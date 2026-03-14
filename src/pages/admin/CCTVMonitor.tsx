@@ -205,7 +205,7 @@ const CCTVMonitor = () => {
         const labeledDescriptors: faceapi.LabeledFaceDescriptors[] = [];
 
         rawVisitors.forEach((record: DBVisitor, index: number) => {
-          const { _id, firstName, lastName, faceEmbedding, fullName } =
+          const { _id, faceEmbedding, fullName } =
             extractVisitorIdentity(record);
 
           if (!_id) {
