@@ -27,10 +27,21 @@ import {
 import Webcam from "react-webcam";
 import { createWorker } from "tesseract.js";
 
-// --- API INSTANCE (🔥 FIXED 404 ISSUE) ---
+// 🔍 DEBUG: Check what API URL the frontend is using
+useEffect(() => {
+  console.log("Resolved API baseURL:", api.defaults.baseURL);
+}, []);
+
+const API_URL =
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.DEV ? "http://localhost:8080/api" : "");
+
+if (!API_URL) {
+  console.error("Missing VITE_API_URL in production");
+}
+
 const api = axios.create({
-  // 🔥 FIXED: Changed 9000 to 8080 to match your backend!
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080/api",
+  baseURL: API_URL,
   headers: {
     "ngrok-skip-browser-warning": "69420",
     "Bypass-Tunnel-Reminder": "true",
