@@ -27,9 +27,9 @@ import {
 import Webcam from "react-webcam";
 import { createWorker } from "tesseract.js";
 
-// --- API INSTANCE ---
+// --- API INSTANCE (🔥 FIXED 404 ISSUE: Added Fallback URL) ---
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
   headers: {
     "ngrok-skip-browser-warning": "69420",
     "Bypass-Tunnel-Reminder": "true",
@@ -121,7 +121,8 @@ const BookAppointment = () => {
       const a = document.createElement("a");
       a.style.display = "none";
       a.href = url;
-      a.download = `UniVentry-Pass-${bookingId?.slice(-6).toUpperCase()}.png`;
+      // 🔥 FIXED: Safe string extraction
+      a.download = `UniVentry-Pass-${bookingId ? bookingId.slice(-6).toUpperCase() : "PASS"}.png`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -167,7 +168,8 @@ const BookAppointment = () => {
                <img src="${qrUrl}" style="width: 250px; height: 250px; margin-top: 25px; border-radius: 10px;" onload="setTimeout(() => { window.print(); window.close(); }, 500);" />
                
                <br />
-               <p class="id-text">#${bookingId?.slice(-6).toUpperCase()}</p>
+               <!-- 🔥 FIXED: Safe string extraction -->
+               <p class="id-text">#${bookingId ? bookingId.slice(-6).toUpperCase() : "XXXXXX"}</p>
             </div>
           </body>
         </html>
@@ -212,7 +214,6 @@ const BookAppointment = () => {
 
       setIsValidating(true);
       try {
-        // ✅ BUG FIXED: Changed from /offices/slots to /bookings/slots
         const res = await api.get(
           `/bookings/slots?bookingDate=${bookingDate}&office=${office}`,
         );
@@ -304,7 +305,6 @@ const BookAppointment = () => {
     setIsVerifying(true);
     setError(null);
     try {
-      // ✅ BUG FIXED: Changed from /bookings/send-otp to /send-otp
       await api.post("/send-otp", { email });
       setOtpSent(true);
       setError(null);
@@ -328,7 +328,6 @@ const BookAppointment = () => {
     setIsVerifying(true);
     setError(null);
     try {
-      // ✅ BUG FIXED: Changed from /bookings/verify-otp to /verify-otp
       const res = await api.post("/verify-otp", {
         email,
         otp: otpCode,
@@ -729,7 +728,9 @@ const BookAppointment = () => {
                     className={`transition-all ${!bookingDate ? "opacity-30 pointer-events-none grayscale" : "opacity-100"}`}
                   >
                     <div className="bg-slate-900 rounded-4xl p-6 border-4 border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
-                      <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+                      {/* 🔥 FIXED 404 WARNING: Using pure CSS Grid instead of external image link */}
+                      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[20px_20px]"></div>
+
                       <div className="flex items-center gap-4 relative z-10">
                         <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400">
                           <FiCpu size={24} />
@@ -1059,7 +1060,7 @@ const BookAppointment = () => {
                 </motion.div>
               )}
 
-              {/* ================= STEP 4: DIGITAL PASS (TICKET DESIGN) ================= */}
+              {/* ================= STEP 4: DIGITAL PASS (🔥 CRASH FIXED) ================= */}
               {step === 4 && (
                 <motion.div
                   key="step4"
@@ -1101,8 +1102,13 @@ const BookAppointment = () => {
                           className="rounded-xl"
                         />
                       </div>
+
+                      {/* 🔥 FIXED: Safe string extraction prevents the White Screen Crash! */}
                       <p className="mt-4 font-mono font-black text-slate-400 text-sm tracking-widest">
-                        #{bookingId?.slice(-6).toUpperCase()}
+                        #
+                        {bookingId
+                          ? bookingId.slice(-6).toUpperCase()
+                          : "XXXXXX"}
                       </p>
                     </div>
 
@@ -1139,7 +1145,6 @@ const BookAppointment = () => {
                   </p>
 
                   <div className="flex justify-center gap-4 max-w-sm mx-auto">
-                    {/* 🔥 ADDED FIX: Button uses standard imported Icons */}
                     <button
                       onClick={downloadQR}
                       className="flex-1 py-4 bg-white border-2 border-slate-200 text-slate-600 hover:text-[#0038A8] hover:border-[#0038A8] rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all shadow-sm flex justify-center items-center gap-2 active:scale-95"
@@ -1197,7 +1202,6 @@ const Input = ({
   </div>
 );
 
-// Stub for Terminal Icon missing in some older lucide-react versions
 const Terminal = ({ size }: any) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
