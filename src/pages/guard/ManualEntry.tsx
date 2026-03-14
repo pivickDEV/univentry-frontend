@@ -24,7 +24,7 @@ import { createWorker } from "tesseract.js";
 
 // --- API INSTANCE ---
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: (import.meta.env.VITE_API_URL || "").replace(/\/+$/, ""),
   headers: {
     "ngrok-skip-browser-warning": "69420",
     "Bypass-Tunnel-Reminder": "true",
@@ -88,6 +88,7 @@ const ManualEntry = () => {
   const today = new Date().toLocaleDateString("en-CA", {
     timeZone: "Asia/Manila",
   });
+
   const [bookingDate, setBookingDate] = useState(today);
   const [slots, setSlots] = useState<{ current: number; max: number | null }>({
     current: 0,
@@ -131,35 +132,64 @@ const ManualEntry = () => {
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         ]);
+
         modelsLoadedRef.current = true;
         setLoadingModels(false);
       } catch (err) {
+        console.error("Initialization error:", err);
         setError("AI Models Failed to Load");
+        setLoadingModels(false);
       }
     };
+
     init();
   }, []);
 
   useEffect(() => {
     const fetchCapacity = async () => {
-      if (!bookingDate || !office) return;
+      if (!bookingDate || !office) {
+        setSlots({ current: 0, max: null });
+        return;
+      }
+
       setIsValidating(true);
+
       try {
-        const res = await api.get(
-          `/offices/slots?bookingDate=${bookingDate}&office=${office}`,
+        const res = await api.get("/offices/slots", {
+          params: {
+            bookingDate,
+            office,
+          },
+        });
+
+        setSlots({
+          current: Number(res.data?.current ?? 0),
+          max: typeof res.data?.max === "number" ? res.data.max : null,
+        });
+      } catch (err: any) {
+        console.error(
+          "Slot fetch failed:",
+          err?.response?.data || err?.message,
         );
-        setSlots({ current: res.data.current, max: res.data.max });
-      } catch (err) {
-        setSlots({ current: 0, max: 0 });
+
+        // Important: do not mark office as closed on fetch failure
+        setSlots({ current: 0, max: null });
+
+        setError(
+          err?.response?.data?.error ||
+            err?.response?.data?.message ||
+            "Failed to check office availability.",
+        );
       } finally {
         setIsValidating(false);
       }
     };
+
     fetchCapacity();
   }, [bookingDate, office]);
 
   // ==========================================================
-  // 2. CAMERA LOOP (Bug Fixed: Null dimensions)
+  // 2. CAMERA LOOP
   // ==========================================================
   const detectFace = useCallback(async () => {
     if (
@@ -167,13 +197,13 @@ const ManualEntry = () => {
       !modelsLoadedRef.current ||
       registeredBookingId ||
       showConfirmModal
-    )
+    ) {
       return;
+    }
 
     const video = webcamRef.current?.video;
     const canvas = canvasRef.current;
 
-    // 🔥 FIX: Ensure video has valid dimensions before feeding to face-api
     if (
       !video ||
       !canvas ||
@@ -226,8 +256,9 @@ const ManualEntry = () => {
                 setFaceScan(screenshot);
                 setFaceEmbedding(Array.from(detection.descriptor));
                 setFaceStatus("success");
-                if (animationFrameRef.current)
+                if (animationFrameRef.current) {
                   cancelAnimationFrame(animationFrameRef.current);
+                }
               }
             }
           }, 1500);
@@ -240,11 +271,12 @@ const ManualEntry = () => {
         }
       }
     } catch (e) {
-      // Suppress benign canvas errors
+      // ignore benign canvas/face timing errors
     }
 
-    if (!faceScan)
+    if (!faceScan) {
       animationFrameRef.current = requestAnimationFrame(detectFace);
+    }
   }, [faceScan, registeredBookingId, showConfirmModal]);
 
   useEffect(() => {
@@ -254,14 +286,19 @@ const ManualEntry = () => {
       !registeredBookingId &&
       !showConfirmModal
     ) {
-      if (animationFrameRef.current)
+      if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
       detectFace();
     }
+
     return () => {
-      if (animationFrameRef.current)
+      if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
-      if (captureTimerRef.current) clearTimeout(captureTimerRef.current);
+      }
+      if (captureTimerRef.current) {
+        clearTimeout(captureTimerRef.current);
+      }
     };
   }, [
     faceScan,
@@ -278,7 +315,10 @@ const ManualEntry = () => {
     setFaceScan(null);
     setFaceEmbedding(null);
     setFaceStatus("no_face");
-    if (captureTimerRef.current) clearTimeout(captureTimerRef.current);
+
+    if (captureTimerRef.current) {
+      clearTimeout(captureTimerRef.current);
+    }
     captureTimerRef.current = null;
   };
 
@@ -286,6 +326,7 @@ const ManualEntry = () => {
     if (!webcamRef.current) return;
     const screenshot = webcamRef.current.getScreenshot();
     if (!screenshot) return;
+
     if (side === "front") {
       setIdFront(screenshot);
       runOcr(screenshot, "front");
@@ -298,16 +339,21 @@ const ManualEntry = () => {
   const runOcr = async (image: string, side: "front" | "back") => {
     const key = side === "front" ? "ocrFront" : "ocrBack";
     setProcessing((prev) => ({ ...prev, [key]: true }));
+
     try {
       const worker = await createWorker("eng");
       const {
         data: { text },
       } = await worker.recognize(image);
+
       const cleanText = text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
+
       if (side === "front") setOcrFront(cleanText);
       else setOcrBack(cleanText);
+
       await worker.terminate();
     } catch (err) {
+      console.error(`OCR ${side} failed:`, err);
     } finally {
       setProcessing((prev) => ({ ...prev, [key]: false }));
     }
@@ -317,12 +363,25 @@ const ManualEntry = () => {
   // 4. SUBMITS & MODALS
   // ==========================================================
   const triggerConfirmation = () => {
-    if (!firstName || !lastName || !email || !office || !category)
-      return setError("Missing Form Details.");
-    if (!faceEmbedding) return setError("Face Scan Required (Look at camera).");
-    if (!idFront || !idBack) return setError("ID Images Required.");
-    if (slots.max !== null && slots.current >= slots.max)
-      return setError("Office Full.");
+    if (!firstName || !lastName || !email || !office || !category) {
+      return setError("Missing form details.");
+    }
+
+    if (!faceEmbedding) {
+      return setError("Face scan required (look at camera).");
+    }
+
+    if (!idFront || !idBack) {
+      return setError("ID images required.");
+    }
+
+    if (slots.max === 0) {
+      return setError("Office is closed on the selected date.");
+    }
+
+    if (slots.max !== null && slots.current >= slots.max) {
+      return setError("Office is full for the selected date.");
+    }
 
     setError(null);
     setShowConfirmModal(true);
@@ -358,7 +417,11 @@ const ManualEntry = () => {
       setShowConfirmModal(false);
       resetFormBackground();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Registration Failed");
+      setError(
+        err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          "Registration failed",
+      );
       setShowConfirmModal(false);
     } finally {
       setLoading(false);
@@ -372,6 +435,9 @@ const ManualEntry = () => {
     setPhoneNumber("");
     setPurpose("");
     setCategory("");
+    setOffice("");
+    setBookingDate(today);
+    setSlots({ current: 0, max: null });
     setFaceScan(null);
     setFaceEmbedding(null);
     setIdFront(null);
@@ -438,7 +504,6 @@ const ManualEntry = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col">
-      {/* ================= HEADER ================= */}
       <div className="max-w-400 mx-auto w-full mb-6 shrink-0">
         <div className="flex items-center gap-4">
           <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
@@ -470,9 +535,7 @@ const ManualEntry = () => {
         </motion.div>
       )}
 
-      {/* ================= MAIN LAYOUT ================= */}
       <div className="max-w-400 mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 pb-10 flex-1 items-start">
-        {/* === LEFT: FORM === */}
         <div className="lg:col-span-6 xl:col-span-5 bg-white p-6 lg:p-10 rounded-[2.5rem] shadow-xl border border-slate-200">
           <h3 className="text-xs font-black text-[#0038A8] uppercase tracking-widest mb-6 flex items-center gap-2">
             <User size={16} /> Visitor Details
@@ -491,6 +554,7 @@ const ManualEntry = () => {
                 placeholder="e.g. Juan"
               />
             </div>
+
             <div className="col-span-1 space-y-1.5">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
                 Last Name
@@ -532,6 +596,7 @@ const ManualEntry = () => {
                 />
               </div>
             </div>
+
             <div className="col-span-1 space-y-1.5">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
                 Destination
@@ -539,7 +604,10 @@ const ManualEntry = () => {
               <select
                 className={inputStyle}
                 value={office}
-                onChange={(e) => setOffice(e.target.value)}
+                onChange={(e) => {
+                  setOffice(e.target.value);
+                  setError(null);
+                }}
               >
                 <option value="">Select Office</option>
                 {offices.map((o) => (
@@ -552,27 +620,43 @@ const ManualEntry = () => {
 
             <div className="col-span-2">
               <div
-                className={`p-4 rounded-2xl flex items-center justify-between shadow-sm border transition-colors ${!isValidating && slots.max === 0 ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-200"}`}
+                className={`p-4 rounded-2xl flex items-center justify-between shadow-sm border transition-colors ${
+                  !isValidating && office && slots.max === 0
+                    ? "bg-red-50 border-red-200"
+                    : "bg-slate-50 border-slate-200"
+                }`}
               >
                 <div className="flex flex-col">
                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
                     Availability
                   </span>
+
                   <span
-                    className={`text-xs font-bold ${!isValidating && slots.max === 0 ? "text-red-600" : "text-[#0038A8]"}`}
+                    className={`text-xs font-bold ${
+                      !isValidating && office && slots.max === 0
+                        ? "text-red-600"
+                        : "text-[#0038A8]"
+                    }`}
                   >
                     {isValidating
                       ? "Checking Cloud..."
-                      : office
-                        ? slots.max === 0
-                          ? "OFFICE CLOSED"
-                          : `${slots.current} / ${slots.max} Taken`
-                        : "Select Office First"}
+                      : !office
+                        ? "Select Office First"
+                        : slots.max === null
+                          ? "Availability Unknown"
+                          : slots.max === 0
+                            ? "OFFICE CLOSED"
+                            : `${slots.current} / ${slots.max} Taken`}
                   </span>
                 </div>
+
                 {office && !isValidating && slots.max !== null && (
                   <div
-                    className={`w-2.5 h-2.5 rounded-full ${slots.max === 0 || slots.current >= slots.max ? "bg-red-500" : "bg-emerald-500 animate-pulse"}`}
+                    className={`w-2.5 h-2.5 rounded-full ${
+                      slots.max === 0 || slots.current >= slots.max
+                        ? "bg-red-500"
+                        : "bg-emerald-500 animate-pulse"
+                    }`}
                   />
                 )}
               </div>
@@ -625,7 +709,6 @@ const ManualEntry = () => {
               />
             </div>
 
-            {/* 🔥 FIX: Dropdown clears out old selection securely */}
             <div className="col-span-2 grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
               <div className="space-y-1.5">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
@@ -644,6 +727,7 @@ const ManualEntry = () => {
                   <option value="Secondary">Secondary ID</option>
                 </select>
               </div>
+
               <div className="space-y-1.5">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
                   ID Type
@@ -671,10 +755,8 @@ const ManualEntry = () => {
           </button>
         </div>
 
-        {/* === RIGHT: SLEEK CAMERA UI === */}
         <div className="lg:col-span-6 xl:col-span-7 flex flex-col gap-6">
           <div className="bg-white rounded-[2.5rem] p-6 lg:p-8 border border-slate-200 shadow-xl flex flex-col">
-            {/* 🔥 FIX: Webcam is ALWAYS mounted so users can continuously capture ID cards! */}
             <div className="relative rounded-4xl overflow-hidden bg-slate-900 mb-6 aspect-video border-4 border-slate-50 shadow-inner group flex items-center justify-center">
               <Webcam
                 ref={webcamRef}
@@ -684,7 +766,6 @@ const ManualEntry = () => {
                 forceScreenshotSourceSize={true}
               />
 
-              {/* AI Canvas Overlay */}
               {!faceScan && (
                 <canvas
                   ref={canvasRef}
@@ -695,7 +776,11 @@ const ManualEntry = () => {
               {!faceScan && (
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-6 py-2.5 rounded-full shadow-lg border border-slate-200 z-20">
                   <p
-                    className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${faceStatus === "stable" ? "text-[#0038A8]" : "text-slate-500"}`}
+                    className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                      faceStatus === "stable"
+                        ? "text-[#0038A8]"
+                        : "text-slate-500"
+                    }`}
                   >
                     {loadingModels ? (
                       <>
@@ -713,6 +798,7 @@ const ManualEntry = () => {
                   </p>
                 </div>
               )}
+
               {faceScan && (
                 <div className="absolute top-4 right-4 bg-emerald-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 border border-emerald-400">
                   <CheckCircle size={14} /> Biometric Secured
@@ -720,7 +806,6 @@ const ManualEntry = () => {
               )}
             </div>
 
-            {/* Capture Controls */}
             <div className="grid grid-cols-3 gap-4">
               <ModernCaptureBtn
                 onClick={handleRetakeFace}
@@ -734,6 +819,7 @@ const ManualEntry = () => {
                 }
                 label={faceScan ? "Retake Face" : "Auto-Scan Face"}
               />
+
               <ModernCaptureBtn
                 onClick={() => handleCaptureID("front")}
                 active={!!idFront}
@@ -741,6 +827,7 @@ const ManualEntry = () => {
                 icon={<CreditCard size={20} className="text-[#0038A8]" />}
                 label="Snap ID Front"
               />
+
               <ModernCaptureBtn
                 onClick={() => handleCaptureID("back")}
                 active={!!idBack}
@@ -751,7 +838,6 @@ const ManualEntry = () => {
             </div>
           </div>
 
-          {/* Clean Horizontal Previews */}
           <div className="grid grid-cols-3 gap-4">
             <ModernPreviewBox label="Biometric Profile" img={faceScan} />
             <ModernPreviewBox label="ID Front" img={idFront} />
@@ -760,7 +846,6 @@ const ManualEntry = () => {
         </div>
       </div>
 
-      {/* ================= 1. CONFIRMATION MODAL ================= */}
       <AnimatePresence>
         {showConfirmModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -785,6 +870,7 @@ const ManualEntry = () => {
                   Verify Registration
                 </h2>
               </div>
+
               <div className="p-8 -mt-6 bg-white rounded-t-4xl relative z-20">
                 <h3 className="text-2xl font-black text-slate-800 uppercase leading-none">
                   {firstName} {lastName}
@@ -808,6 +894,7 @@ const ManualEntry = () => {
                   >
                     Cancel
                   </button>
+
                   <button
                     onClick={executeRegistration}
                     disabled={loading}
@@ -828,7 +915,6 @@ const ManualEntry = () => {
         )}
       </AnimatePresence>
 
-      {/* ================= 2. QR CODE DIGITAL PASS MODAL (🔥 REDESIGNED) ================= */}
       <AnimatePresence>
         {registeredBookingId && (
           <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
@@ -844,7 +930,6 @@ const ManualEntry = () => {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20 flex flex-col"
             >
-              {/* Email Header Style */}
               <div className="bg-[#0038A8] p-8 text-center border-b border-blue-800">
                 <h1 className="text-[#FFD700] m-0 tracking-widest text-3xl font-black uppercase">
                   UNIVENTRY
@@ -904,6 +989,7 @@ const ManualEntry = () => {
                 >
                   <Download size={18} /> Download
                 </button>
+
                 <button
                   onClick={printQR}
                   className="flex-1 py-4 bg-[#0038A8] text-[#FFD700] rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-blue-900/20 hover:bg-[#002b82] flex justify-center items-center gap-2 active:scale-95"
@@ -926,14 +1012,19 @@ const ManualEntry = () => {
   );
 };
 
-// --- REDESIGNED HELPER COMPONENTS ---
 const ModernCaptureBtn = ({ onClick, active, loading, icon, label }: any) => (
   <button
     onClick={onClick}
-    className={`flex flex-col items-center justify-center gap-3 p-4 rounded-3xl border-2 transition-all active:scale-95 shadow-sm ${active ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-slate-100 hover:border-[#0038A8]/30 hover:shadow-md text-slate-500"}`}
+    className={`flex flex-col items-center justify-center gap-3 p-4 rounded-3xl border-2 transition-all active:scale-95 shadow-sm ${
+      active
+        ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+        : "bg-white border-slate-100 hover:border-[#0038A8]/30 hover:shadow-md text-slate-500"
+    }`}
   >
     <div
-      className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm ${active ? "bg-emerald-500 text-white" : "bg-blue-50"}`}
+      className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm ${
+        active ? "bg-emerald-500 text-white" : "bg-blue-50"
+      }`}
     >
       {loading ? (
         <Loader2 className="animate-spin text-[#0038A8]" />
