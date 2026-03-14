@@ -153,26 +153,31 @@ const ManualEntry = () => {
       }
 
       setIsValidating(true);
+      setError(null);
 
       try {
-        const res = await api.get("/offices/slots", {
+        const res = await api.get("/slots", {
           params: {
-            bookingDate,
-            office,
+            bookingDate: bookingDate.trim(),
+            office: office.trim(),
           },
         });
+
+        console.log("SLOTS RESPONSE:", res.data);
 
         setSlots({
           current: Number(res.data?.current ?? 0),
           max: typeof res.data?.max === "number" ? res.data.max : null,
         });
       } catch (err: any) {
-        console.error(
-          "Slot fetch failed:",
-          err?.response?.data || err?.message,
-        );
+        console.error("Slot fetch failed:", {
+          status: err?.response?.status,
+          data: err?.response?.data,
+          url: err?.config?.url,
+          fullUrl: `${err?.config?.baseURL}${err?.config?.url}`,
+          params: err?.config?.params,
+        });
 
-        // Important: do not mark office as closed on fetch failure
         setSlots({ current: 0, max: null });
 
         setError(
