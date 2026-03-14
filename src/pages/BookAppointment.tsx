@@ -1,5 +1,6 @@
 /* eslint-disable */
 "use client";
+
 import axios from "axios";
 import * as faceapi from "face-api.js";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
@@ -29,7 +30,7 @@ import { createWorker } from "tesseract.js";
 
 const API_URL =
   import.meta.env.VITE_API_URL ??
-  (import.meta.env.DEV ? "http://localhost:8080/api" : "");
+  (import.meta.env.DEV ? "http://localhost:9000/api" : "");
 
 if (!API_URL) {
   console.error("Missing VITE_API_URL in production");
@@ -42,6 +43,7 @@ const api = axios.create({
     "Bypass-Tunnel-Reminder": "true",
   },
 });
+
 api.interceptors.request.use((config) => {
   console.log("API REQUEST:", {
     method: config.method,
@@ -78,7 +80,7 @@ const BookAppointment = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
-  const [, setIsEmailVerified] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -137,7 +139,6 @@ const BookAppointment = () => {
     ],
   };
 
-  // --- PRINTER / DOWNLOAD LOGIC ---
   const qrUrl = bookingId
     ? `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${bookingId}`
     : "";
@@ -150,7 +151,6 @@ const BookAppointment = () => {
       const a = document.createElement("a");
       a.style.display = "none";
       a.href = url;
-      // 🔥 FIXED: Safe string extraction
       a.download = `UniVentry-Pass-${bookingId ? bookingId.slice(-6).toUpperCase() : "PASS"}.png`;
       document.body.appendChild(a);
       a.click();
@@ -177,27 +177,21 @@ const BookAppointment = () => {
               .details p { margin: 8px 0; font-size: 14px; font-weight: bold; }
               .details span { color: #0038A8; }
               .id-text { font-family: monospace; font-size: 28px; font-weight: bold; color: #0038A8; margin-top: 25px; letter-spacing: 2px; background: #eff6ff; padding: 10px; border-radius: 10px; display: inline-block; }
-              @media print {
-                body { -webkit-print-color-adjust: exact; }
-              }
+              @media print { body { -webkit-print-color-adjust: exact; } }
             </style>
           </head>
           <body>
             <div class="card">
                <h1>UNIVENTRY</h1>
                <h3>Digital Access Pass</h3>
-               
                <div class="details">
                   <p>Name: <span>${firstName} ${lastName}</span></p>
                   <p>Destination: <span>${office}</span></p>
                   <p>Category: <span>${category}</span></p>
                   <p>Valid Date: <span>${bookingDate}</span></p>
                </div>
-
                <img src="${qrUrl}" style="width: 250px; height: 250px; margin-top: 25px; border-radius: 10px;" onload="setTimeout(() => { window.print(); window.close(); }, 500);" />
-               
                <br />
-               <!-- 🔥 FIXED: Safe string extraction -->
                <p class="id-text">#${bookingId ? bookingId.slice(-6).toUpperCase() : "XXXXXX"}</p>
             </div>
           </body>
@@ -207,7 +201,6 @@ const BookAppointment = () => {
     }
   };
 
-  // --- OCR FUNCTION ---
   const handleOcr = async (image: string, side: "front" | "back") => {
     setIsOcrLoading(true);
     try {
@@ -215,8 +208,10 @@ const BookAppointment = () => {
       const {
         data: { text },
       } = await worker.recognize(image);
+
       if (side === "front") setOcrFront(text);
       else setOcrBack(text);
+
       await worker.terminate();
     } catch (err) {
       console.error("OCR Error:", err);
@@ -225,7 +220,6 @@ const BookAppointment = () => {
     }
   };
 
-  // 🔍 DEBUG: Check what API URL the frontend is using
   useEffect(() => {
     console.log("Resolved API baseURL:", api.defaults.baseURL);
   }, []);
@@ -244,6 +238,7 @@ const BookAppointment = () => {
         });
       }
     };
+
     fetchOffices();
   }, []);
 
@@ -258,10 +253,7 @@ const BookAppointment = () => {
 
       try {
         const res = await api.get("/bookings/slots", {
-          params: {
-            bookingDate,
-            office,
-          },
+          params: { bookingDate, office },
         });
 
         setSlots({
@@ -300,23 +292,29 @@ const BookAppointment = () => {
         setError("Biometric Engine failed.");
       }
     };
+
     loadModels();
   }, []);
 
   const detectFace = useCallback(async () => {
     if (faceScan || step !== 3 || !modelsLoadedRef.current) return;
+
     const video = webcamRef.current?.video;
     const canvas = canvasRef.current;
+
     if (!video || !canvas || video.readyState < 2) {
       animationFrameRef.current = requestAnimationFrame(detectFace);
       return;
     }
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
     if (canvas.width !== video.videoWidth) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
     }
+
     const detection = await faceapi
       .detectSingleFace(
         video,
@@ -329,12 +327,15 @@ const BookAppointment = () => {
       .withFaceDescriptor();
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     if (detection) {
       const box = detection.detection.box;
       ctx.strokeStyle = "#FFD700";
       ctx.lineWidth = 4;
       ctx.strokeRect(box.x, box.y, box.width, box.height);
+
       setFaceStatus("stable");
+
       if (!captureTimerRef.current) {
         captureTimerRef.current = setTimeout(() => {
           const screenshot = webcamRef.current?.getScreenshot();
@@ -348,35 +349,43 @@ const BookAppointment = () => {
       if (captureTimerRef.current) clearTimeout(captureTimerRef.current);
       captureTimerRef.current = null;
     }
+
     animationFrameRef.current = requestAnimationFrame(detectFace);
   }, [faceScan, step]);
 
   useEffect(() => {
     if (step === 3 && !faceScan) detectFace();
+
     return () => {
-      if (animationFrameRef.current)
+      if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
-      if (captureTimerRef.current) clearTimeout(captureTimerRef.current);
+      }
+      if (captureTimerRef.current) {
+        clearTimeout(captureTimerRef.current);
+      }
     };
   }, [step, faceScan, detectFace]);
 
   const handleSendOTP = async () => {
-    if (!email.includes("@")) return setError("Enter valid email");
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !normalizedEmail.includes("@")) {
+      return setError("Enter a valid email address.");
+    }
 
     setIsVerifying(true);
     setError(null);
 
     try {
-      const res = await api.post("/send-otp", { email });
+      const res = await api.post("/send-otp", { email: normalizedEmail });
 
-      console.log("OTP RESPONSE:", res.data);
-
-      if (res.data?.otp) {
-        alert(`TEST OTP: ${res.data.otp}`);
+      if (res.data?.success) {
+        setEmail(normalizedEmail);
+        setOtpSent(true);
+        setError(null);
+      } else {
+        setError(res.data?.error || "Failed to send OTP.");
       }
-
-      setOtpSent(true);
-      setError(null);
     } catch (err: any) {
       console.error("Send OTP Error:", err);
       setError(
@@ -390,14 +399,22 @@ const BookAppointment = () => {
   };
 
   const handleVerifyOTP = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!otpCode.trim()) {
+      return setError("Enter the OTP code.");
+    }
+
     setIsVerifying(true);
     setError(null);
+
     try {
       const res = await api.post("/verify-otp", {
-        email,
-        otp: otpCode,
+        email: normalizedEmail,
+        otp: otpCode.trim(),
       });
-      if (res.data.success) {
+
+      if (res.data?.success) {
         setIsEmailVerified(true);
         setStep(1);
         setError(null);
@@ -406,15 +423,11 @@ const BookAppointment = () => {
       }
     } catch (err: any) {
       console.error("Verify OTP Error:", err);
-      if (err.response?.status === 404) {
-        setError("Backend Error: Route does not exist.");
-      } else {
-        setError(
-          err.response?.data?.message ||
-            err.response?.data?.error ||
-            "Invalid Code.",
-        );
-      }
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Invalid or expired OTP.",
+      );
     } finally {
       setIsVerifying(false);
     }
@@ -431,10 +444,12 @@ const BookAppointment = () => {
 
   const submitBooking = async () => {
     if (loading) return;
+
     setLoading(true);
     setError(null);
 
     try {
+      if (!isEmailVerified) throw new Error("Email verification is required.");
       if (!faceEmbedding || faceEmbedding.length === 0)
         throw new Error("Biometric face scan is required.");
       if (!idFront || !idBack)
@@ -445,7 +460,7 @@ const BookAppointment = () => {
       const payload = {
         firstName,
         lastName,
-        email,
+        email: email.trim().toLowerCase(),
         phoneNumber,
         category,
         office,
@@ -493,7 +508,6 @@ const BookAppointment = () => {
     category !== "" &&
     /^09\d{9}$/.test(phoneNumber);
 
-  // --- ANIMATION VARIANTS ---
   const stepVariants: Variants = {
     hidden: { opacity: 0, x: 20 },
     visible: {
@@ -506,12 +520,10 @@ const BookAppointment = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 p-4 md:p-8 font-sans selection:bg-[#FFD700]/30 selection:text-[#0038A8] relative overflow-hidden flex items-center justify-center">
-      {/* --- BACKGROUND MESH GRADIENTS --- */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#0038A8]/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#FFD700]/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-5xl relative z-10">
-        {/* --- TOP BRANDING --- */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/60 backdrop-blur-md border border-white text-[#0038A8] text-[10px] font-black uppercase tracking-widest mb-6 shadow-sm">
             <FiShield className="text-[#FFD700] text-lg" /> Official RTU Gateway
@@ -527,9 +539,7 @@ const BookAppointment = () => {
           </p>
         </div>
 
-        {/* --- MAIN CARD --- */}
         <div className="bg-white/90 backdrop-blur-xl border border-white rounded-[2.5rem] md:rounded-[3rem] shadow-[0_20px_60px_-15px_rgba(0,56,168,0.1)] overflow-hidden flex flex-col relative">
-          {/* STEPPER UI (Hidden on Success) */}
           {step < 4 && (
             <div className="bg-slate-50/50 border-b border-slate-100 p-6 flex justify-between items-center px-8 md:px-16 shrink-0">
               {["Verification", "Identity", "Logistics", "Biometrics"].map(
@@ -557,7 +567,6 @@ const BookAppointment = () => {
                   </div>
                 ),
               )}
-              {/* Connecting Line */}
               <div className="absolute left-[15%] right-[15%] top-10 h-0.5 bg-slate-100 -z-10 hidden md:block">
                 <motion.div
                   className="h-full bg-[#0038A8] transition-all duration-500"
@@ -578,14 +587,13 @@ const BookAppointment = () => {
                 >
                   <div className="p-1.5 bg-white rounded-lg shadow-sm text-red-500">
                     <FiAlertCircle size={16} />
-                  </div>{" "}
+                  </div>
                   {error}
                 </motion.div>
               )}
             </AnimatePresence>
 
             <AnimatePresence mode="wait">
-              {/* ================= STEP 0: OTP ================= */}
               {step === 0 && (
                 <motion.div
                   key="step0"
@@ -601,6 +609,7 @@ const BookAppointment = () => {
                       <FiMail className="text-4xl text-[#FFD700]" />
                     </div>
                   </div>
+
                   <div>
                     <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-2">
                       Security Gateway
@@ -619,34 +628,53 @@ const BookAppointment = () => {
                       disabled={otpSent}
                       placeholder="name@domain.com"
                     />
+
                     {otpSent && (
                       <Input
-                        label="6-Digit Auth Code"
+                        label="6-Digit OTP Code"
                         value={otpCode}
                         onChange={setOtpCode}
                         icon={<FiHash />}
                         placeholder="------"
                       />
                     )}
+
+                    {isEmailVerified && (
+                      <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 text-xs font-bold flex items-center gap-2">
+                        <FiCheckCircle className="text-emerald-600" />
+                        Email successfully verified.
+                      </div>
+                    )}
                   </div>
 
-                  <button
-                    onClick={otpSent ? handleVerifyOTP : handleSendOTP}
-                    disabled={isVerifying || !email}
-                    className="w-full py-5 bg-[#0038A8] hover:bg-[#002b82] text-[#FFD700] rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] transition-all shadow-xl shadow-blue-900/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
-                  >
-                    {isVerifying ? (
-                      <FiLoader className="animate-spin text-lg" />
-                    ) : otpSent ? (
-                      "Verify & Unlock"
-                    ) : (
-                      "Send Verification Link"
+                  <div className="space-y-3">
+                    <button
+                      onClick={otpSent ? handleVerifyOTP : handleSendOTP}
+                      disabled={isVerifying || !email.trim()}
+                      className="w-full py-5 bg-[#0038A8] hover:bg-[#002b82] text-[#FFD700] rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] transition-all shadow-xl shadow-blue-900/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
+                    >
+                      {isVerifying ? (
+                        <FiLoader className="animate-spin text-lg" />
+                      ) : otpSent ? (
+                        "Verify OTP"
+                      ) : (
+                        "Send OTP"
+                      )}
+                    </button>
+
+                    {otpSent && !isEmailVerified && (
+                      <button
+                        onClick={handleSendOTP}
+                        disabled={isVerifying}
+                        className="w-full py-4 bg-white border-2 border-slate-200 text-slate-600 hover:text-[#0038A8] hover:border-[#0038A8] rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        Resend OTP
+                      </button>
                     )}
-                  </button>
+                  </div>
                 </motion.div>
               )}
 
-              {/* ================= STEP 1: INFO ================= */}
               {step === 1 && (
                 <motion.div
                   key="step1"
@@ -681,6 +709,7 @@ const BookAppointment = () => {
                       placeholder="Dela Cruz"
                     />
                   </div>
+
                   <div className="grid md:grid-cols-2 gap-6">
                     <Input
                       label="Mobile Number"
@@ -729,7 +758,6 @@ const BookAppointment = () => {
                 </motion.div>
               )}
 
-              {/* ================= STEP 2: LOGISTICS ================= */}
               {step === 2 && (
                 <motion.div
                   key="step2"
@@ -749,7 +777,6 @@ const BookAppointment = () => {
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-8">
-                    {/* Target Office */}
                     <div className="space-y-2 text-left group">
                       <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-1 transition-colors group-focus-within:text-[#0038A8]">
                         1. Target Destination
@@ -772,7 +799,6 @@ const BookAppointment = () => {
                       </select>
                     </div>
 
-                    {/* Date */}
                     <div
                       className={`transition-all ${!office ? "opacity-30 pointer-events-none grayscale" : "opacity-100"}`}
                     >
@@ -788,12 +814,10 @@ const BookAppointment = () => {
                     </div>
                   </div>
 
-                  {/* Server Status Widget */}
                   <div
                     className={`transition-all ${!bookingDate ? "opacity-30 pointer-events-none grayscale" : "opacity-100"}`}
                   >
                     <div className="bg-slate-900 rounded-4xl p-6 border-4 border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden">
-                      {/* 🔥 FIXED 404 WARNING: Using pure CSS Grid instead of external image link */}
                       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[20px_20px]"></div>
 
                       <div className="flex items-center gap-4 relative z-10">
@@ -813,7 +837,7 @@ const BookAppointment = () => {
                       <div className="relative z-10 flex items-center gap-4 bg-black/40 px-6 py-3 rounded-2xl border border-white/5">
                         {isValidating ? (
                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                            <FiLoader className="animate-spin text-[#FFD700]" />{" "}
+                            <FiLoader className="animate-spin text-[#FFD700]" />
                             Querying DB...
                           </span>
                         ) : (
@@ -853,7 +877,6 @@ const BookAppointment = () => {
                     />
                   </div>
 
-                  {/* Navigation */}
                   <div className="flex gap-4 pt-8 border-t border-slate-100">
                     <button
                       onClick={() => setStep(1)}
@@ -881,7 +904,6 @@ const BookAppointment = () => {
                 </motion.div>
               )}
 
-              {/* ================= STEP 3: BIOMETRICS ================= */}
               {step === 3 && (
                 <motion.div
                   key="step3"
@@ -902,10 +924,8 @@ const BookAppointment = () => {
                   </div>
 
                   <div className="grid lg:grid-cols-2 gap-10 items-start">
-                    {/* LEFT: HUD CAMERA */}
                     <div className="space-y-4">
                       <div className="relative aspect-4/3 bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl border-[6px] border-slate-800 group">
-                        {/* Sci-Fi Corner Brackets */}
                         <div className="absolute top-6 left-6 w-10 h-10 border-t-4 border-l-4 border-[#FFD700] opacity-50 z-20 pointer-events-none" />
                         <div className="absolute top-6 right-6 w-10 h-10 border-t-4 border-r-4 border-[#FFD700] opacity-50 z-20 pointer-events-none" />
                         <div className="absolute bottom-6 left-6 w-10 h-10 border-b-4 border-l-4 border-[#FFD700] opacity-50 z-20 pointer-events-none" />
@@ -941,6 +961,7 @@ const BookAppointment = () => {
                             <button
                               onClick={() => {
                                 setFaceScan(null);
+                                setFaceEmbedding(null);
                                 setFaceStatus("no_face");
                                 detectFace();
                               }}
@@ -953,7 +974,6 @@ const BookAppointment = () => {
                       </div>
                     </div>
 
-                    {/* RIGHT: ID UPLOADS & OCR TERMINAL */}
                     <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
@@ -972,6 +992,7 @@ const BookAppointment = () => {
                             <option value="Secondary">Secondary</option>
                           </select>
                         </div>
+
                         <div className="space-y-1.5">
                           <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
                             Document Type
@@ -1029,6 +1050,7 @@ const BookAppointment = () => {
                             <div className="absolute top-2 right-2 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />
                           )}
                         </div>
+
                         <div className="relative h-32 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl flex flex-col items-center justify-center overflow-hidden group hover:border-[#0038A8] hover:bg-blue-50 transition-all cursor-pointer">
                           {idBack ? (
                             <img
@@ -1062,7 +1084,6 @@ const BookAppointment = () => {
                         </div>
                       </div>
 
-                      {/* TERMINAL OCR DISPLAY */}
                       <div className="bg-[#050505] p-5 rounded-2xl border-4 border-slate-800 shadow-inner flex flex-col">
                         <div className="flex justify-between items-center mb-3 border-b border-slate-800 pb-3">
                           <span className="text-[8px] font-black text-emerald-500 uppercase tracking-[0.3em] flex items-center gap-2">
@@ -1072,6 +1093,7 @@ const BookAppointment = () => {
                             <FiLoader className="text-emerald-500 animate-spin text-sm" />
                           )}
                         </div>
+
                         <div className="grid grid-cols-2 gap-4 flex-1">
                           <div className="flex flex-col">
                             <p className="text-[7px] text-slate-500 font-black uppercase mb-1">
@@ -1081,6 +1103,7 @@ const BookAppointment = () => {
                               {ocrFront || "> Waiting for image input..."}
                             </div>
                           </div>
+
                           <div className="flex flex-col">
                             <p className="text-[7px] text-slate-500 font-black uppercase mb-1">
                               Stdout_Back
@@ -1125,7 +1148,6 @@ const BookAppointment = () => {
                 </motion.div>
               )}
 
-              {/* ================= STEP 4: DIGITAL PASS (🔥 CRASH FIXED) ================= */}
               {step === 4 && (
                 <motion.div
                   key="step4"
@@ -1135,9 +1157,7 @@ const BookAppointment = () => {
                   exit="exit"
                   className="py-4"
                 >
-                  {/* The Ticket Wrapper */}
                   <div className="w-full max-w-sm mx-auto bg-white rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,56,168,0.2)] border border-slate-100 overflow-hidden relative">
-                    {/* Ticket Header */}
                     <div className="bg-[#0038A8] pt-8 pb-10 px-8 text-center relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-full h-2 bg-[#FFD700]" />
                       <div className="w-14 h-14 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/20 backdrop-blur-sm text-[#FFD700]">
@@ -1151,7 +1171,6 @@ const BookAppointment = () => {
                       </p>
                     </div>
 
-                    {/* Ticket Body */}
                     <div className="px-8 pb-8 pt-4 bg-white text-center -mt-6 rounded-t-3xl relative z-10">
                       <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-1">
                         {firstName} {lastName}
@@ -1168,7 +1187,6 @@ const BookAppointment = () => {
                         />
                       </div>
 
-                      {/* 🔥 FIXED: Safe string extraction prevents the White Screen Crash! */}
                       <p className="mt-4 font-mono font-black text-slate-400 text-sm tracking-widest">
                         #
                         {bookingId
@@ -1177,14 +1195,12 @@ const BookAppointment = () => {
                       </p>
                     </div>
 
-                    {/* Perforated Tear Line */}
                     <div className="relative h-8 flex items-center justify-center bg-white">
                       <div className="absolute w-8 h-8 bg-[#F8FAFC] rounded-full -left-4 shadow-inner" />
                       <div className="absolute w-8 h-8 bg-[#F8FAFC] rounded-full -right-4 shadow-inner" />
                       <div className="w-full h-px border-t-2 border-dashed border-slate-200 mx-6" />
                     </div>
 
-                    {/* Ticket Footer */}
                     <div className="bg-slate-50 p-6 flex justify-between items-center px-8 border-t border-slate-100">
                       <div className="text-left">
                         <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">
@@ -1233,7 +1249,6 @@ const BookAppointment = () => {
   );
 };
 
-/* CUSTOM THEMED INPUT */
 const Input = ({
   label,
   icon,
