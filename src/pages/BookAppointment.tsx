@@ -252,17 +252,25 @@ const BookAppointment = () => {
       if (!bookingDate || !office) return;
 
       setIsValidating(true);
+
       try {
         const res = await api.get(
           `/offices/slots?date=${bookingDate}&office=${encodeURIComponent(office)}`,
         );
-        setSlots({ current: res.data.current, max: res.data.max });
+
+        console.log("CAPACITY RESPONSE:", res.data);
+
+        setSlots({
+          current: Number(res.data.current ?? 0),
+          max: Number(res.data.max ?? 0),
+        });
       } catch (err: any) {
         console.error("Capacity fetch failed:", {
           status: err.response?.status,
           data: err.response?.data,
           url: `${err.config?.baseURL}${err.config?.url}`,
         });
+
         setSlots({ current: 0, max: 0 });
       } finally {
         setIsValidating(false);
