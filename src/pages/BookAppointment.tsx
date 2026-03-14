@@ -1,6 +1,5 @@
 /* eslint-disable */
 "use client";
-
 import axios from "axios";
 import * as faceapi from "face-api.js";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
@@ -299,19 +298,19 @@ const BookAppointment = () => {
     };
   }, [step, faceScan, detectFace]);
 
-  // 🚀 FIXED: PROPER ERROR CATCHING SO BUTTON STOPS SPINNING
   const handleSendOTP = async () => {
     if (!email.includes("@")) return setError("Enter valid email");
     setIsVerifying(true);
     setError(null);
     try {
-      await api.post("/send-otp", { email }); // Check if this should be /auth/send-otp
+      // 🚀 FIXED: Added /auth/ prefix to the route so Railway can find it!
+      await api.post("/auth/send-otp", { email });
       setOtpSent(true);
       setError(null);
     } catch (err: any) {
       console.error("Send OTP Error:", err);
       if (err.response?.status === 404) {
-        setError("Backend Error: Route '/send-otp' does not exist.");
+        setError("Backend Error: Route '/auth/send-otp' does not exist.");
       } else {
         setError(err.response?.data?.message || "OTP service failed.");
       }
@@ -320,12 +319,12 @@ const BookAppointment = () => {
     }
   };
 
-  // 🚀 FIXED: PROPER ERROR CATCHING SO BUTTON STOPS SPINNING
   const handleVerifyOTP = async () => {
     setIsVerifying(true);
     setError(null);
     try {
-      const res = await api.post("/verify-otp", { email, otp: otpCode }); // Check if this should be /auth/verify-otp
+      // 🚀 FIXED: Added /auth/ prefix to the route so Railway can find it!
+      const res = await api.post("/auth/verify-otp", { email, otp: otpCode });
       if (res.data.success) {
         setIsEmailVerified(true);
         setStep(1);
@@ -336,7 +335,7 @@ const BookAppointment = () => {
     } catch (err: any) {
       console.error("Verify OTP Error:", err);
       if (err.response?.status === 404) {
-        setError("Backend Error: Route '/verify-otp' does not exist.");
+        setError("Backend Error: Route '/auth/verify-otp' does not exist.");
       } else {
         setError(err.response?.data?.message || "Invalid Code.");
       }
