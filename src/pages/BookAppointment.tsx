@@ -42,6 +42,28 @@ const api = axios.create({
     "Bypass-Tunnel-Reminder": "true",
   },
 });
+api.interceptors.request.use((config) => {
+  console.log("API REQUEST:", {
+    method: config.method,
+    url: `${config.baseURL}${config.url}`,
+  });
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => {
+    console.log("API RESPONSE:", response.status, response.config.url);
+    return response;
+  },
+  (error) => {
+    console.error("API ERROR:", {
+      status: error.response?.status,
+      url: `${error.config?.baseURL}${error.config?.url}`,
+      data: error.response?.data,
+    });
+    return Promise.reject(error);
+  },
+);
 
 type FaceStatus = "scanning" | "stable" | "no_face" | "too_far" | "success";
 
@@ -213,8 +235,13 @@ const BookAppointment = () => {
       try {
         const res = await api.get("/offices");
         setOffices(res.data);
-      } catch (err) {
-        console.error("Office fetch failed");
+      } catch (err: any) {
+        console.error("Office fetch failed:", {
+          status: err.response?.status,
+          data: err.response?.data,
+          url: err.config?.url,
+          fullUrl: `${err.config?.baseURL}${err.config?.url}`,
+        });
       }
     };
     fetchOffices();
@@ -227,15 +254,21 @@ const BookAppointment = () => {
       setIsValidating(true);
       try {
         const res = await api.get(
-          `/bookings/slots?bookingDate=${bookingDate}&office=${office}`,
+          `/offices/slots?date=${bookingDate}&office=${encodeURIComponent(office)}`,
         );
         setSlots({ current: res.data.current, max: res.data.max });
-      } catch (err) {
+      } catch (err: any) {
+        console.error("Capacity fetch failed:", {
+          status: err.response?.status,
+          data: err.response?.data,
+          url: `${err.config?.baseURL}${err.config?.url}`,
+        });
         setSlots({ current: 0, max: 0 });
       } finally {
         setIsValidating(false);
       }
     };
+
     fetchCapacity();
   }, [bookingDate, office]);
 
