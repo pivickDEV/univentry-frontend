@@ -174,14 +174,17 @@ const CCTVMonitor = () => {
 
         if (!isMounted) return;
 
+        // CHANGE THIS PART
+        const visitorsRes = await api
+          .get("/face-recognition/visitors")
+          .catch((err) => {
+            console.error("Failed to load visitor faces:", err);
+            return { data: [] };
+          });
+
         setSystemStatus("SYNCING DB VECTORS...");
 
-        const visitorsRes = await api.get("/bookings").catch((err) => {
-          console.error("Failed to load visitor faces:", err);
-          return { data: [] };
-        });
-
-        const logsRes = await api.get("/cctv-logs").catch((err) => {
+        const logsRes = await api.get("/cctv-logs").catch(() => {
           console.warn(
             "Notice: /cctv-logs unavailable. Proceeding without history.",
           );
