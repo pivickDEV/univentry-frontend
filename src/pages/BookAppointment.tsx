@@ -27,9 +27,10 @@ import {
 import Webcam from "react-webcam";
 import { createWorker } from "tesseract.js";
 
-// --- API INSTANCE (🔥 FIXED 404 ISSUE: Added Fallback URL) ---
+// --- API INSTANCE (🔥 FIXED 404 ISSUE) ---
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
+  // Added the fallback so it ALWAYS knows where your backend is!
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost;5000/api",
   headers: {
     "ngrok-skip-browser-warning": "69420",
     "Bypass-Tunnel-Reminder": "true",
