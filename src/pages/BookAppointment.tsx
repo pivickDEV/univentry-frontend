@@ -29,8 +29,8 @@ import { createWorker } from "tesseract.js";
 
 // --- API INSTANCE (🔥 FIXED 404 ISSUE) ---
 const api = axios.create({
-  // Added the fallback so it ALWAYS knows where your backend is!
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost;5000/api",
+  // 🔥 FIXED: Changed 9000 to 8080 to match your backend!
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080/api",
   headers: {
     "ngrok-skip-browser-warning": "69420",
     "Bypass-Tunnel-Reminder": "true",
