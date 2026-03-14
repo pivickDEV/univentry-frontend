@@ -249,29 +249,36 @@ const BookAppointment = () => {
 
   useEffect(() => {
     const fetchCapacity = async () => {
-      if (!bookingDate || !office) return;
+      if (!bookingDate || !office) {
+        setSlots({ current: 0, max: null });
+        return;
+      }
 
       setIsValidating(true);
 
       try {
-        const res = await api.get(
-          `/offices/slots?date=${bookingDate}&office=${encodeURIComponent(office)}`,
-        );
-
-        console.log("CAPACITY RESPONSE:", res.data);
+        const res = await api.get("/bookings/slots", {
+          params: {
+            bookingDate,
+            office,
+          },
+        });
 
         setSlots({
-          current: Number(res.data.current ?? 0),
-          max: Number(res.data.max ?? 0),
+          current: Number(res.data?.current ?? 0),
+          max: typeof res.data?.max === "number" ? res.data.max : null,
         });
       } catch (err: any) {
-        console.error("Capacity fetch failed:", {
-          status: err.response?.status,
-          data: err.response?.data,
-          url: `${err.config?.baseURL}${err.config?.url}`,
-        });
-
-        setSlots({ current: 0, max: 0 });
+        console.error(
+          "Slot fetch failed:",
+          err?.response?.data || err?.message,
+        );
+        setSlots({ current: 0, max: null });
+        setError(
+          err?.response?.data?.error ||
+            err?.response?.data?.message ||
+            "Failed to check office availability.",
+        );
       } finally {
         setIsValidating(false);
       }
