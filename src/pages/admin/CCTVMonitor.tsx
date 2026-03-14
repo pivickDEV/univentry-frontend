@@ -4,7 +4,7 @@
 import axios from "axios";
 import * as faceapi from "face-api.js";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FiAlertCircle,
   FiCalendar,
@@ -30,7 +30,9 @@ const api = axios.create({
 
 const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
 
-// --- TYPES ---
+// ============================================================================
+// TYPES
+// ============================================================================
 interface Camera {
   id: string;
   name: string;
@@ -39,9 +41,16 @@ interface Camera {
 
 interface DBVisitor {
   _id: string;
-  firstName: string;
-  lastName: string;
-  faceEmbedding: any;
+  firstName?: string;
+  lastName?: string;
+  visitorId?: string;
+  visitor?: {
+    _id?: string;
+    firstName?: string;
+    lastName?: string;
+    faceEmbedding?: any;
+  };
+  faceEmbedding?: any;
 }
 
 interface RecognitionLog {
@@ -56,6 +65,71 @@ interface RecognitionLog {
   timestamp: string;
 }
 
+// ============================================================================
+// HELPERS
+// ============================================================================
+const getCurrentPHDate = () =>
+  new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Manila",
+  });
+
+const normalizeEmbedding = (rawEmbedding: any): number[] => {
+  if (!rawEmbedding) return [];
+
+  let arr: any[] = [];
+
+  // Case 1: already a proper JS array
+  if (Array.isArray(rawEmbedding)) {
+    arr = rawEmbedding;
+  }
+  // Case 2: JSON string
+  else if (typeof rawEmbedding === "string") {
+    try {
+      const parsed = JSON.parse(rawEmbedding);
+      if (Array.isArray(parsed)) arr = parsed;
+    } catch (err) {
+      return [];
+    }
+  }
+  // Case 3: mongoose/buffer-like object { data: [...] }
+  else if (
+    typeof rawEmbedding === "object" &&
+    rawEmbedding !== null &&
+    Array.isArray(rawEmbedding.data)
+  ) {
+    arr = rawEmbedding.data;
+  }
+  // Case 4: object with numeric keys
+  else if (typeof rawEmbedding === "object" && rawEmbedding !== null) {
+    const values = Object.values(rawEmbedding);
+    if (Array.isArray(values)) arr = values;
+  }
+
+  const numeric = arr.map((v) => Number(v)).filter((v) => !Number.isNaN(v));
+
+  if (numeric.length !== 128) return [];
+
+  return numeric;
+};
+
+const extractVisitorIdentity = (record: DBVisitor) => {
+  const _id = record._id || record.visitorId || record.visitor?._id || "";
+  const firstName = record.firstName || record.visitor?.firstName || "";
+  const lastName = record.lastName || record.visitor?.lastName || "";
+  const faceEmbedding = record.faceEmbedding || record.visitor?.faceEmbedding;
+
+  return {
+    _id,
+    firstName,
+    lastName,
+    faceEmbedding,
+    fullName: `${firstName} ${lastName}`.trim(),
+  };
+};
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 const CCTVMonitor = () => {
   const [cameras] = useState<Camera[]>([
     {
@@ -82,12 +156,16 @@ const CCTVMonitor = () => {
     Map<string, { lastSeen: number; status: "IN" | "OUT"; visitorName: string }>
   >(new Map());
 
-  // --- INITIALIZATION ---
+  // ============================================================================
+  // INITIALIZATION
+  // ============================================================================
   useEffect(() => {
     let isMounted = true;
 
     const initSystem = async () => {
       try {
+        setSystemStatus("LOADING NEURAL NETS...");
+
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
@@ -95,77 +173,128 @@ const CCTVMonitor = () => {
         ]);
 
         if (!isMounted) return;
+
         setSystemStatus("SYNCING DB VECTORS...");
 
-        // 🔥 FIX: Separate API calls with individual `.catch()` handlers.
-        // If /cctv-logs returns 404, it won't crash the /bookings Face Vector sync anymore!
         const visitorsRes = await api.get("/bookings").catch((err) => {
           console.error("Failed to load visitor faces:", err);
           return { data: [] };
         });
 
-        const logsRes = await api.get("/cctv-logs").catch(() => {
-          console.warn("Notice: /cctv-logs 404. Proceeding without history.");
+        const logsRes = await api.get("/cctv-logs").catch((err) => {
+          console.warn(
+            "Notice: /cctv-logs unavailable. Proceeding without history.",
+          );
           return { data: [] };
         });
 
-        const labeledDescriptors: faceapi.LabeledFaceDescriptors[] = [];
-        const visitorsArray = Array.isArray(visitorsRes.data)
+        const rawVisitors = Array.isArray(visitorsRes.data)
           ? visitorsRes.data
-          : visitorsRes.data?.data || [];
+          : Array.isArray(visitorsRes.data?.data)
+            ? visitorsRes.data.data
+            : Array.isArray(visitorsRes.data?.bookings)
+              ? visitorsRes.data.bookings
+              : [];
 
-        if (Array.isArray(visitorsArray)) {
-          visitorsArray.forEach((v: DBVisitor) => {
-            if (!v.faceEmbedding) return;
-            let arr: number[] = [];
+        console.log("Visitors response:", visitorsRes.data);
+        console.log("Resolved visitors array:", rawVisitors);
 
-            // Handle different ways Mongoose might have returned the array
-            if (typeof v.faceEmbedding === "string") {
-              try {
-                arr = JSON.parse(v.faceEmbedding);
-              } catch (e) {}
-            } else if (Array.isArray(v.faceEmbedding)) {
-              arr = v.faceEmbedding;
-            } else if (typeof v.faceEmbedding === "object") {
-              arr = Object.values(v.faceEmbedding);
-            }
+        const labeledDescriptors: faceapi.LabeledFaceDescriptors[] = [];
 
-            if (arr.length === 128) {
-              const floatArray = new Float32Array(arr.map(Number));
-              labeledDescriptors.push(
-                new faceapi.LabeledFaceDescriptors(
-                  `${v.firstName} ${v.lastName}__${v._id}`,
-                  [floatArray],
-                ),
-              );
-            }
-          });
-        }
+        rawVisitors.forEach((record: DBVisitor, index: number) => {
+          const { _id, firstName, lastName, faceEmbedding, fullName } =
+            extractVisitorIdentity(record);
+
+          if (!_id) {
+            console.warn(`Visitor [${index}] skipped: missing _id`, record);
+            return;
+          }
+
+          if (!faceEmbedding) {
+            console.warn(
+              `Visitor [${index}] skipped: missing faceEmbedding`,
+              record,
+            );
+            return;
+          }
+
+          const normalized = normalizeEmbedding(faceEmbedding);
+
+          if (normalized.length !== 128) {
+            console.warn(
+              `Visitor [${index}] skipped: invalid embedding length`,
+              {
+                _id,
+                name: fullName,
+                length: normalized.length,
+                rawFaceEmbedding: faceEmbedding,
+              },
+            );
+            return;
+          }
+
+          try {
+            labeledDescriptors.push(
+              new faceapi.LabeledFaceDescriptors(
+                `${fullName || "Unknown Visitor"}__${_id}`,
+                [new Float32Array(normalized)],
+              ),
+            );
+          } catch (err) {
+            console.warn(
+              `Visitor [${index}] skipped: failed descriptor build`,
+              {
+                _id,
+                name: fullName,
+                err,
+              },
+            );
+          }
+        });
+
+        console.log("Loaded labeled descriptors:", labeledDescriptors.length);
 
         if (labeledDescriptors.length > 0 && isMounted) {
-          // 0.6 is the strictness distance (lower = stricter)
-          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.6));
+          // Slightly more forgiving than 0.6 for live CCTV conditions
+          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65));
+          console.log("FaceMatcher initialized successfully.");
         } else {
           console.warn("⚠️ No faces found in DB to match against.");
+          setFaceMatcher(null);
         }
 
         if (isMounted) {
-          if (logsRes.data && Array.isArray(logsRes.data)) {
-            const sorted = logsRes.data.sort(
+          const logsArray = Array.isArray(logsRes.data)
+            ? logsRes.data
+            : Array.isArray(logsRes.data?.data)
+              ? logsRes.data.data
+              : [];
+
+          if (Array.isArray(logsArray)) {
+            const sorted = logsArray.sort(
               (a: any, b: any) =>
                 new Date(b.timestamp).getTime() -
                 new Date(a.timestamp).getTime(),
             );
             setLogs(sorted);
           }
+
           setModelsLoaded(true);
-          setSystemStatus("CCTV ACTIVE");
+          setSystemStatus(
+            labeledDescriptors.length > 0
+              ? "CCTV ACTIVE"
+              : "NO FACE VECTORS LOADED",
+          );
         }
       } catch (err) {
         console.error("AI Init Error:", err);
-        if (isMounted) setSystemStatus("SYSTEM OFFLINE");
+        if (isMounted) {
+          setSystemStatus("SYSTEM OFFLINE");
+          setFaceMatcher(null);
+        }
       }
     };
+
     initSystem();
 
     return () => {
@@ -173,13 +302,13 @@ const CCTVMonitor = () => {
     };
   }, []);
 
-  // --- AUTO-LOGOUT LOGIC ---
+  // ============================================================================
+  // AUTO-LOGOUT
+  // ============================================================================
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
-      const currentDate = new Date().toLocaleDateString("en-CA", {
-        timeZone: "Asia/Manila",
-      });
+      const currentDate = getCurrentPHDate();
 
       activeVisitors.current.forEach((data, key) => {
         if (data.status === "IN" && now - data.lastSeen > 30000) {
@@ -208,66 +337,73 @@ const CCTVMonitor = () => {
               )
               .slice(0, 50),
           );
+
           api.post("/cctv-logs", outLog).catch(() => {});
         }
       });
     }, 5000);
+
     return () => clearInterval(interval);
   }, []);
 
-  // --- RECOGNITION HANDLER ---
-  const handleFaceDetected = async (
-    matchInfo: string,
-    distance: number,
-    imageBase64: string,
-    cameraName: string,
-  ) => {
-    if (matchInfo === "unknown") return;
+  // ============================================================================
+  // MATCH HANDLER
+  // ============================================================================
+  const handleFaceDetected = useCallback(
+    async (
+      matchInfo: string,
+      distance: number,
+      imageBase64: string,
+      cameraName: string,
+    ) => {
+      if (matchInfo === "unknown") return;
 
-    const [visitorName, visitorId] = matchInfo.split("__");
-    const now = Date.now();
-    const currentDate = new Date().toLocaleDateString("en-CA", {
-      timeZone: "Asia/Manila",
-    });
-    const key = `${visitorId}|||${cameraName}`;
-    const activeInfo = activeVisitors.current.get(key);
+      const [visitorName, visitorId] = matchInfo.split("__");
+      const now = Date.now();
+      const currentDate = getCurrentPHDate();
+      const key = `${visitorId}|||${cameraName}`;
+      const activeInfo = activeVisitors.current.get(key);
 
-    if (activeInfo && activeInfo.status === "IN") {
-      activeVisitors.current.set(key, { ...activeInfo, lastSeen: now });
-      return;
-    }
+      if (activeInfo && activeInfo.status === "IN") {
+        activeVisitors.current.set(key, { ...activeInfo, lastSeen: now });
+        return;
+      }
 
-    activeVisitors.current.set(key, {
-      lastSeen: now,
-      status: "IN",
-      visitorName,
-    });
+      activeVisitors.current.set(key, {
+        lastSeen: now,
+        status: "IN",
+        visitorName,
+      });
 
-    const newLog: RecognitionLog = {
-      _id: Math.random().toString(),
-      visitorId,
-      visitorName,
-      cameraName,
-      confidence: Math.round((1 - distance) * 100),
-      screenshotBase64: imageBase64,
-      status: "IN",
-      date: currentDate,
-      timestamp: new Date().toISOString(),
-    };
+      const newLog: RecognitionLog = {
+        _id: Math.random().toString(),
+        visitorId,
+        visitorName,
+        cameraName,
+        confidence: Math.round((1 - distance) * 100),
+        screenshotBase64: imageBase64,
+        status: "IN",
+        date: currentDate,
+        timestamp: new Date().toISOString(),
+      };
 
-    setLogs((prev) =>
-      [newLog, ...prev]
-        .sort(
-          (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-        )
-        .slice(0, 50),
-    );
+      setLogs((prev) =>
+        [newLog, ...prev]
+          .sort(
+            (a, b) =>
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+          )
+          .slice(0, 50),
+      );
 
-    try {
-      await api.post("/cctv-logs", newLog);
-    } catch (err) {}
-  };
+      try {
+        await api.post("/cctv-logs", newLog);
+      } catch (err) {
+        console.warn("Failed to save CCTV log:", err);
+      }
+    },
+    [],
+  );
 
   const filteredLogs = logs
     .filter((l) =>
@@ -344,6 +480,7 @@ const CCTVMonitor = () => {
             )}
             {systemStatus}
           </span>
+
           <span className="hidden md:flex items-center gap-2 text-white bg-[#0038A8] border border-blue-800 px-5 py-3 rounded-2xl shadow-lg">
             <FiCamera /> {cameras.length} NODE(S) ONLINE
           </span>
@@ -386,7 +523,7 @@ const CCTVMonitor = () => {
                 </h3>
               </div>
               <span className="text-[9px] font-black text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-lg shadow-sm tracking-widest flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />{" "}
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 LIVE
               </span>
             </div>
@@ -402,6 +539,7 @@ const CCTVMonitor = () => {
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-xs font-bold focus:outline-none focus:border-[#0038A8] focus:ring-2 focus:ring-blue-50 transition-all placeholder:text-slate-400"
                 />
               </div>
+
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -413,6 +551,7 @@ const CCTVMonitor = () => {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-3 text-[10px] font-black text-slate-600 focus:outline-none focus:border-[#0038A8] transition-colors cursor-pointer uppercase"
                   />
                 </div>
+
                 <div className="relative flex-1">
                   <FiFilter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <select
@@ -448,7 +587,11 @@ const CCTVMonitor = () => {
                     className="bg-[#F8FAFC] border border-slate-200 p-4 rounded-3xl flex gap-4 items-center shadow-sm hover:shadow-md hover:border-blue-200 transition-all group"
                   >
                     <div
-                      className={`w-16 h-16 rounded-2xl overflow-hidden shrink-0 border-2 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_15px_rgba(0,56,168,0.2)] ${log.screenshotBase64 ? "cursor-zoom-in border-white group-hover:border-[#0038A8]" : "bg-slate-200 border-slate-300"}`}
+                      className={`w-16 h-16 rounded-2xl overflow-hidden shrink-0 border-2 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_15px_rgba(0,56,168,0.2)] ${
+                        log.screenshotBase64
+                          ? "cursor-zoom-in border-white group-hover:border-[#0038A8]"
+                          : "bg-slate-200 border-slate-300"
+                      }`}
                       onClick={() =>
                         log.screenshotBase64 &&
                         setZoomedImage(log.screenshotBase64)
@@ -506,7 +649,7 @@ const CCTVMonitor = () => {
 };
 
 // ============================================================================
-// COMPONENT: HIGH-TECH CCTV NODE
+// CAMERA NODE
 // ============================================================================
 const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -535,6 +678,7 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
         setStreamStatus("ERROR: JSMPEG SCRIPT MISSING");
         return;
       }
+
       try {
         setStreamStatus("CONNECTING TO NODE...");
 
@@ -624,7 +768,6 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
           displaySize,
         );
 
-        // 🔥 FIX: Added willReadFrequently to suppress console warnings and improve loop speed
         const ctx = canvas.getContext("2d", {
           willReadFrequently: true,
         }) as CanvasRenderingContext2D;
@@ -661,9 +804,16 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
             const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
             label = bestMatch.label;
             distance = bestMatch.distance;
+
+            console.log("Best match:", {
+              label,
+              distance,
+              confidence: Math.round((1 - distance) * 100),
+            });
           }
 
           const isKnown = label !== "unknown";
+
           const drawLabel = isKnown
             ? `${label.split("__")[0]} (${Math.round((1 - distance) * 100)}%)`
             : "UNAUTHORIZED";
@@ -684,7 +834,7 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
           }
         });
       } catch (err) {
-        // Suppressed to prevent console spam
+        console.warn("Face scan error:", err);
       } finally {
         isScanning = false;
         scanTimeout = setTimeout(scanFace, 600);
@@ -692,6 +842,7 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
     };
 
     scanFace();
+
     return () => clearTimeout(scanTimeout);
   }, [faceMatcher, modelsLoaded, camera.name, streamStatus, onMatch]);
 
@@ -742,29 +893,31 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
         </div>
       )}
 
-      {/* LIVE VIDEO CANVAS */}
       <canvas
         ref={videoCanvasRef}
-        className={`w-full h-full object-cover transition-opacity duration-1000 ${streamStatus === "LIVE" ? "opacity-100" : "opacity-0"}`}
+        className={`w-full h-full object-cover transition-opacity duration-1000 ${
+          streamStatus === "LIVE" ? "opacity-100" : "opacity-0"
+        }`}
       />
 
-      {/* AI DRAWING CANVAS */}
       <canvas
         ref={drawCanvasRef}
         className="absolute inset-0 w-full h-full pointer-events-none z-20"
       />
 
-      {/* CAMERA OVERLAY BADGE */}
       <div className="absolute top-4 left-4 z-30 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10 shadow-lg">
         <div
-          className={`w-2 h-2 rounded-full ${streamStatus === "LIVE" ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" : "bg-slate-500"}`}
+          className={`w-2 h-2 rounded-full ${
+            streamStatus === "LIVE"
+              ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+              : "bg-slate-500"
+          }`}
         />
         <span className="text-white text-[10px] font-black uppercase tracking-widest">
           {camera.name}
         </span>
       </div>
 
-      {/* FULLSCREEN BUTTON */}
       <button
         onClick={toggleFullscreen}
         className="absolute top-4 right-4 z-30 text-white/70 hover:text-[#FFD700] bg-black/40 p-3 rounded-xl backdrop-blur-md transition-colors opacity-0 group-hover:opacity-100 shadow-lg"
