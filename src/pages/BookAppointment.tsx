@@ -27,11 +27,6 @@ import {
 import Webcam from "react-webcam";
 import { createWorker } from "tesseract.js";
 
-// 🔍 DEBUG: Check what API URL the frontend is using
-useEffect(() => {
-  console.log("Resolved API baseURL:", api.defaults.baseURL);
-}, []);
-
 const API_URL =
   import.meta.env.VITE_API_URL ??
   (import.meta.env.DEV ? "http://localhost:8080/api" : "");
@@ -207,6 +202,11 @@ const BookAppointment = () => {
       setIsOcrLoading(false);
     }
   };
+
+  // 🔍 DEBUG: Check what API URL the frontend is using
+  useEffect(() => {
+    console.log("Resolved API baseURL:", api.defaults.baseURL);
+  }, []);
 
   useEffect(() => {
     const fetchOffices = async () => {
