@@ -29,7 +29,7 @@ import { createWorker } from "tesseract.js";
 
 // --- API INSTANCE ---
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
+  baseURL: import.meta.env.VITE_API_URL,
   headers: {
     "ngrok-skip-browser-warning": "69420",
     "Bypass-Tunnel-Reminder": "true",
@@ -212,8 +212,9 @@ const BookAppointment = () => {
 
       setIsValidating(true);
       try {
+        // ✅ BUG FIXED: Changed from /offices/slots to /bookings/slots
         const res = await api.get(
-          `/offices/slots?bookingDate=${bookingDate}&office=${office}`,
+          `/bookings/slots?bookingDate=${bookingDate}&office=${office}`,
         );
         setSlots({ current: res.data.current, max: res.data.max });
       } catch (err) {
@@ -303,15 +304,20 @@ const BookAppointment = () => {
     setIsVerifying(true);
     setError(null);
     try {
-      await api.post("/bookings/send-otp", { email }); // 👈 FIX HERE
+      // ✅ BUG FIXED: Changed from /bookings/send-otp to /send-otp
+      await api.post("/send-otp", { email });
       setOtpSent(true);
       setError(null);
     } catch (err: any) {
       console.error("Send OTP Error:", err);
       if (err.response?.status === 404) {
-        setError("Backend Error: Route '/bookings/send-otp' does not exist.");
+        setError("Backend Error: Route does not exist.");
       } else {
-        setError(err.response?.data?.message || "OTP service failed.");
+        setError(
+          err.response?.data?.message ||
+            err.response?.data?.error ||
+            "OTP service failed.",
+        );
       }
     } finally {
       setIsVerifying(false);
@@ -322,10 +328,11 @@ const BookAppointment = () => {
     setIsVerifying(true);
     setError(null);
     try {
-      const res = await api.post("/bookings/verify-otp", {
+      // ✅ BUG FIXED: Changed from /bookings/verify-otp to /verify-otp
+      const res = await api.post("/verify-otp", {
         email,
         otp: otpCode,
-      }); // 👈 FIX HERE
+      });
       if (res.data.success) {
         setIsEmailVerified(true);
         setStep(1);
@@ -336,9 +343,13 @@ const BookAppointment = () => {
     } catch (err: any) {
       console.error("Verify OTP Error:", err);
       if (err.response?.status === 404) {
-        setError("Backend Error: Route '/bookings/verify-otp' does not exist.");
+        setError("Backend Error: Route does not exist.");
       } else {
-        setError(err.response?.data?.message || "Invalid Code.");
+        setError(
+          err.response?.data?.message ||
+            err.response?.data?.error ||
+            "Invalid Code.",
+        );
       }
     } finally {
       setIsVerifying(false);
