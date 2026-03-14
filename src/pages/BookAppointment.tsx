@@ -27,6 +27,15 @@ import {
 import Webcam from "react-webcam";
 import { createWorker } from "tesseract.js";
 
+// --- API INSTANCE ---
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
+  headers: {
+    "ngrok-skip-browser-warning": "69420",
+    "Bypass-Tunnel-Reminder": "true",
+  },
+});
+
 type FaceStatus = "scanning" | "stable" | "no_face" | "too_far" | "success";
 
 const BookAppointment = () => {
@@ -191,7 +200,7 @@ const BookAppointment = () => {
   useEffect(() => {
     const fetchOffices = async () => {
       try {
-        const res = await axios.get("http://localhost:9000/api/offices");
+        const res = await api.get("/offices");
         setOffices(res.data);
       } catch (err) {
         console.error("Office fetch failed");
@@ -207,8 +216,8 @@ const BookAppointment = () => {
 
       setIsValidating(true);
       try {
-        const res = await axios.get(
-          `http://localhost:9000/api/offices/slots?bookingDate=${bookingDate}&office=${office}`,
+        const res = await api.get(
+          `/offices/slots?bookingDate=${bookingDate}&office=${office}`,
         );
         setSlots({ current: res.data.current, max: res.data.max });
       } catch (err) {
@@ -298,7 +307,7 @@ const BookAppointment = () => {
     if (!email.includes("@")) return setError("Enter valid email");
     setIsVerifying(true);
     try {
-      await axios.post("http://localhost:9000/api/send-otp", { email });
+      await api.post("/send-otp", { email });
       setOtpSent(true);
       setError(null);
     } catch {
@@ -311,7 +320,7 @@ const BookAppointment = () => {
   const handleVerifyOTP = async () => {
     setIsVerifying(true);
     try {
-      const res = await axios.post("http://localhost:9000/api/verify-otp", {
+      const res = await api.post("/verify-otp", {
         email,
         otp: otpCode,
       });
@@ -368,10 +377,7 @@ const BookAppointment = () => {
         actionBy: "Online Booking",
       };
 
-      const response = await axios.post(
-        "http://localhost:9000/api/bookings",
-        payload,
-      );
+      const response = await api.post("/bookings", payload);
 
       if (response.data?.success) {
         setBookingId(response.data.bookingId);

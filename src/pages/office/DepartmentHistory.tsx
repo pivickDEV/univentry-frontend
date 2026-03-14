@@ -16,6 +16,15 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+// --- API INSTANCE ---
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: {
+    "ngrok-skip-browser-warning": "69420",
+    "Bypass-Tunnel-Reminder": "true",
+  },
+});
+
 // --- TYPES ---
 interface VisitorLog {
   _id: string;
@@ -64,8 +73,8 @@ const DepartmentHistory = () => {
 
     try {
       const [bookingRes, officeRes] = await Promise.all([
-        axios.get("http://localhost:9000/api/bookings"),
-        axios.get("http://localhost:9000/api/offices"),
+        api.get("/bookings"),
+        api.get("/offices"),
       ]);
 
       // We only want visitors who have actually TRANSACTED at the office

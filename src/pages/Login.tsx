@@ -16,7 +16,15 @@ import {
   FiShield,
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import api from "../lib/axios";
+
+// --- API INSTANCE ---
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
+  headers: {
+    "ngrok-skip-browser-warning": "69420",
+    "Bypass-Tunnel-Reminder": "true",
+  },
+});
 
 const Login = () => {
   const navigate = useNavigate();
@@ -106,7 +114,7 @@ const Login = () => {
         variants={containerVars}
         initial="hidden"
         animate="show"
-        className="relative z-10 w-full max-w-6xl bg-white rounded-[2.5rem] lg:rounded-[3rem] shadow-[0_0_80px_rgba(0,56,168,0.3)] overflow-hidden flex flex-col md:flex-row min-h-160 lg:min-h-184"
+        className="relative z-10 w-full max-w-6xl bg-white rounded-[2.5rem] lg:rounded-[3rem] shadow-[0_0_80px_rgba(0,56,168,0.3)] overflow-hidden flex flex-col md:flex-row min-h-160 lg:minh-184"
       >
         {/* === LEFT SIDE: HIGH-TECH BRANDING === */}
         <div className="md:w-5/12 relative overflow-hidden bg-linear-to-b from-[#0038A8] to-[#001d54] p-10 lg:p-16 text-white flex flex-col justify-between">

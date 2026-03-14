@@ -20,6 +20,15 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+// --- API INSTANCE ---
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: {
+    "ngrok-skip-browser-warning": "69420",
+    "Bypass-Tunnel-Reminder": "true",
+  },
+});
+
 // --- TYPES ---
 interface Booking {
   _id: string;
@@ -62,7 +71,7 @@ const GuardDashboard = () => {
     if (isManualRefresh) setRefreshing(true);
 
     try {
-      const { data } = await axios.get("http://localhost:9000/api/bookings");
+      const { data } = await api.get("/bookings");
       const allBookings = Array.isArray(data.data)
         ? data.data
         : Array.isArray(data)

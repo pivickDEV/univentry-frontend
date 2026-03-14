@@ -22,6 +22,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import { createWorker } from "tesseract.js";
 
+// --- API INSTANCE ---
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: {
+    "ngrok-skip-browser-warning": "69420",
+    "Bypass-Tunnel-Reminder": "true",
+  },
+});
+
 // --- CONFIGURATION ---
 const VIDEO_CONSTRAINTS = { width: 1280, height: 720, facingMode: "user" };
 const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
@@ -114,7 +123,7 @@ const ManualEntry = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        const officeRes = await axios.get("http://localhost:9000/api/offices");
+        const officeRes = await api.get("/offices");
         setOffices(officeRes.data);
 
         await Promise.all([
@@ -136,8 +145,8 @@ const ManualEntry = () => {
       if (!bookingDate || !office) return;
       setIsValidating(true);
       try {
-        const res = await axios.get(
-          `http://localhost:9000/api/offices/slots?bookingDate=${bookingDate}&office=${office}`,
+        const res = await api.get(
+          `/offices/slots?bookingDate=${bookingDate}&office=${office}`,
         );
         setSlots({ current: res.data.current, max: res.data.max });
       } catch (err) {
@@ -343,10 +352,7 @@ const ManualEntry = () => {
         actionBy: "Walk-In Registration",
       };
 
-      const { data } = await axios.post(
-        "http://localhost:9000/api/bookings",
-        payload,
-      );
+      const { data } = await api.post("/bookings", payload);
 
       setRegisteredBookingId(data.bookingId);
       setShowConfirmModal(false);

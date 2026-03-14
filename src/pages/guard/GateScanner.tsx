@@ -18,6 +18,15 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+// --- API INSTANCE ---
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: {
+    "ngrok-skip-browser-warning": "69420",
+    "Bypass-Tunnel-Reminder": "true",
+  },
+});
+
 // --- Types ---
 interface VisitorLog {
   _id: string;
@@ -95,8 +104,8 @@ const GateScanner = () => {
         },
       };
 
-      const { data } = await axios.post(
-        "http://localhost:9000/api/bookings/scan",
+      const { data } = await api.post(
+        "/bookings/scan",
         {
           qrCode: rawValue,
           scanType: scanMode, // 'in' or 'out' based on your button selection

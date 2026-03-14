@@ -20,14 +20,15 @@ import {
   FiWifiOff,
 } from "react-icons/fi";
 
-// 🚀 VERCEL PREP: Uses environment variables in production, falls back to localhost for local testing!
+// 🚀 THE FIX: API points to RAILWAY
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
+  baseURL: import.meta.env.VITE_API_URL,
   headers: {
-    "ngrok-skip-browser-warning": "69420",
-    "Bypass-Tunnel-Reminder": "true",
+    "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "69420", // Kept just as a safety fallback
   },
 });
+
 const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
 
 // --- TYPES ---
@@ -57,11 +58,12 @@ interface RecognitionLog {
 }
 
 const CCTVMonitor = () => {
-  // 🚀 VERCEL PREP: Secure WebSocket connection
+  // 🚀 VERCEL PREP: Secure WebSocket connection uses Ngrok!
   const [cameras] = useState<Camera[]>([
     {
       id: "CAM_1",
-      name: "IT Office Window",
+      name: "Main Gate Camera",
+      // It looks for your Ngrok URL in the .env file!
       wsUrl: import.meta.env.VITE_WS_CAM_1 || "ws://localhost:9999",
     },
   ]);

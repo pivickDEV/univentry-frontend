@@ -17,6 +17,15 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+// --- API INSTANCE ---
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: {
+    "ngrok-skip-browser-warning": "69420",
+    "Bypass-Tunnel-Reminder": "true",
+  },
+});
+
 // --- TYPES ---
 interface Booking {
   _id: string;
@@ -60,8 +69,8 @@ const OfficeDashboard = () => {
     if (isRefresh) setRefreshing(true);
     try {
       const [bookingRes, officeRes] = await Promise.all([
-        axios.get("http://localhost:9000/api/bookings"),
-        axios.get("http://localhost:9000/api/offices"),
+        api.get("/bookings"),
+        api.get("/offices"),
       ]);
 
       const safeBookings = Array.isArray(bookingRes.data)
