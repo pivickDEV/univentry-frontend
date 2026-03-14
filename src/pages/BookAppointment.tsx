@@ -303,14 +303,13 @@ const BookAppointment = () => {
     setIsVerifying(true);
     setError(null);
     try {
-      // 🚀 FIXED: Added /auth/ prefix to the route so Railway can find it!
-      await api.post("/auth/send-otp", { email });
+      await api.post("/bookings/send-otp", { email }); // 👈 FIX HERE
       setOtpSent(true);
       setError(null);
     } catch (err: any) {
       console.error("Send OTP Error:", err);
       if (err.response?.status === 404) {
-        setError("Backend Error: Route '/auth/send-otp' does not exist.");
+        setError("Backend Error: Route '/bookings/send-otp' does not exist.");
       } else {
         setError(err.response?.data?.message || "OTP service failed.");
       }
@@ -323,8 +322,10 @@ const BookAppointment = () => {
     setIsVerifying(true);
     setError(null);
     try {
-      // 🚀 FIXED: Added /auth/ prefix to the route so Railway can find it!
-      const res = await api.post("/auth/verify-otp", { email, otp: otpCode });
+      const res = await api.post("/bookings/verify-otp", {
+        email,
+        otp: otpCode,
+      }); // 👈 FIX HERE
       if (res.data.success) {
         setIsEmailVerified(true);
         setStep(1);
@@ -335,7 +336,7 @@ const BookAppointment = () => {
     } catch (err: any) {
       console.error("Verify OTP Error:", err);
       if (err.response?.status === 404) {
-        setError("Backend Error: Route '/auth/verify-otp' does not exist.");
+        setError("Backend Error: Route '/bookings/verify-otp' does not exist.");
       } else {
         setError(err.response?.data?.message || "Invalid Code.");
       }
