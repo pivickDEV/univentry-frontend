@@ -104,7 +104,7 @@ const CCTVMonitor = () => {
           return { data: [] };
         });
 
-        const logsRes = await api.get("/cctv-logs").catch((err) => {
+        const logsRes = await api.get("/cctv-logs").catch(() => {
           console.warn("Notice: /cctv-logs 404. Proceeding without history.");
           return { data: [] };
         });
