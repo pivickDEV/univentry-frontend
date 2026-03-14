@@ -347,23 +347,28 @@ const BookAppointment = () => {
 
   const handleSendOTP = async () => {
     if (!email.includes("@")) return setError("Enter valid email");
+
     setIsVerifying(true);
     setError(null);
+
     try {
-      await api.post("/send-otp", { email });
+      const res = await api.post("/send-otp", { email });
+
+      console.log("OTP RESPONSE:", res.data);
+
+      if (res.data?.otp) {
+        alert(`TEST OTP: ${res.data.otp}`);
+      }
+
       setOtpSent(true);
       setError(null);
     } catch (err: any) {
       console.error("Send OTP Error:", err);
-      if (err.response?.status === 404) {
-        setError("Backend Error: Route does not exist.");
-      } else {
-        setError(
-          err.response?.data?.message ||
-            err.response?.data?.error ||
-            "OTP service failed.",
-        );
-      }
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "OTP service failed.",
+      );
     } finally {
       setIsVerifying(false);
     }
