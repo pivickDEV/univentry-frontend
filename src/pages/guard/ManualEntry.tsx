@@ -156,9 +156,9 @@ const ManualEntry = () => {
       setError(null);
 
       try {
-        const res = await api.get("/slots", {
+        const res = await api.get("/offices/slots", {
           params: {
-            bookingDate: bookingDate.trim(),
+            date: bookingDate,
             office: office.trim(),
           },
         });
