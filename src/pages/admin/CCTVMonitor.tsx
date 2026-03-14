@@ -20,12 +20,11 @@ import {
   FiWifiOff,
 } from "react-icons/fi";
 
-// 🚀 THE FIX: API points to RAILWAY
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
   headers: {
     "Content-Type": "application/json",
-    "ngrok-skip-browser-warning": "69420", // Kept just as a safety fallback
+    "ngrok-skip-browser-warning": "69420",
   },
 });
 
@@ -58,12 +57,10 @@ interface RecognitionLog {
 }
 
 const CCTVMonitor = () => {
-  // 🚀 VERCEL PREP: Secure WebSocket connection uses Ngrok!
   const [cameras] = useState<Camera[]>([
     {
       id: "CAM_1",
       name: "Main Gate Camera",
-      // It looks for your Ngrok URL in the .env file!
       wsUrl: import.meta.env.VITE_WS_CAM_1 || "ws://localhost:9999",
     },
   ]);
@@ -100,13 +97,19 @@ const CCTVMonitor = () => {
         if (!isMounted) return;
         setSystemStatus("SYNCING DB VECTORS...");
 
-        const [visitorsRes, logsRes] = await Promise.all([
-          api.get("/bookings"),
-          api.get("/cctv-logs"),
-        ]);
+        // 🔥 FIX: Separate API calls with individual `.catch()` handlers.
+        // If /cctv-logs returns 404, it won't crash the /bookings Face Vector sync anymore!
+        const visitorsRes = await api.get("/bookings").catch((err) => {
+          console.error("Failed to load visitor faces:", err);
+          return { data: [] };
+        });
+
+        const logsRes = await api.get("/cctv-logs").catch((err) => {
+          console.warn("Notice: /cctv-logs 404. Proceeding without history.");
+          return { data: [] };
+        });
 
         const labeledDescriptors: faceapi.LabeledFaceDescriptors[] = [];
-
         const visitorsArray = Array.isArray(visitorsRes.data)
           ? visitorsRes.data
           : visitorsRes.data?.data || [];
@@ -115,6 +118,8 @@ const CCTVMonitor = () => {
           visitorsArray.forEach((v: DBVisitor) => {
             if (!v.faceEmbedding) return;
             let arr: number[] = [];
+
+            // Handle different ways Mongoose might have returned the array
             if (typeof v.faceEmbedding === "string") {
               try {
                 arr = JSON.parse(v.faceEmbedding);
@@ -138,11 +143,14 @@ const CCTVMonitor = () => {
         }
 
         if (labeledDescriptors.length > 0 && isMounted) {
+          // 0.6 is the strictness distance (lower = stricter)
           setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.6));
+        } else {
+          console.warn("⚠️ No faces found in DB to match against.");
         }
 
         if (isMounted) {
-          if (logsRes.data) {
+          if (logsRes.data && Array.isArray(logsRes.data)) {
             const sorted = logsRes.data.sort(
               (a: any, b: any) =>
                 new Date(b.timestamp).getTime() -
@@ -200,7 +208,6 @@ const CCTVMonitor = () => {
               )
               .slice(0, 50),
           );
-          // ✅ FIX: Removed console.error to prevent console flooding when DB drops
           api.post("/cctv-logs", outLog).catch(() => {});
         }
       });
@@ -259,9 +266,7 @@ const CCTVMonitor = () => {
 
     try {
       await api.post("/cctv-logs", newLog);
-    } catch (err) {
-      // ✅ FIX: Removed console.error to prevent console flooding on failed network logs
-    }
+    } catch (err) {}
   };
 
   const filteredLogs = logs
@@ -303,7 +308,7 @@ const CCTVMonitor = () => {
         )}
       </AnimatePresence>
 
-      <div className="max-w-425 mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
+      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
         <div className="flex items-center gap-4">
           <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
             <FiShield className="text-2xl lg:text-3xl" />
@@ -345,7 +350,7 @@ const CCTVMonitor = () => {
         </div>
       </div>
 
-      <div className="max-w-425 mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 overflow-hidden">
+      <div className="max-w-[1600px] mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 overflow-hidden">
         <div className="flex-[2.5] bg-white rounded-[2.5rem] border border-slate-200 p-6 lg:p-8 flex flex-col overflow-hidden shadow-xl">
           <div className="flex items-center gap-3 mb-6 shrink-0">
             <div className="p-2 bg-blue-50 text-[#0038A8] rounded-lg">
@@ -510,7 +515,7 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
   const playerRef = useRef<any>(null);
 
   const [streamStatus, setStreamStatus] = useState("CONNECTING TO NODE...");
-  const [refreshKey, setRefreshKey] = useState(0); // ✅ FIX: Triggers manual reconnect
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -533,7 +538,6 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
       try {
         setStreamStatus("CONNECTING TO NODE...");
 
-        // Ensure previous player is completely destroyed before making a new one
         if (playerRef.current) {
           playerRef.current.destroy();
           playerRef.current = null;
@@ -549,12 +553,9 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
           onStalled: () => setStreamStatus("BUFFERING..."),
         });
 
-        // ✅ FIX: Constantly check if the socket closes. If it drops, destroy the player!
-        // This completely prevents JSMpeg from endlessly trying to reconnect and spamming your console!
         socketInterval = setInterval(() => {
           if (playerRef.current?.source?.socket) {
             const rs = playerRef.current.source.socket.readyState;
-            // 2: CLOSING, 3: CLOSED
             if (rs === 2 || rs === 3) {
               setStreamStatus("OFFLINE");
               if (playerRef.current) {
@@ -579,7 +580,7 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
         playerRef.current = null;
       }
     };
-  }, [camera.wsUrl, refreshKey]); // ✅ Re-runs whenever the Refresh button is clicked
+  }, [camera.wsUrl, refreshKey]);
 
   useEffect(() => {
     if (!modelsLoaded || streamStatus !== "LIVE") return;
@@ -622,7 +623,11 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
           detections,
           displaySize,
         );
-        const ctx = canvas.getContext("2d");
+
+        // 🔥 FIX: Added willReadFrequently to suppress console warnings and improve loop speed
+        const ctx = canvas.getContext("2d", {
+          willReadFrequently: true,
+        }) as CanvasRenderingContext2D;
         ctx?.clearRect(0, 0, canvas.width, canvas.height);
 
         resizedDetections.forEach((detection) => {
@@ -695,10 +700,8 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
       ref={containerRef}
       className="relative bg-[#0a0f1c] rounded-4xl overflow-hidden aspect-video shadow-2xl group border-[6px] border-slate-100 flex items-center justify-center"
     >
-      {/* 🔥 THE HIGH-TECH OFFLINE UI */}
       {streamStatus !== "LIVE" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0f1c] z-50 overflow-hidden">
-          {/* Cyber Grid Background */}
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[20px_20px] opacity-20"></div>
 
           {streamStatus === "BUFFERING..." ||
@@ -725,7 +728,6 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
                 active.
               </span>
 
-              {/* ✅ FIX: THE NEW REFRESH BUTTON */}
               <button
                 onClick={() => setRefreshKey((prev) => prev + 1)}
                 className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-600 transition-all shadow-[0_4px_15px_rgba(0,0,0,0.3)] hover:shadow-[0_0_15px_rgba(52,211,153,0.3)] active:scale-95 group cursor-pointer"
