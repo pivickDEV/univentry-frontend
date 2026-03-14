@@ -450,7 +450,7 @@ const AuditTrail = () => {
                     </td>
                     <td className="px-8 py-5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-slate-700 uppercase bg-slate-100 px-3 py-1.5 rounded-full truncate max-w-37.5 border border-slate-200">
+                        <span className="text-[10px] font-black text-slate-700 uppercase  px-3 py-1.5 rounded-full truncate max-w-37.5 ">
                           {log.office || "N/A"}
                         </span>
                       </div>
@@ -503,7 +503,7 @@ const AuditTrail = () => {
                       </span>
                     </td>
                     <td className="px-8 py-5 text-right whitespace-nowrap">
-                      <span className="text-[9px] font-black text-slate-500 uppercase px-2.5 py-1 bg-slate-50 rounded-lg border border-slate-200">
+                      <span className="text-[9px] font-black text-slate-500 uppercase px-2.5 py-1  rounded-lg ">
                         {log.actionBy ? log.actionBy.split(" ")[0] : "SYSTEM"}
                       </span>
                     </td>
