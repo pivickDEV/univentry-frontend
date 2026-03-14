@@ -308,7 +308,7 @@ const CCTVMonitor = () => {
         )}
       </AnimatePresence>
 
-      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
+      <div className="max-w-400 mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
         <div className="flex items-center gap-4">
           <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
             <FiShield className="text-2xl lg:text-3xl" />
@@ -350,7 +350,7 @@ const CCTVMonitor = () => {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 overflow-hidden">
+      <div className="max-w-400 mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 overflow-hidden">
         <div className="flex-[2.5] bg-white rounded-[2.5rem] border border-slate-200 p-6 lg:p-8 flex flex-col overflow-hidden shadow-xl">
           <div className="flex items-center gap-3 mb-6 shrink-0">
             <div className="p-2 bg-blue-50 text-[#0038A8] rounded-lg">

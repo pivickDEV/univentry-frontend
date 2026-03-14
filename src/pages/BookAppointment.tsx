@@ -1,5 +1,6 @@
 /* eslint-disable */
 "use client";
+
 import axios from "axios";
 import * as faceapi from "face-api.js";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
@@ -108,7 +109,7 @@ const BookAppointment = () => {
     ],
   };
 
-  // --- PRINTER / DOWNLOAD LOGIC (🔥 RESTORED AND FIXED) ---
+  // --- PRINTER / DOWNLOAD LOGIC ---
   const qrUrl = bookingId
     ? `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${bookingId}`
     : "";
@@ -127,9 +128,7 @@ const BookAppointment = () => {
       window.URL.revokeObjectURL(url);
     } catch (e) {
       console.error("Download failed", e);
-      alert(
-        "Download failed due to network settings. A copy of this pass has been sent to your email.",
-      );
+      alert("Download failed due to network settings.");
     }
   };
 
@@ -196,7 +195,6 @@ const BookAppointment = () => {
     }
   };
 
-  // 1. Fetch Offices from Management
   useEffect(() => {
     const fetchOffices = async () => {
       try {
@@ -209,7 +207,6 @@ const BookAppointment = () => {
     fetchOffices();
   }, []);
 
-  // 2. Real-time Capacity Logic
   useEffect(() => {
     const fetchCapacity = async () => {
       if (!bookingDate || !office) return;
@@ -229,7 +226,6 @@ const BookAppointment = () => {
     fetchCapacity();
   }, [bookingDate, office]);
 
-  // Biometric Model Loading
   useEffect(() => {
     const loadModels = async () => {
       try {
@@ -303,34 +299,47 @@ const BookAppointment = () => {
     };
   }, [step, faceScan, detectFace]);
 
+  // 🚀 FIXED: PROPER ERROR CATCHING SO BUTTON STOPS SPINNING
   const handleSendOTP = async () => {
     if (!email.includes("@")) return setError("Enter valid email");
     setIsVerifying(true);
+    setError(null);
     try {
-      await api.post("/send-otp", { email });
+      await api.post("/send-otp", { email }); // Check if this should be /auth/send-otp
       setOtpSent(true);
       setError(null);
-    } catch {
-      setError("OTP service error.");
+    } catch (err: any) {
+      console.error("Send OTP Error:", err);
+      if (err.response?.status === 404) {
+        setError("Backend Error: Route '/send-otp' does not exist.");
+      } else {
+        setError(err.response?.data?.message || "OTP service failed.");
+      }
     } finally {
       setIsVerifying(false);
     }
   };
 
+  // 🚀 FIXED: PROPER ERROR CATCHING SO BUTTON STOPS SPINNING
   const handleVerifyOTP = async () => {
     setIsVerifying(true);
+    setError(null);
     try {
-      const res = await api.post("/verify-otp", {
-        email,
-        otp: otpCode,
-      });
+      const res = await api.post("/verify-otp", { email, otp: otpCode }); // Check if this should be /auth/verify-otp
       if (res.data.success) {
         setIsEmailVerified(true);
         setStep(1);
         setError(null);
+      } else {
+        setError("Invalid OTP Code.");
       }
-    } catch {
-      setError("Invalid Code.");
+    } catch (err: any) {
+      console.error("Verify OTP Error:", err);
+      if (err.response?.status === 404) {
+        setError("Backend Error: Route '/verify-otp' does not exist.");
+      } else {
+        setError(err.response?.data?.message || "Invalid Code.");
+      }
     } finally {
       setIsVerifying(false);
     }
