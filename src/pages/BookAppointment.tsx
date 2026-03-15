@@ -250,22 +250,33 @@ const BookAppointment = () => {
       }
 
       setIsValidating(true);
+      setError(null);
 
       try {
-        const res = await api.get("/bookings/slots", {
-          params: { bookingDate, office },
+        const res = await api.get("/offices/slots", {
+          params: {
+            date: bookingDate,
+            office: office.trim(),
+          },
         });
+
+        console.log("SLOTS RESPONSE:", res.data);
 
         setSlots({
           current: Number(res.data?.current ?? 0),
           max: typeof res.data?.max === "number" ? res.data.max : null,
         });
       } catch (err: any) {
-        console.error(
-          "Slot fetch failed:",
-          err?.response?.data || err?.message,
-        );
+        console.error("Slot fetch failed:", {
+          status: err?.response?.status,
+          data: err?.response?.data,
+          url: err?.config?.url,
+          fullUrl: `${err?.config?.baseURL}${err?.config?.url}`,
+          params: err?.config?.params,
+        });
+
         setSlots({ current: 0, max: null });
+
         setError(
           err?.response?.data?.error ||
             err?.response?.data?.message ||
