@@ -609,7 +609,7 @@ const BookAppointment = () => {
       <motion.div
         animate={{ backgroundPosition: ["0px 0px", "100px 100px"] }}
         transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
-        className="fixed inset-0 z-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:3rem_3rem]"
+        className="fixed inset-0 z-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-size-[3rem_3rem]"
       />
       <motion.div
         animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
@@ -634,7 +634,7 @@ const BookAppointment = () => {
         className="absolute bottom-20 left-20 w-48 h-48 border border-[#0038A8]/40 rounded-full border-dotted hidden lg:block z-0"
       />
 
-      <div className="w-full max-w-[1200px] relative z-10 grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+      <div className="w-full max-w-300 relative z-10 grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
         {/* --- LEFT PANEL: BRANDING (Animated) --- */}
         <motion.div
           variants={containerVariants}
@@ -650,10 +650,10 @@ const BookAppointment = () => {
           </motion.div>
           <motion.h1
             variants={itemVariants}
-            className="text-5xl lg:text-7xl font-black tracking-tighter text-white mb-4 uppercase leading-[1]"
+            className="text-5xl lg:text-7xl font-black tracking-tighter text-white mb-4 uppercase leading-none"
           >
             Public <br className="hidden lg:block" />{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-[#FFD700]">
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-[#FFD700]">
               Clearance
             </span>
           </motion.h1>
@@ -765,7 +765,7 @@ const BookAppointment = () => {
                       transition={{ duration: 2, repeat: Infinity }}
                       className="absolute inset-0 bg-[#0038A8] blur-xl rounded-full"
                     />
-                    <div className="relative w-full h-full bg-gradient-to-br from-[#0038A8] to-blue-900 rounded-[2rem] flex items-center justify-center shadow-xl border border-white/20 transform rotate-3">
+                    <div className="relative w-full h-full bg-linear-to-br from-[#0038A8] to-blue-900 rounded-4xl flex items-center justify-center shadow-xl border border-white/20 transform rotate-3">
                       <FiMail className="text-4xl text-[#FFD700]" />
                     </div>
                   </div>
@@ -993,7 +993,7 @@ const BookAppointment = () => {
                       variants={itemVariants}
                       className={`transition-all ${!bookingDate ? "opacity-30 pointer-events-none grayscale" : "opacity-100"}`}
                     >
-                      <div className="bg-[#001233] rounded-[2rem] p-5 border-2 border-blue-900 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl relative overflow-hidden">
+                      <div className="bg-[#001233] rounded-4xl p-5 border-2 border-blue-900 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl relative overflow-hidden">
                         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:10px_10px]"></div>
                         <div className="flex items-center gap-4 relative z-10">
                           <div className="p-3 bg-[#0038A8] rounded-xl text-[#FFD700] shadow-[0_0_15px_rgba(0,56,168,0.8)]">
@@ -1101,7 +1101,7 @@ const BookAppointment = () => {
                   <div className="grid lg:grid-cols-2 gap-8 items-start">
                     {/* LEFT: FACIAL SCANNER */}
                     <div className="space-y-4">
-                      <div className="relative aspect-4/3 bg-[#001233] rounded-[2rem] overflow-hidden shadow-2xl border-[6px] border-[#0038A8]/30 group">
+                      <div className="relative aspect-4/3 bg-[#001233] rounded-4xl overflow-hidden shadow-2xl border-[6px] border-[#0038A8]/30 group">
                         <div className="absolute top-4 left-4 w-8 h-8 border-t-4 border-l-4 border-[#FFD700] opacity-50 z-20 pointer-events-none" />
                         <div className="absolute top-4 right-4 w-8 h-8 border-t-4 border-r-4 border-[#FFD700] opacity-50 z-20 pointer-events-none" />
                         <div className="absolute bottom-4 left-4 w-8 h-8 border-b-4 border-l-4 border-[#FFD700] opacity-50 z-20 pointer-events-none" />
@@ -1456,7 +1456,7 @@ const BookAppointment = () => {
                         <span className="text-[#FFD700] mx-2">•</span> {office}
                       </p>
 
-                      <div className="bg-white border-[4px] border-[#0038A8] p-3 rounded-2xl inline-block shadow-[0_10px_30px_rgba(0,56,168,0.15)] mb-3">
+                      <div className="bg-white border-4 border-[#0038A8] p-3 rounded-2xl inline-block shadow-[0_10px_30px_rgba(0,56,168,0.15)] mb-3">
                         <QRCodeSVG
                           value={bookingId || "error"}
                           size={140}
