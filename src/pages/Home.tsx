@@ -1,328 +1,571 @@
-import { motion, type Variants } from "framer-motion";
+import { motion, type TargetAndTransition, type Variants } from "framer-motion";
 import {
   FiActivity,
   FiArrowRight,
+  FiBriefcase,
   FiCamera,
   FiCheckCircle,
+  FiChevronRight,
   FiCode,
+  FiCpu,
+  FiCrosshair,
+  FiDatabase,
+  FiGlobe,
   FiLock,
   FiMail,
+  FiMessageSquare,
   FiShield,
+  FiSmartphone,
+  FiTruck,
+  FiUser,
+  FiUsers,
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
-// Animation Variants
-const fadeInUp: Variants = {
-  initial: { opacity: 0, y: 30 },
-  whileInView: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: "easeOut" },
-  },
+// --- STRICT ANIMATION VARIANTS ---
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 50 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
 };
 
 const staggerContainer: Variants = {
-  initial: {},
-  whileInView: {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
     transition: { staggerChildren: 0.2 },
   },
 };
 
+const rotateAnim: TargetAndTransition = {
+  rotate: 360,
+  transition: { duration: 20, repeat: Infinity, ease: "linear" },
+};
+
+const rotateReverseAnim: TargetAndTransition = {
+  rotate: -360,
+  transition: { duration: 15, repeat: Infinity, ease: "linear" },
+};
+
+const scanLineAnim: TargetAndTransition = {
+  top: ["0%", "100%", "0%"],
+  transition: { duration: 3, repeat: Infinity, ease: "linear" },
+};
+
+const pulseGlow: TargetAndTransition = {
+  boxShadow: [
+    "0px 0px 0px rgba(255,215,0,0)",
+    "0px 0px 40px rgba(255,215,0,0.4)",
+    "0px 0px 0px rgba(255,215,0,0)",
+  ],
+  transition: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+};
+
 const Home = () => {
-  const coreModules = [
-    {
-      title: "Face Recognition",
-      desc: "CNN-based identity verification at entry points to ensure authorized access only.",
-      icon: <FiCamera />,
-      accent: "border-[#0038A8]",
-    },
-    {
-      title: "QR Integration",
-      desc: "One-time, date-locked QR codes generated automatically upon admin approval.",
-      icon: <FiCode />,
-      accent: "border-[#FFD700]",
-    },
-    {
-      title: "Predictive Analytics",
-      desc: "Monitor visitor trends and detect anomalies using integrated IoT CCTV data.",
-      icon: <FiActivity />,
-      accent: "border-[#0038A8]",
-    },
-  ];
-
-  const visitorSteps = [
-    {
-      title: "Verify Email",
-      desc: "One-time link verification",
-      icon: <FiMail />,
-    },
-    {
-      title: "Book Appointment",
-      desc: "Upload ID and Face data",
-      icon: <FiCheckCircle />,
-    },
-    {
-      title: "Secure Entry",
-      desc: "QR Scan & Face Verification",
-      icon: <FiShield />,
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-[#FFD700] selection:text-[#0038A8] overflow-x-hidden">
-      {/* HEADER */}
-      <header className="fixed top-0 w-full z-100 bg-[#0038A8] text-white shadow-xl shadow-[#0038A8]/10 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 md:h-20 flex items-center justify-between">
-          {/* Logo Section */}
-          <div className="flex items-center gap-2 md:gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-[#FFD700] rounded-lg flex items-center justify-center text-[#0038A8] shadow-md transform -rotate-3 hover:rotate-0 transition-transform cursor-pointer">
-              <FiLock className="text-lg md:text-xl stroke-3" />
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans selection:bg-[#FFD700] selection:text-[#0038A8] overflow-x-hidden flex flex-col relative">
+      {/* ================= FLOATING DOCK HEADER ================= */}
+      <div className="fixed top-6 left-0 w-full z-50 flex justify-center px-4 pointer-events-none">
+        <header className="w-full max-w-5xl bg-[#001233]/80 backdrop-blur-2xl border border-white/10 rounded-full shadow-[0_20px_40px_-15px_rgba(0,56,168,0.5)] px-4 py-3 md:px-6 md:py-4 flex items-center justify-between pointer-events-auto">
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-[#FFD700] rounded-full flex items-center justify-center text-[#0038A8] shadow-[0_0_15px_rgba(255,215,0,0.5)] group-hover:scale-110 transition-transform duration-500">
+              <FiLock className="text-xl stroke-3" />
             </div>
-            <h1 className="text-xl md:text-2xl font-black tracking-tighter uppercase leading-none">
-              Uni<span className="text-[#FFD700]">Ventry</span>
+            <div className="hidden sm:block">
+              <h1 className="text-xl font-black tracking-tighter uppercase leading-none text-white">
+                Uni<span className="text-[#FFD700]">Ventry</span>
+              </h1>
+            </div>
+          </Link>
+
+          <div className="flex items-center gap-2 md:gap-4 bg-white/5 p-1.5 rounded-full border border-white/10">
+            <Link
+              to="/login"
+              className="flex items-center gap-2 text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-300 hover:text-white hover:bg-white/10 transition-all px-4 py-2 md:px-6 md:py-3 rounded-full"
+            >
+              <FiShield /> Console
+            </Link>
+            <Link
+              to="/book-appointment"
+              className="px-4 py-2 md:px-8 md:py-3 rounded-full bg-[#FFD700] hover:bg-yellow-300 text-[#0038A8] text-[10px] md:text-xs font-black tracking-widest uppercase transition-all shadow-[0_0_20px_rgba(255,215,0,0.3)] active:scale-95 flex items-center gap-2"
+            >
+              Book Appointment <FiArrowRight className="text-sm" />
+            </Link>
+          </div>
+        </header>
+      </div>
+
+      {/* ================= HERO SECTION (Deep Space Blue) ================= */}
+      <section className="relative pt-40 pb-20 md:pt-48 md:pb-32 bg-[#001233] min-h-[95vh] flex flex-col justify-center items-center overflow-hidden">
+        {/* Complex Tech Background */}
+        <div className="absolute inset-0 z-0 opacity-20 bg-[linear-gradient(to_right,#FFD700_1px,transparent_1px),linear-gradient(to_bottom,#FFD700_1px,transparent_1px)] bg-[size:100px_100px][mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_10%,transparent_100%)]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-200 h-150 bg-[#0038A8]/40 rounded-full blur-[150px] pointer-events-none" />
+
+        <div className="max-w-350 w-full mx-auto px-6 relative z-10">
+          <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+            {/* LEFT: Massive Typography & CTA */}
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+              className="lg:col-span-7 flex flex-col items-center lg:items-start text-center lg:text-left pt-10 lg:pt-0"
+            >
+              <motion.div
+                variants={fadeUp}
+                className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-[#0038A8]/40 border border-[#0038A8] text-blue-200 text-[10px] md:text-xs font-black uppercase tracking-[0.3em] mb-8 backdrop-blur-md"
+              >
+                <span className="w-2 h-2 rounded-full bg-[#FFD700] animate-pulse" />
+                System Version 2.0 Live
+              </motion.div>
+
+              <motion.h1
+                variants={fadeUp}
+                className="text-[3.5rem] sm:text-6xl md:text-7xl lg:text-[6.5rem] font-black leading-[0.95] tracking-tighter mb-8 text-white"
+              >
+                THE SMART <br />
+                <span className="text-transparent bg-clip-text bg-linear-to-r from-[#FFD700] via-yellow-200 to-[#0038A8]">
+                  CAMPUS GRID
+                </span>
+              </motion.h1>
+
+              <motion.p
+                variants={fadeUp}
+                className="text-slate-400 text-sm md:text-lg max-w-xl font-medium leading-relaxed mb-10 lg:mb-14"
+              >
+                A non-conventional, ultra-secure IoT ecosystem utilizing CNN
+                Facial Recognition and Dynamic Cryptographic QR passes for Rizal
+                Technological University.
+              </motion.p>
+
+              <motion.div
+                variants={fadeUp}
+                className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto"
+              >
+                <Link
+                  to="/book-appointment"
+                  className="w-full sm:w-auto px-10 py-5 rounded-full bg-[#0038A8] text-[#FFD700] text-xs lg:text-sm font-black tracking-[0.2em] uppercase transition-all shadow-[0_10px_40px_rgba(0,56,168,0.6)] hover:bg-[#002b82] hover:-translate-y-1 flex items-center justify-center gap-3 group border border-blue-600/50"
+                >
+                  Book Appointment{" "}
+                  <FiChevronRight className="text-lg group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  <FiDatabase size={24} className="text-emerald-500" /> Secure
+                  NoSQL Auth
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {/* RIGHT: Pure CSS / Framer Motion Biometric HUD (NO IMAGES) */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
+              className="lg:col-span-5 relative flex justify-center items-center h-100 lg:h-150 w-full"
+            >
+              {/* HUD Core */}
+              <div className="relative w-75 h-75 lg:w-112.5 lg:h-112.5 flex items-center justify-center">
+                {/* Outer Ring 1 (Dashed) */}
+                <motion.div
+                  animate={rotateAnim}
+                  className="absolute inset-0 rounded-full border-2 border-dashed border-[#0038A8]/60"
+                />
+
+                {/* Outer Ring 2 (Solid with gaps) */}
+                <motion.div
+                  animate={rotateReverseAnim}
+                  className="absolute inset-4 rounded-full border border-[#FFD700]/30"
+                  style={{
+                    clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
+                  }}
+                />
+
+                {/* Center Glass Plate */}
+                <motion.div
+                  animate={pulseGlow}
+                  className="absolute inset-12 bg-[#0038A8]/10 backdrop-blur-md rounded-full border border-blue-400/20 flex flex-col items-center justify-center overflow-hidden"
+                >
+                  <FiCrosshair className="text-8xl lg:text-9xl text-[#FFD700] opacity-30 absolute" />
+                  <FiUser className="text-6xl lg:text-8xl text-white relative z-10" />
+
+                  {/* CSS Scanning Laser */}
+                  <motion.div
+                    animate={scanLineAnim}
+                    className="absolute left-0 right-0 h-0.5 bg-[#FFD700] shadow-[0_0_20px_#FFD700] z-20"
+                  />
+                </motion.div>
+
+                {/* Floating HUD Tags */}
+                <div className="absolute -left-10 top-1/4 bg-[#001233]/90 backdrop-blur-xl px-4 py-2 rounded-xl border border-[#0038A8] shadow-2xl flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className="flex flex-col">
+                    <span className="text-[7px] text-slate-400 uppercase tracking-widest font-black">
+                      Vector Status
+                    </span>
+                    <span className="text-[10px] text-white font-bold uppercase tracking-wider">
+                      Identity Verified
+                    </span>
+                  </div>
+                </div>
+
+                <div className="absolute -right-6 bottom-1/4 bg-[#001233]/90 backdrop-blur-xl px-4 py-2 rounded-xl border border-[#FFD700]/50 shadow-2xl flex items-center gap-3">
+                  <FiCode className="text-[#FFD700]" />
+                  <div className="flex flex-col">
+                    <span className="text-[7px] text-slate-400 uppercase tracking-widest font-black">
+                      QR Matrix
+                    </span>
+                    <span className="text-[10px] text-white font-bold uppercase tracking-wider">
+                      Token Active
+                    </span>
+                  </div>
+                </div>
+
+                {/* Decorative Corner Brackets */}
+                <div className="absolute -top-4 -left-4 w-12 h-12 border-t-[3px] border-l-[3px] border-[#0038A8] rounded-tl-xl" />
+                <div className="absolute -top-4 -right-4 w-12 h-12 border-t-[3px] border-r-[3px] border-[#0038A8] rounded-tr-xl" />
+                <div className="absolute -bottom-4 -left-4 w-12 h-12 border-b-[3px] border-l-[3px] border-[#0038A8] rounded-bl-xl" />
+                <div className="absolute -bottom-4 -right-4 w-12 h-12 border-b-[3px] border-r-[3px] border-[#0038A8] rounded-br-xl" />
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= INFINITE MARQUEE RIBBON (Gold) ================= */}
+      <div className="bg-[#FFD700] py-4 md:py-5 overflow-hidden flex border-y-4 border-[#0038A8] relative z-20">
+        <motion.div
+          animate={{ x: [0, -1035] }} // Adjust based on content width
+          transition={{ duration: 15, ease: "linear", repeat: Infinity }}
+          className="flex w-max gap-12 md:gap-24 px-6 text-[11px] md:text-sm font-black text-[#0038A8] uppercase tracking-[0.3em] whitespace-nowrap items-center"
+        >
+          <span className="flex items-center gap-3">
+            <FiCpu size={18} /> Optical Character Recognition
+          </span>
+          <span className="flex items-center gap-3">
+            <FiCamera size={18} /> face-api.js Biometrics
+          </span>
+          <span className="flex items-center gap-3">
+            <FiDatabase size={18} /> MongoDB Cloud Clusters
+          </span>
+          <span className="flex items-center gap-3">
+            <FiGlobe size={18} /> Node.js WebSockets
+          </span>
+          {/* Duplicate for seamless loop */}
+          <span className="flex items-center gap-3">
+            <FiCpu size={18} /> Optical Character Recognition
+          </span>
+          <span className="flex items-center gap-3">
+            <FiCamera size={18} /> face-api.js Biometrics
+          </span>
+          <span className="flex items-center gap-3">
+            <FiDatabase size={18} /> MongoDB Cloud Clusters
+          </span>
+          <span className="flex items-center gap-3">
+            <FiGlobe size={18} /> Node.js WebSockets
+          </span>
+        </motion.div>
+      </div>
+
+      {/* ================= BENTO BOX ARCHITECTURE SECTION ================= */}
+      <section className="py-32 lg:py-48 bg-[#F8FAFC]">
+        <div className="max-w-350 mx-auto px-6">
+          <div className="mb-20 md:mb-32 max-w-3xl">
+            <h2 className="text-[#0038A8] text-xs font-black uppercase tracking-[0.4em] mb-6 flex items-center gap-4">
+              <span className="w-12 h-0.5 bg-[#0038A8]" /> Core Infrastructure
+            </h2>
+            <h3 className="text-4xl md:text-6xl font-black tracking-tighter text-slate-900 leading-[1.1]">
+              Uncompromising <br /> Security Modules.
+            </h3>
+          </div>
+
+          {/* Bento Grid */}
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 auto-rows-[350px]"
+          >
+            {/* Box 1 (Large - Col Span 2) */}
+            <motion.div
+              variants={fadeUp}
+              className="md:col-span-2 relative p-10 lg:p-14 bg-[#0038A8] rounded-[2.5rem] lg:rounded-[3rem] overflow-hidden group shadow-2xl shadow-blue-900/20"
+            >
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 mix-blend-overlay" />
+              <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="w-16 h-16 rounded-2xl bg-[#FFD700] flex items-center justify-center text-[#0038A8] text-3xl shadow-lg">
+                  <FiCrosshair />
+                </div>
+                <div>
+                  <h3 className="text-3xl lg:text-4xl font-black text-white tracking-tight mb-4">
+                    Facial Biometrics
+                  </h3>
+                  <p className="text-blue-200 text-sm lg:text-base font-medium max-w-md leading-relaxed">
+                    Utilizes CNN-based identity verification at entry points,
+                    converting physical facial structures into secure
+                    128-dimensional float arrays for unforgeable identification.
+                  </p>
+                </div>
+              </div>
+              {/* Decorative graphic */}
+              <div className="absolute -bottom-20 -right-20 text-white/5 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                <FiUser size={400} />
+              </div>
+            </motion.div>
+
+            {/* Box 2 (Tall/Square) */}
+            <motion.div
+              variants={fadeUp}
+              className="relative p-10 lg:p-14 bg-white rounded-[2.5rem] lg:rounded-[3rem] border-2 border-slate-100 shadow-xl overflow-hidden group hover:border-[#FFD700] transition-colors duration-500"
+            >
+              <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-[#0038A8] text-3xl border border-amber-100">
+                  <FiSmartphone />
+                </div>
+                <div>
+                  <h3 className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight mb-4">
+                    Dynamic QR
+                  </h3>
+                  <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                    Generates time-locked, encrypted QR passes dispatched via
+                    email for seamless validation.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Box 3 (Wide - Col Span 3) */}
+            <motion.div
+              variants={fadeUp}
+              className="md:col-span-3 relative p-10 lg:p-14 bg-[#001233] rounded-[2.5rem] lg:rounded-[3rem] overflow-hidden flex flex-col md:flex-row items-center justify-between gap-12 group shadow-2xl"
+            >
+              <div className="absolute inset-0 bg-linear-to-r from-[#0038A8]/20 to-transparent opacity-50" />
+              <div className="relative z-10 max-w-xl">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-emerald-400 text-2xl border border-white/20">
+                    <FiDatabase />
+                  </div>
+                  <span className="text-[10px] font-black text-white uppercase tracking-[0.3em] bg-emerald-500/20 px-4 py-2 rounded-full border border-emerald-500/30">
+                    Live Monitoring
+                  </span>
+                </div>
+                <h3 className="text-3xl lg:text-4xl font-black text-white tracking-tight mb-4">
+                  IoT Surveillance Logs
+                </h3>
+                <p className="text-slate-400 text-sm lg:text-base font-medium leading-relaxed">
+                  Tracks campus flow using edge-node CCTV cameras. Triggers
+                  automated SMS warnings via iProgSMS API for overstaying
+                  visitors, backed by an immutable NoSQL audit trail.
+                </p>
+              </div>
+              {/* Abstract Data Nodes */}
+              <div className="relative z-10 hidden lg:flex items-center gap-6">
+                <div className="w-24 h-24 rounded-full border border-white/20 flex items-center justify-center text-white/50 animate-[spin_10s_linear_infinite]">
+                  <FiActivity size={32} />
+                </div>
+                <div className="w-32 h-32 rounded-full border-2 border-[#0038A8] flex items-center justify-center text-[#FFD700] shadow-[0_0_30px_rgba(0,56,168,0.5)]">
+                  <FiGlobe size={48} />
+                </div>
+                <div className="w-24 h-24 rounded-full border border-white/20 flex items-center justify-center text-white/50 animate-[spin_10s_linear_infinite_reverse]">
+                  <FiMessageSquare size={32} />
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ================= VERTICAL TIMELINE JOURNEY ================= */}
+      <section className="py-32 lg:py-48 bg-white relative">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-24 md:mb-32">
+            <h2 className="text-[#0038A8] text-xs font-black uppercase tracking-[0.4em] mb-4">
+              Operation Flow
+            </h2>
+            <h3 className="text-4xl lg:text-6xl font-black tracking-tight text-slate-900">
+              The Visitor Protocol
+            </h3>
+          </div>
+
+          <div className="relative pl-8 md:pl-0">
+            {/* Timeline Line */}
+            <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-1 bg-slate-100 -translate-x-1/2 rounded-full" />
+
+            {[
+              {
+                step: "01",
+                title: "Verify Identity",
+                desc: "Authenticate via OTP protocol to ensure traceability and log integrity.",
+                icon: <FiMail />,
+                align: "left",
+              },
+              {
+                step: "02",
+                title: "Digital KYC",
+                desc: "Submit physical ID and facial biometrics for server-side AI extraction.",
+                icon: <FiShield />,
+                align: "right",
+              },
+              {
+                step: "03",
+                title: "Access Granted",
+                desc: "Scan Digital QR Pass at the Security Terminal to initiate tracking.",
+                icon: <FiCheckCircle />,
+                align: "left",
+              },
+            ].map((item, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.6 }}
+                className={`relative flex items-center justify-between mb-16 md:mb-24 w-full ${item.align === "left" ? "md:flex-row-reverse" : "md:flex-row"}`}
+              >
+                {/* Empty Space for alternate side on desktop */}
+                <div className="hidden md:block w-5/12" />
+
+                {/* Timeline Node */}
+                <div className="absolute left-0 md:left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-[#FFD700] border-4 border-white shadow-xl flex items-center justify-center z-10 text-[#0038A8] font-black text-sm">
+                  {item.step}
+                </div>
+
+                {/* Content Card */}
+                <div className="w-full md:w-5/12 pl-12 md:pl-0">
+                  <div className="bg-slate-50 p-8 lg:p-10 rounded-4xl border border-slate-200 shadow-lg hover:shadow-2xl hover:border-[#0038A8]/30 transition-all duration-500 group">
+                    <div className="text-4xl text-[#0038A8] mb-6 group-hover:scale-110 transition-transform origin-left">
+                      {item.icon}
+                    </div>
+                    <h4 className="text-2xl font-black text-slate-900 tracking-tight mb-3">
+                      {item.title}
+                    </h4>
+                    <p className="text-sm font-medium text-slate-500 leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ================= UNIVERSAL ACCESS (Staggered Cards) ================= */}
+      <section className="py-32 lg:py-48 bg-[#001233] border-t-10 border-[#FFD700] relative overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute top-0 right-0 w-200 h-200 bg-[#0038A8]/20 rounded-full blur-[150px] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="mb-20 lg:mb-32">
+            <h2 className="text-[#FFD700] text-xs font-black uppercase tracking-[0.4em] mb-6 flex items-center gap-4">
+              <span className="w-12 h-0.5 bg-[#FFD700]" /> Demographics
+            </h2>
+            <h3 className="text-4xl lg:text-6xl font-black tracking-tight text-white mb-8">
+              Adaptive Access Control.
+            </h3>
+            <p className="text-blue-200 text-lg max-w-2xl font-medium leading-relaxed">
+              The system dynamically categorizes visitors to enforce tailored
+              security protocols based on their institutional relationship.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { icon: <FiUser />, title: "Students & Alumni", delay: 0 },
+              {
+                icon: <FiBriefcase />,
+                title: "Applicants & Staff",
+                delay: 0.1,
+              },
+              { icon: <FiTruck />, title: "Suppliers & Merchants", delay: 0.2 },
+              { icon: <FiUsers />, title: "Parents & Guests", delay: 0.3 },
+            ].map((item, idx) => (
+              <motion.div
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: item.delay, duration: 0.6 }}
+                key={idx}
+                className={`bg-white/5 backdrop-blur-md p-8 lg:p-10 rounded-[2.5rem] border border-white/10 text-center hover:bg-[#0038A8] hover:border-[#0038A8] transition-all duration-500 group ${idx % 2 !== 0 ? "lg:translate-y-12" : ""}`}
+              >
+                <div className="w-20 h-20 mx-auto rounded-3xl flex items-center justify-center text-3xl mb-8 bg-black/20 text-[#FFD700] group-hover:bg-[#FFD700] group-hover:text-[#0038A8] transition-colors duration-500 shadow-inner">
+                  {item.icon}
+                </div>
+                <h4 className="text-lg font-black text-white tracking-wide">
+                  {item.title}
+                </h4>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ================= MASSIVE FOOTER ================= */}
+      <footer className="bg-[#000a1f] text-white pt-32 pb-12 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6 relative">
+          {/* Edge-to-Edge Typography */}
+          <div className="text-center mb-24">
+            <h1 className="text-[15vw] leading-none font-black text-white/5 tracking-tighter select-none">
+              UNIVENTRY
             </h1>
           </div>
 
-          {/* Actions Section */}
-          <div className="flex items-center gap-4 md:gap-8">
-            <Link
-              to="/login"
-              className="hidden sm:block text-xs md:text-sm font-bold hover:text-[#FFD700] transition-colors uppercase tracking-widest"
-            >
-              Staff Login
-            </Link>
-            {/* Mobile-optimized button */}
-            <Link
-              to="/book-appointment"
-              className="px-4 py-2 md:px-6 md:py-3 rounded-full bg-[#FFD700] hover:bg-white text-[#0038A8] text-[10px] md:text-xs font-black tracking-widest uppercase transition-all shadow-lg shadow-black/10 active:scale-95 whitespace-nowrap"
-            >
-              Request Visit
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* SECTION 1: HERO */}
-      <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 bg-linear-to-b from-slate-50 to-white overflow-hidden">
-        {/* Background Blobs (Scaled for mobile) */}
-        <div className="absolute top-[-10%] right-[-5%] w-75 h-75 md:w-125 md:h-125 bg-[#FFD700]/10 rounded-full blur-[80px] md:blur-[120px] animate-pulse pointer-events-none" />
-        <div className="absolute bottom-[10%] left-[-5%] w-62.55 h-62.5 md:w-100 md:h-100 bg-[#0038A8]/5 rounded-full blur-[60px] md:blur-[100px] pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Text Content */}
-            <motion.div
-              variants={fadeInUp}
-              initial="initial"
-              whileInView="whileInView"
-              viewport={{ once: true }}
-              className="space-y-6 md:space-y-8 text-center lg:text-left order-2 lg:order-1"
-            >
-              <span className="inline-block px-3 py-1.5 md:px-4 rounded-full bg-[#0038A8] text-[#FFD700] text-[10px] md:text-[11px] font-bold uppercase tracking-[0.2em] shadow-lg">
-                Secure IoT Ecosystem
-              </span>
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-black text-[#0038A8] leading-none md:leading-[0.9] tracking-tighter">
-                Smart Visitor <br />
-                <span className="text-slate-900">Monitoring</span>
-              </h1>
-              <p className="text-base md:text-xl text-slate-600 max-w-lg mx-auto lg:mx-0 leading-relaxed font-medium">
-                A centralized Capstone solution utilizing{" "}
-                <span className="text-[#0038A8] font-bold">
-                  Face Recognition
-                </span>{" "}
-                and{" "}
-                <span className="text-[#0038A8] font-bold">QR Integration</span>{" "}
-                for high-security campus monitoring.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link
-                  to="/book-appointment"
-                  className="group px-8 py-4 md:px-10 md:py-5 bg-[#0038A8] text-white text-sm md:text-base font-black rounded-xl flex items-center justify-center gap-3 hover:bg-[#FFD700] hover:text-[#0038A8] transition-all shadow-2xl hover:-translate-y-1"
-                >
-                  START APPOINTMENT{" "}
-                  <FiArrowRight className="group-hover:translate-x-2 transition-transform" />
-                </Link>
-                {/* Mobile only staff link for ease of access */}
-                <Link
-                  to="/login"
-                  className="sm:hidden px-8 py-4 text-[#0038A8] font-bold border-2 border-[#0038A8]/10 rounded-xl flex items-center justify-center hover:bg-slate-50 transition-colors"
-                >
-                  STAFF LOGIN
-                </Link>
-              </div>
-            </motion.div>
-
-            {/* Image Content */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8 }}
-              className="relative order-1 lg:order-2"
-            >
-              <div className="absolute -inset-4 bg-linear-to-tr from-[#FFD700] to-[#0038A8] rounded-3xl blur-2xl opacity-20 animate-pulse" />
-              <div className="relative border-4 md:border-12border-white bg-white rounded-2xl md:rounded-4xl shadow-[0_20px_50px_-10px_rgba(0,0,0,0.15)] overflow-hidden">
-                <img
-                  src="/login_image.png"
-                  alt="IoT Interface"
-                  className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
-                />
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 2: MODULES */}
-      <section className="py-20 md:py-32 bg-[#0038A8] text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <motion.div
-            variants={fadeInUp}
-            initial="initial"
-            whileInView="whileInView"
-            viewport={{ once: true }}
-            className="text-center mb-12 md:mb-20 space-y-4"
-          >
-            <h2 className="text-[#FFD700] text-xs md:text-sm font-black uppercase tracking-[0.4em]">
-              Core Technology
-            </h2>
-            <h3 className="text-3xl md:text-5xl font-black tracking-tight">
-              Advanced Security Modules
-            </h3>
-            <div className="w-16 md:w-24 h-2 bg-[#FFD700] mx-auto rounded-full" />
-          </motion.div>
-
-          <motion.div
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="whileInView"
-            viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8"
-          >
-            {coreModules.map((module, i) => (
-              <motion.div
-                variants={fadeInUp}
-                key={i}
-                className="group p-8 md:p-10 bg-white/5 border border-white/10 rounded-3xl hover:bg-white hover:text-[#0038A8] transition-all duration-500 hover:-translate-y-4 shadow-xl"
-              >
-                <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-[#FFD700] flex items-center justify-center text-[#0038A8] text-2xl md:text-3xl mb-6 md:mb-8 group-hover:scale-110 transition-transform duration-500 shadow-lg shadow-[#FFD700]/20">
-                  {module.icon}
-                </div>
-                <h3 className="text-xl md:text-2xl font-black mb-3 md:mb-4 tracking-tight">
-                  {module.title}
-                </h3>
-                <p className="text-blue-100 group-hover:text-slate-600 text-sm md:text-base leading-relaxed font-medium">
-                  {module.desc}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* SECTION 3: JOURNEY */}
-      <section className="py-20 md:py-32 bg-white relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <motion.div
-            variants={fadeInUp}
-            initial="initial"
-            whileInView="whileInView"
-            viewport={{ once: true }}
-            className="flex flex-col items-center text-center mb-16 md:mb-24"
-          >
-            <h2 className="text-[#0038A8] text-xs md:text-sm font-black uppercase tracking-[0.4em] mb-4">
-              The Workflow
-            </h2>
-            <h3 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight">
-              The Visitor Journey
-            </h3>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
-            {visitorSteps.map((step, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{
-                  opacity: 1,
-                  x: 0,
-                  transition: { delay: i * 0.2, duration: 0.5 },
-                }}
-                viewport={{ once: true }}
-                whileHover={{
-                  scale: 1.05,
-                  y: -10,
-                  transition: { type: "spring", stiffness: 300, delay: 0 },
-                }}
-                className="relative p-8 md:p-10 bg-slate-50 rounded-3xl border-b-8 border-[#FFD700] shadow-sm hover:shadow-2xl transition-shadow cursor-default group"
-              >
-                {/* Step Number Badge */}
-                <div className="absolute -top-5 md:-top-6 left-8 md:left-10 w-10 h-10 md:w-12 md:h-12 bg-[#0038A8] text-[#FFD700] flex items-center justify-center rounded-xl font-black text-lg md:text-xl shadow-lg">
-                  0{i + 1}
-                </div>
-
-                {/* Icon */}
-                <div className="text-3xl md:text-4xl text-[#0038A8] mb-4 md:mb-6 mt-2 md:mt-4 group-hover:scale-100 transition-transform duration-300">
-                  {step.icon}
-                </div>
-
-                <h4 className="text-xl md:text-2xl font-black text-[#0038A8] mb-3 md:mb-4">
-                  {step.title}
-                </h4>
-                <p className="text-sm md:text-base text-slate-600 font-medium leading-relaxed">
-                  {step.desc}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="bg-[#002b82] text-white pt-16 md:pt-24 pb-8 md:pb-12 border-t-8 border-[#FFD700]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 md:gap-16 mb-12 md:mb-20 text-center md:text-left">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-16 mb-20 relative z-10 -mt-32">
             {/* Branding Column */}
-            <div className="lg:col-span-2 space-y-4 md:space-y-6">
-              <h1 className="text-3xl md:text-4xl font-black text-white">
-                UNI<span className="text-[#FFD700]">VENTRY</span>
-              </h1>
-              <p className="text-blue-100 text-base md:text-lg leading-relaxed mx-auto md:mx-0 max-w-sm">
-                IoT-Based Smart Visitor Management and Monitoring System for
-                Rizal Technological University.
+            <div className="lg:col-span-2 space-y-8 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-4">
+                <div className="w-12 h-12 bg-[#FFD700] rounded-xl flex items-center justify-center text-[#0038A8]">
+                  <FiLock className="text-2xl stroke-3" />
+                </div>
+                <div className="text-3xl font-black tracking-tighter uppercase leading-none">
+                  Uni<span className="text-[#FFD700]">Ventry</span>
+                </div>
+              </div>
+              <p className="text-slate-500 text-sm lg:text-base leading-relaxed max-w-md mx-auto md:mx-0 font-medium">
+                Engineered exclusively for Rizal Technological University.
+                Ensuring campus safety through immutable data logs and AI
+                surveillance.
               </p>
             </div>
 
             {/* Navigation Column */}
-            <div className="space-y-4 md:space-y-6">
-              <h5 className="text-[#FFD700] font-black uppercase tracking-widest text-sm">
-                Navigation
+            <div className="space-y-6 text-center md:text-left">
+              <h5 className="text-[#FFD700] font-black uppercase tracking-[0.2em] text-xs">
+                System Access
               </h5>
-              <ul className="space-y-3 md:space-y-4 font-bold text-blue-100 text-sm md:text-base">
+              <ul className="space-y-4 font-bold text-slate-300 text-sm">
+                <li>
+                  <Link
+                    to="/book-appointment"
+                    className="hover:text-white transition-colors flex items-center justify-center md:justify-start gap-3"
+                  >
+                    <FiArrowRight className="text-[#0038A8]" /> Public Gateway
+                  </Link>
+                </li>
                 <li>
                   <Link
                     to="/login"
-                    className="hover:text-[#FFD700] transition-colors"
+                    className="hover:text-white transition-colors flex items-center justify-center md:justify-start gap-3"
                   >
-                    Staff Portal
+                    <FiShield className="text-[#0038A8]" /> Security Portal
                   </Link>
                 </li>
               </ul>
             </div>
 
             {/* Standards Column */}
-            <div className="space-y-4 md:space-y-6">
-              <h5 className="text-[#FFD700] font-black uppercase tracking-widest text-sm">
-                Standards
+            <div className="space-y-6 text-center md:text-left">
+              <h5 className="text-[#FFD700] font-black uppercase tracking-[0.2em] text-xs">
+                Compliance
               </h5>
-              <ul className="space-y-3 md:space-y-4 font-bold text-blue-100 text-sm md:text-base">
-                <li>ISO 25010 Quality</li>
-                <li>RTU Pasig / Mandaluyong</li>
+              <ul className="space-y-4 font-bold text-slate-500 text-sm">
+                <li>ISO 25010 Quality Model</li>
+                <li>Data Privacy Act 2012</li>
+                <li>RTU Pasig & Boni</li>
               </ul>
             </div>
           </div>
 
-          <div className="pt-8 md:pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-blue-200/60 text-center">
-            <p>© {new Date().getFullYear()} UniVentry Capstone Project</p>
+          <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-[9px] lg:text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 text-center">
+            <p>© {new Date().getFullYear()} UniVentry Capstone Project.</p>
             <p>Department of Computer Studies</p>
           </div>
         </div>
