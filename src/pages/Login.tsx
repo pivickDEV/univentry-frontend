@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client";
 
 import axios from "axios";
@@ -100,20 +99,20 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 lg:p-8 font-sans relative overflow-hidden bg-slate-950 selection:bg-[#FFD700]/30 selection:text-[#FFD700]">
       {/* 1. BACKGROUND LAYER */}
-      <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#0038A8]/20 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-[#FFD700]/5 rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-size-[4rem_4rem]"></div>
+      <div className="absolute top-0 right-0 w-200 h-200 bg-[#0038A8]/20 rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-200 h-200 bg-[#FFD700]/5 rounded-full blur-[150px] pointer-events-none" />
 
       {/* 2. MAIN CARD */}
       <motion.div
         variants={containerVars}
         initial="hidden"
         animate="show"
-        className="relative z-10 w-full max-w-6xl bg-white rounded-[2.5rem] lg:rounded-[3rem] shadow-[0_0_80px_rgba(0,56,168,0.3)] overflow-hidden flex flex-col md:flex-row min-h-[40rem] lg:min-h-[46rem]"
+        className="relative z-10 w-full max-w-6xl bg-white rounded-[2.5rem] lg:rounded-[3rem] shadow-[0_0_80px_rgba(0,56,168,0.3)] overflow-hidden flex flex-col md:flex-row min-h-160 lg:min-h-184"
       >
         {/* === LEFT SIDE: DEEP TECH BRANDING === */}
         <div className="md:w-5/12 relative overflow-hidden bg-[#001233] p-10 lg:p-16 text-white flex flex-col justify-between border-r border-slate-800">
-          <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(0,56,168,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,56,168,0.1)_1px,transparent_1px)] bg-[size:20px_20px]" />
+          <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(0,56,168,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,56,168,0.1)_1px,transparent_1px)] bg-size-[20px_20px]" />
 
           <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#0038A8] opacity-50 rounded-full blur-[100px]" />
 
@@ -136,7 +135,7 @@ const Login = () => {
             {/* Title */}
             <h1 className="text-4xl lg:text-[3.25rem] font-black leading-[1.1] mb-6 tracking-tight">
               SECURE <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] to-amber-200">
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#FFD700] to-amber-200">
                 STAFF LOGIN
               </span>
             </h1>
