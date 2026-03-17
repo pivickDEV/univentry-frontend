@@ -646,15 +646,16 @@ const BookAppointment = () => {
             variants={itemVariants}
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-[#FFD700] text-[10px] font-black uppercase tracking-[0.2em] mb-6 shadow-[0_0_30px_rgba(0,56,168,0.5)] mx-auto lg:mx-0"
           >
-            <FiShield className="text-lg animate-pulse" /> Official RTU Node
+            <FiShield className="text-lg animate-pulse" /> Official RTU Online
+            Booking
           </motion.div>
           <motion.h1
             variants={itemVariants}
             className="text-5xl lg:text-7xl font-black tracking-tighter text-white mb-4 uppercase leading-none"
           >
-            Public <br className="hidden lg:block" />{" "}
+            Book <br className="hidden lg:block" />{" "}
             <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-[#FFD700]">
-              Clearance
+              Appointment
             </span>
           </motion.h1>
           <motion.p
