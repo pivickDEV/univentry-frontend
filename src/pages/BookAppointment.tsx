@@ -446,8 +446,7 @@ const BookAppointment = () => {
     setError(null);
 
     try {
-      // 🚀 FIXED: Pointing to /bookings/send-otp to prevent 404
-      const res = await api.post("/bookings/send-otp", {
+      const res = await api.post("/send-otp", {
         email: normalizedEmail,
       });
 
@@ -482,7 +481,7 @@ const BookAppointment = () => {
 
     try {
       // 🚀 FIXED: Pointing to /bookings/verify-otp to prevent 404
-      const res = await api.post("/bookings/verify-otp", {
+      const res = await api.post("/verify-otp", {
         email: normalizedEmail,
         otp: otpCode.trim(),
       });
