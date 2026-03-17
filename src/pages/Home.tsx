@@ -114,7 +114,7 @@ const Home = () => {
                 className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-[#0038A8]/40 border border-[#0038A8] text-blue-200 text-[10px] md:text-xs font-black uppercase tracking-[0.3em] mb-8 backdrop-blur-md"
               >
                 <span className="w-2 h-2 rounded-full bg-[#FFD700] animate-pulse" />
-                System Version 2.0 Live
+                System Version 1.0 Live
               </motion.div>
 
               <motion.h1
@@ -537,7 +537,7 @@ const Home = () => {
                     to="/book-appointment"
                     className="hover:text-white transition-colors flex items-center justify-center md:justify-start gap-3"
                   >
-                    <FiArrowRight className="text-[#0038A8]" /> Public Gateway
+                    <FiArrowRight className="text-[#0038A8]" /> Book Appointment
                   </Link>
                 </li>
                 <li>

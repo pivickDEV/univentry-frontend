@@ -180,7 +180,7 @@ const Login = () => {
           >
             <FiArrowLeft className="text-base group-hover:-translate-x-1 transition-transform" />
             <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">
-              Public Portal
+              Go back to Homepage
             </span>
           </button>
 
