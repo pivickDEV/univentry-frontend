@@ -324,7 +324,7 @@ const BookAppointment = () => {
       setError(null);
 
       try {
-        const res = await api.get("/bookings/slots", {
+        const res = await api.get("/offices/slots", {
           params: {
             bookingDate: bookingDate,
             office: office.trim(),
