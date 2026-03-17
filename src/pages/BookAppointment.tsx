@@ -579,12 +579,6 @@ const BookAppointment = () => {
     }
   };
 
-  const isStep1Valid =
-    firstName.trim() !== "" &&
-    lastName.trim() !== "" &&
-    category !== "" &&
-    /^09\d{9}$/.test(phoneNumber);
-
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
@@ -1568,24 +1562,6 @@ const Input = ({
       )}
     </div>
   </div>
-);
-
-// Stub for Terminal Icon
-const Terminal = ({ size }: any) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="4 17 10 11 4 5"></polyline>
-    <line x1="12" y1="19" x2="20" y2="19"></line>
-  </svg>
 );
 
 export default BookAppointment;
