@@ -1,5 +1,6 @@
 /* eslint-disable */
 "use client";
+
 import axios from "axios";
 import * as faceapi from "face-api.js";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
@@ -28,14 +29,47 @@ import {
 import Webcam from "react-webcam";
 import { createWorker } from "tesseract.js";
 
-// --- API INSTANCE ---
+const API_URL =
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.DEV ? "http://localhost:9000/api" : "");
+
+if (!API_URL) {
+  console.error("Missing VITE_API_URL in production");
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
+  baseURL: API_URL,
   headers: {
     "ngrok-skip-browser-warning": "69420",
     "Bypass-Tunnel-Reminder": "true",
   },
 });
+
+// Debugging Interceptors
+api.interceptors.request.use((config) => {
+  console.log("API REQUEST:", {
+    method: config.method,
+    url: `${config.baseURL}${config.url}`,
+  });
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => {
+    console.log("API RESPONSE:", response.status, response.config.url);
+    return response;
+  },
+  (error) => {
+    console.error("API ERROR:", {
+      status: error.response?.status,
+      url: `${error.config?.baseURL}${error.config?.url}`,
+      data: error.response?.data,
+    });
+    return Promise.reject(error);
+  },
+);
+
+const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
 
 type FaceStatus = "scanning" | "stable" | "no_face" | "too_far" | "success";
 type IDStatus = "idle" | "scanning" | "valid" | "fake";
@@ -51,7 +85,7 @@ const BookAppointment = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
-  const [, setIsEmailVerified] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -85,8 +119,6 @@ const BookAppointment = () => {
   const [idType, setIdType] = useState("");
   const [idFront, setIdFront] = useState<string | null>(null);
   const [idBack, setIdBack] = useState<string | null>(null);
-
-  // OCR & Verification State
   const [ocrFront, setOcrFront] = useState("");
   const [ocrBack, setOcrBack] = useState("");
   const [idStatusFront, setIdStatusFront] = useState<IDStatus>("idle");
@@ -114,7 +146,6 @@ const BookAppointment = () => {
     ],
   };
 
-  // --- PRINTER / DOWNLOAD LOGIC ---
   const qrUrl = bookingId
     ? `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${bookingId}`
     : "";
@@ -132,6 +163,7 @@ const BookAppointment = () => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (e) {
+      console.error("Download failed", e);
       alert("Download failed due to network settings.");
     }
   };
@@ -141,29 +173,33 @@ const BookAppointment = () => {
     if (printWindow) {
       printWindow.document.write(`
         <html>
-          <head><title>Print Access Pass</title>
+          <head>
+            <title>Print Access Pass</title>
             <style>
-              body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 40px; color: #1e293b; }
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 40px; color: #1e293b; }
               .card { border: 3px dashed #0038A8; padding: 40px; display: inline-block; border-radius: 20px; max-width: 400px; margin: 0 auto; }
-              h1 { color: #0038A8; margin-bottom: 5px; font-weight: 900; letter-spacing: 2px; font-size: 32px; }
+              h1 { color: #0038A8; margin-bottom: 5px; font-weight: 900; letter-spacing: 2px; font-size: 32px; text-transform: uppercase; }
               h3 { color: #475569; margin-top: 0; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; }
               .details { margin-top: 20px; text-align: left; background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; }
               .details p { margin: 8px 0; font-size: 14px; font-weight: bold; }
               .details span { color: #0038A8; }
               .id-text { font-family: monospace; font-size: 28px; font-weight: bold; color: #0038A8; margin-top: 25px; letter-spacing: 2px; background: #eff6ff; padding: 10px; border-radius: 10px; display: inline-block; }
+              @media print { body { -webkit-print-color-adjust: exact; } }
             </style>
           </head>
           <body>
             <div class="card">
-               <h1>UNIVENTRY</h1><h3>Digital Access Pass</h3>
+               <h1>UNIVENTRY</h1>
+               <h3>Digital Access Pass</h3>
                <div class="details">
                   <p>Name: <span>${firstName} ${lastName}</span></p>
                   <p>Destination: <span>${office}</span></p>
                   <p>Category: <span>${category}</span></p>
-                  <p>Date: <span>${bookingDate}</span></p>
+                  <p>Valid Date: <span>${bookingDate}</span></p>
                </div>
                <img src="${qrUrl}" style="width: 250px; height: 250px; margin-top: 25px; border-radius: 10px;" onload="setTimeout(() => { window.print(); window.close(); }, 500);" />
-               <br /><p class="id-text">#${bookingId ? bookingId.slice(-6).toUpperCase() : "XXXXXX"}</p>
+               <br />
+               <p class="id-text">#${bookingId ? bookingId.slice(-6).toUpperCase() : "XXXXXX"}</p>
             </div>
           </body>
         </html>
@@ -172,7 +208,6 @@ const BookAppointment = () => {
     }
   };
 
-  // --- AI FORGERY DETECTION LOGIC ---
   const verifyDocumentAuthenticity = (
     text: string,
     idTypeStr: string,
@@ -255,6 +290,7 @@ const BookAppointment = () => {
           text.length > 10 ? verifyDocumentAuthenticity(text, idType) : "fake",
         );
       }
+
       await worker.terminate();
     } catch (err) {
       console.error("OCR Error:", err);
@@ -265,38 +301,53 @@ const BookAppointment = () => {
     }
   };
 
-  // --- INITIAL DATA FETCHING ---
   useEffect(() => {
-    api
-      .get("/offices")
-      .then((res) => setOffices(res.data))
-      .catch(() => {});
+    const fetchOffices = async () => {
+      try {
+        const res = await api.get("/offices");
+        setOffices(res.data);
+      } catch (err: any) {
+        console.error("Office fetch failed:", err);
+      }
+    };
+    fetchOffices();
   }, []);
 
   useEffect(() => {
-    if (!bookingDate || !office) {
-      setSlots({ current: 0, max: null });
-      return;
-    }
-    setIsValidating(true);
-    setError(null);
-    api
-      .get("/bookings/slots", {
-        params: { bookingDate, office: office.trim() },
-      })
-      .then((res) =>
+    const fetchCapacity = async () => {
+      if (!bookingDate || !office) {
+        setSlots({ current: 0, max: null });
+        return;
+      }
+
+      setIsValidating(true);
+      setError(null);
+
+      try {
+        const res = await api.get("/bookings/slots", {
+          params: {
+            bookingDate: bookingDate,
+            office: office.trim(),
+          },
+        });
+
         setSlots({
           current: Number(res.data?.current ?? 0),
           max: typeof res.data?.max === "number" ? res.data.max : null,
-        }),
-      )
-      .catch((err) => {
+        });
+      } catch (err: any) {
         setSlots({ current: 0, max: null });
         setError(
-          err?.response?.data?.error || "Failed to check office availability.",
+          err?.response?.data?.error ||
+            err?.response?.data?.message ||
+            "Failed to check office availability.",
         );
-      })
-      .finally(() => setIsValidating(false));
+      } finally {
+        setIsValidating(false);
+      }
+    };
+
+    fetchCapacity();
   }, [bookingDate, office]);
 
   useEffect(() => {
@@ -306,24 +357,28 @@ const BookAppointment = () => {
         await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
         await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
         modelsLoadedRef.current = true;
-      } catch (err) {}
+      } catch (err) {
+        setError("Biometric Engine failed.");
+      }
     };
+
     loadModels();
   }, []);
 
-  const MODEL_URL = "https://justadudewhohacks.github.io/face-api.js/models";
-
-  // --- FACE SCANNER ---
   const detectFace = useCallback(async () => {
     if (faceScan || step !== 3 || !modelsLoadedRef.current) return;
+
     const video = webcamRef.current?.video;
     const canvas = canvasRef.current;
+
     if (!video || !canvas || video.readyState < 2) {
       animationFrameRef.current = requestAnimationFrame(detectFace);
       return;
     }
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
     if (canvas.width !== video.videoWidth) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -339,6 +394,7 @@ const BookAppointment = () => {
       )
       .withFaceLandmarks()
       .withFaceDescriptor();
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (detection) {
@@ -346,6 +402,7 @@ const BookAppointment = () => {
       ctx.strokeStyle = "#FFD700";
       ctx.lineWidth = 4;
       ctx.strokeRect(box.x, box.y, box.width, box.height);
+
       setFaceStatus("stable");
 
       if (!captureTimerRef.current) {
@@ -361,75 +418,111 @@ const BookAppointment = () => {
       if (captureTimerRef.current) clearTimeout(captureTimerRef.current);
       captureTimerRef.current = null;
     }
+
     animationFrameRef.current = requestAnimationFrame(detectFace);
   }, [faceScan, step]);
 
   useEffect(() => {
     if (step === 3 && !faceScan) detectFace();
+
     return () => {
-      if (animationFrameRef.current)
+      if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
-      if (captureTimerRef.current) clearTimeout(captureTimerRef.current);
+      }
+      if (captureTimerRef.current) {
+        clearTimeout(captureTimerRef.current);
+      }
     };
   }, [step, faceScan, detectFace]);
 
-  // --- HANDLERS ---
   const handleSendOTP = async () => {
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || !normalizedEmail.includes("@"))
+
+    if (!normalizedEmail || !normalizedEmail.includes("@")) {
       return setError("Enter a valid email address.");
+    }
+
     setIsVerifying(true);
     setError(null);
+
     try {
+      // 🚀 FIXED: Pointing to /bookings/send-otp to prevent 404
       const res = await api.post("/bookings/send-otp", {
         email: normalizedEmail,
       });
+
       if (res.data?.success) {
         setEmail(normalizedEmail);
         setOtpSent(true);
-      } else setError(res.data?.error || "Failed to send OTP.");
+        setError(null);
+      } else {
+        setError(res.data?.error || "Failed to send OTP.");
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || "OTP service failed.");
+      console.error("Send OTP Error:", err);
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "OTP service failed.",
+      );
     } finally {
       setIsVerifying(false);
     }
   };
 
   const handleVerifyOTP = async () => {
-    if (!otpCode.trim()) return setError("Enter the OTP code.");
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!otpCode.trim()) {
+      return setError("Enter the OTP code.");
+    }
+
     setIsVerifying(true);
     setError(null);
+
     try {
+      // 🚀 FIXED: Pointing to /bookings/verify-otp to prevent 404
       const res = await api.post("/bookings/verify-otp", {
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         otp: otpCode.trim(),
       });
+
       if (res.data?.success) {
         setIsEmailVerified(true);
         setStep(1);
-      } else setError("Invalid OTP Code.");
+        setError(null);
+      } else {
+        setError("Invalid OTP Code.");
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Invalid or expired OTP.");
+      console.error("Verify OTP Error:", err);
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Invalid or expired OTP.",
+      );
     } finally {
       setIsVerifying(false);
     }
   };
 
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = (err) => reject(err);
       reader.readAsDataURL(file);
     });
+  };
 
   const submitBooking = async () => {
     if (loading) return;
+
     setLoading(true);
     setError(null);
+
     try {
-      if (!setIsEmailVerified)
-        throw new Error("Email verification is required.");
+      if (!isEmailVerified) throw new Error("Email verification is required.");
       if (!faceEmbedding || faceEmbedding.length === 0)
         throw new Error("Biometric face scan is required.");
       if (!idFront || !idBack)
@@ -438,6 +531,7 @@ const BookAppointment = () => {
         throw new Error(
           "Document verification failed. Please upload a clear, valid ID.",
         );
+      if (!idType) throw new Error("Please select an ID type from the list.");
       if (!bookingDate) throw new Error("Please select a valid date.");
 
       const payload = {
@@ -460,18 +554,36 @@ const BookAppointment = () => {
       };
 
       const response = await api.post("/bookings", payload);
+
       if (response.data?.success) {
         setBookingId(response.data.bookingId);
         setStep(4);
       }
     } catch (err: any) {
+      console.error("REGISTRATION ERROR:", err);
       setError(
-        err.response?.data?.error || err.message || "Registration failed.",
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          err.message ||
+          "Registration failed.",
       );
     } finally {
       setLoading(false);
     }
   };
+
+  const handlePhoneChange = (val: string) => {
+    const numbersOnly = val.replace(/\D/g, "");
+    if (numbersOnly.length <= 11) {
+      setPhoneNumber(numbersOnly);
+    }
+  };
+
+  const isStep1Valid =
+    firstName.trim() !== "" &&
+    lastName.trim() !== "" &&
+    category !== "" &&
+    /^09\d{9}$/.test(phoneNumber);
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -497,6 +609,7 @@ const BookAppointment = () => {
     exit: { opacity: 0, scale: 1.05, transition: { duration: 0.3 } },
   };
 
+  // --- UI START (DARK CYBER THEME) ---
   return (
     <div className="min-h-screen bg-[#001233] text-white font-sans selection:bg-[#FFD700]/30 selection:text-[#FFD700] relative overflow-x-hidden flex items-center justify-center p-4 lg:p-8">
       {/* --- HIGH-TECH ANIMATED BACKGROUND --- */}
@@ -763,9 +876,7 @@ const BookAppointment = () => {
                         <Input
                           label="Mobile Network"
                           value={phoneNumber}
-                          onChange={(v: string) =>
-                            setPhoneNumber(v.replace(/\D/g, "").slice(0, 11))
-                          }
+                          onChange={handlePhoneChange}
                           icon={<FiPhone />}
                           placeholder="09XXXXXXXXX"
                         />
@@ -878,7 +989,9 @@ const BookAppointment = () => {
                           onChange={setBookingDate}
                           icon={<FiCalendar />}
                           min={today}
-                          onClick={(e: any) => e.currentTarget.showPicker()}
+                          onClick={(e: any) => {
+                            if (e.target.showPicker) e.target.showPicker();
+                          }}
                         />
                       </motion.div>
                     </div>
@@ -1455,6 +1568,24 @@ const Input = ({
       )}
     </div>
   </div>
+);
+
+// Stub for Terminal Icon
+const Terminal = ({ size }: any) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polyline points="4 17 10 11 4 5"></polyline>
+    <line x1="12" y1="19" x2="20" y2="19"></line>
+  </svg>
 );
 
 export default BookAppointment;
