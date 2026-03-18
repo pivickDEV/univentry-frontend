@@ -10,9 +10,13 @@ import {
   AlertTriangle,
   BarChart3,
   Briefcase,
+  Calendar,
   Clock,
+  DatabaseBackup,
   Download,
+  Filter,
   PieChart,
+  RefreshCw,
   ShieldCheck,
   TrendingUp,
   Users,
@@ -21,7 +25,7 @@ import { useEffect, useMemo, useState } from "react";
 
 // 🚀 VERCEL PREP: Global API Instance with Tunnel Headers
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
   headers: {
     "ngrok-skip-browser-warning": "69420",
     "Bypass-Tunnel-Reminder": "true",
@@ -44,35 +48,37 @@ interface Booking {
 
 const ReportsAnalytics = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [isArchiving, setIsArchiving] = useState(false);
+
+  // --- FILTER & SORT STATES ---
   const [timeFilter, setTimeFilter] = useState<
     "today" | "week" | "month" | "all"
   >("today");
+  const [customDate, setCustomDate] = useState("");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   // --- 1. FETCH DATA ---
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/bookings");
+      setBookings(
+        Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [],
+      );
+    } catch (error) {
+      console.error("Failed to fetch analytics data", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        setLoading(true);
-        const { data } = await api.get("/bookings");
-        setBookings(
-          Array.isArray(data.data)
-            ? data.data
-            : Array.isArray(data)
-              ? data
-              : [],
-        );
-      } catch (error) {
-        console.error("Failed to fetch analytics data", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchBookings();
   }, []);
 
   // --- 2. PROCESS ANALYTICS (Manila Time) ---
-  const stats = useMemo(() => {
+  const { stats, sortedFilteredBookings } = useMemo(() => {
     const manilaNow = new Date(
       new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }),
     );
@@ -80,15 +86,23 @@ const ReportsAnalytics = () => {
     const weekAgo = manilaNow.getTime() - 7 * 86400000;
     const monthAgo = manilaNow.getTime() - 30 * 86400000;
 
-    // Filter by Date
+    // Filter by Date (Custom Date overrides TimeFilter)
     const filtered = bookings.filter((b) => {
       if (!b.bookingDate) return false;
       const bTime = new Date(b.bookingDate).getTime();
 
+      if (customDate) return b.bookingDate === customDate;
       if (timeFilter === "today") return b.bookingDate === todayStr;
       if (timeFilter === "week") return bTime >= weekAgo;
       if (timeFilter === "month") return bTime >= monthAgo;
       return true; // "all"
+    });
+
+    // Apply Sorting (Ascending / Descending)
+    const sortedFilteredBookings = [...filtered].sort((a, b) => {
+      const timeA = new Date(a.bookingDate).getTime();
+      const timeB = new Date(b.bookingDate).getTime();
+      return sortOrder === "desc" ? timeB - timeA : timeA - timeB;
     });
 
     let totalStays = 0;
@@ -143,19 +157,74 @@ const ReportsAnalytics = () => {
       peakHour > 12 ? `${peakHour - 12} PM` : `${peakHour} AM`;
 
     return {
-      total: filtered.length,
-      avgStay,
-      overstays,
-      topOffices,
-      catMap,
-      hourTraffic: hourMap,
-      peakHour: maxTraffic > 0 ? peakHourFormatted : "N/A",
-      maxTrafficValue: maxTraffic || 1, // Prevent division by zero in chart
+      sortedFilteredBookings,
+      stats: {
+        total: filtered.length,
+        avgStay,
+        overstays,
+        topOffices,
+        catMap,
+        hourTraffic: hourMap,
+        peakHour: maxTraffic > 0 ? peakHourFormatted : "N/A",
+        maxTrafficValue: maxTraffic || 1, // Prevent division by zero in chart
+      },
     };
-  }, [bookings, timeFilter]);
+  }, [bookings, timeFilter, customDate, sortOrder]);
 
-  // --- 3. PDF GENERATION LOGIC ---
+  // --- 3. DATA ARCHIVER (Download + DB Clean) ---
+  const handleArchiveOldData = async () => {
+    const thirtyDaysAgo = new Date().getTime() - 30 * 86400000;
+    const oldRecords = bookings.filter(
+      (b) => new Date(b.bookingDate).getTime() < thirtyDaysAgo,
+    );
+
+    if (oldRecords.length === 0) {
+      return alert("System Optimization: No records older than 30 days found.");
+    }
+
+    if (
+      !window.confirm(
+        `Found ${oldRecords.length} records older than 30 days.\n\nDo you want to backup these to your local computer and permanently delete them from the database?`,
+      )
+    ) {
+      return;
+    }
+
+    setIsArchiving(true);
+    try {
+      // Step 1: Download backup locally (JSON Format)
+      const dataStr = JSON.stringify(oldRecords, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `UniVentry_Archive_${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Step 2: Delete old records from DB (Fallback loop if batch delete isn't available)
+      await Promise.all(
+        oldRecords.map((b) => api.delete(`/bookings/${b._id}`)),
+      );
+
+      alert(
+        "Backup successful! Old data has been purged from the active database.",
+      );
+      fetchBookings(); // Refresh UI
+    } catch (err) {
+      console.error("Archive Failed", err);
+      alert("Error purging some records from the database. Please check logs.");
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  // --- 4. PDF GENERATION LOGIC ---
   const generatePDF = () => {
+    if (sortedFilteredBookings.length === 0)
+      return alert("No data to export for this period.");
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -169,11 +238,10 @@ const ReportsAnalytics = () => {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(
-      `Official Intelligence Report - Period: ${timeFilter.toUpperCase()}`,
-      15,
-      30,
-    );
+    const periodLabel = customDate
+      ? `Date: ${customDate}`
+      : `Period: ${timeFilter.toUpperCase()}`;
+    doc.text(`Official Intelligence Report - ${periodLabel}`, 15, 30);
 
     // 2. High-Level Metrics
     doc.setTextColor(0, 0, 0);
@@ -212,39 +280,43 @@ const ReportsAnalytics = () => {
       styles: { fontSize: 10 },
     });
 
-    // 4. Demographics Table
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    // 4. Raw Visitor Logs (Affected by Sort)
+    const logY = (doc as any).lastAutoTable.finalY + 15;
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("Visitor Demographics", 15, finalY);
+    doc.text("Detailed Visitor Logs", 15, logY);
 
-    const catData = Object.entries(stats.catMap).map(([cat, count]) => [
-      cat,
-      `${count} Visitors`,
+    const logData = sortedFilteredBookings.map((b) => [
+      `${b.lastName}, ${b.firstName}`,
+      b.category,
+      b.office,
+      b.bookingDate,
+      b.status,
     ]);
 
     autoTable(doc, {
-      startY: finalY + 5,
-      head: [["Category", "Count"]],
-      body: catData,
+      startY: logY + 5,
+      head: [["Visitor Name", "Category", "Destination", "Date", "Status"]],
+      body: logData,
       theme: "grid",
       headStyles: {
         fillColor: [255, 215, 0],
         textColor: [0, 56, 168],
         fontStyle: "bold",
       },
-      styles: { fontSize: 10 },
+      styles: { fontSize: 9 },
     });
 
     // Save
     const dateStr = new Date().toISOString().split("T")[0];
-    doc.save(`UniVentry_Analytics_${timeFilter}_${dateStr}.pdf`);
+    doc.save(`UniVentry_Report_${timeFilter}_${dateStr}.pdf`);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
-      {/* ================= HEADER ================= */}
-      <div className="max-w-400 mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      {/* ================= HEADER (FULLY RESPONSIVE) ================= */}
+      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+        {/* Branding Title */}
         <div className="flex items-center gap-4">
           <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
             <PieChart className="text-2xl lg:text-3xl" />
@@ -252,7 +324,7 @@ const ReportsAnalytics = () => {
           <div>
             <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
               Reports &{" "}
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
                 Analytics
               </span>
             </h1>
@@ -262,34 +334,83 @@ const ReportsAnalytics = () => {
           </div>
         </div>
 
-        {/* Action Bar */}
-        <div className="flex items-center gap-3">
-          {/* Time Filters */}
-          <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200">
+        {/* --- DYNAMIC ACTION BAR (Wraps on Mobile) --- */}
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+          {/* Quick Filters */}
+          <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar w-full sm:w-auto">
             {["today", "week", "month", "all"].map((f) => (
               <button
                 key={f}
-                onClick={() => setTimeFilter(f as any)}
-                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${timeFilter === f ? "bg-[#0038A8] text-white shadow-md" : "text-slate-400 hover:text-slate-700"}`}
+                onClick={() => {
+                  setTimeFilter(f as any);
+                  setCustomDate("");
+                }}
+                className={`px-4 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex-1 sm:flex-none text-center ${timeFilter === f && !customDate ? "bg-[#0038A8] text-white shadow-md" : "text-slate-400 hover:text-slate-700"}`}
               >
                 {f}
               </button>
             ))}
           </div>
 
-          <button
-            onClick={generatePDF}
-            className="flex items-center gap-2 px-6 py-3.5 bg-[#FFD700] text-[#0038A8] rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-[#e6c200] transition-all shadow-lg active:scale-95"
-          >
-            <Download size={16} strokeWidth={2.5} /> Export PDF
-          </button>
+          {/* Date Picker & Sorting */}
+          <div className="flex gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-36">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="date"
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-2 py-2.5 text-[10px] font-bold text-slate-600 focus:outline-none focus:border-[#0038A8] shadow-sm uppercase cursor-pointer"
+              />
+            </div>
+            <div className="relative flex-1 sm:w-36">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as any)}
+                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-2 py-2.5 text-[10px] font-bold text-slate-600 focus:outline-none focus:border-[#0038A8] shadow-sm uppercase cursor-pointer appearance-none"
+              >
+                <option value="desc">Newest First</option>
+                <option value="asc">Oldest First</option>
+              </select>
+            </div>
+            <button
+              onClick={fetchBookings}
+              disabled={loading}
+              className="p-2.5 bg-white text-[#0038A8] border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
+
+          {/* Critical Actions */}
+          <div className="flex gap-2 w-full md:w-auto">
+            <button
+              onClick={handleArchiveOldData}
+              disabled={isArchiving}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 text-white border border-slate-700 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
+            >
+              <DatabaseBackup
+                size={14}
+                className={isArchiving ? "animate-pulse" : ""}
+              />{" "}
+              {isArchiving ? "Archiving..." : "Archive Logs"}
+            </button>
+
+            <button
+              onClick={generatePDF}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-[#FFD700] text-[#0038A8] rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#e6c200] transition-all shadow-md active:scale-95"
+            >
+              <Download size={14} strokeWidth={2.5} /> Export PDF
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ================= MASSIVE WHITE CONTAINER ================= */}
-      <div className="max-w-400 mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-6 lg:p-8 flex flex-col overflow-y-auto custom-scrollbar">
+      <div className="max-w-[1600px] mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-6 lg:p-8 flex flex-col overflow-y-auto custom-scrollbar">
         {/* === TOP METRICS GRID === */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard
             icon={<Users />}
             label="Total Visitors"
@@ -347,15 +468,15 @@ const ReportsAnalytics = () => {
           <div className="lg:col-span-2 bg-slate-50 rounded-4xl border border-slate-200 p-6 lg:p-8 flex flex-col">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-sm font-black text-[#0038A8] flex items-center gap-2 uppercase tracking-widest">
-                <BarChart3 className="text-[#FFD700]" />
-                Campus Traffic Distribution
+                <BarChart3 className="text-[#FFD700]" /> Campus Traffic
+                Distribution
               </h3>
-              <span className="text-[9px] font-black text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-200 uppercase tracking-[0.2em]">
+              <span className="text-[9px] font-black text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-200 uppercase tracking-[0.2em] hidden sm:block">
                 8AM - 6PM
               </span>
             </div>
 
-            <div className="flex-1 min-h-62.5 relative flex items-end justify-between gap-2 px-2 pt-10 pb-6 border-b-2 border-slate-200">
+            <div className="flex-1 min-h-[250px] relative flex items-end justify-between gap-1 sm:gap-2 px-1 sm:px-2 pt-10 pb-6 border-b-2 border-slate-200">
               {/* Horizontal Grid Lines */}
               <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-30 pb-6 pt-10">
                 <div className="w-full h-px bg-slate-400"></div>
@@ -383,24 +504,22 @@ const ReportsAnalytics = () => {
                     key={hr}
                     className="flex flex-col items-center justify-end h-full flex-1 group z-10 relative"
                   >
-                    {/* Tooltip */}
                     <div className="absolute -top-8 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
                       {count} Visits
                     </div>
-
                     <div
-                      className="w-full max-w-10 bg-slate-200 rounded-t-lg relative flex items-end justify-center overflow-hidden"
+                      className="w-full max-w-[40px] bg-slate-200 rounded-t-lg relative flex items-end justify-center overflow-hidden"
                       style={{ height: "100%" }}
                     >
                       <motion.div
                         initial={{ height: 0 }}
                         animate={{ height: `${heightPct}%` }}
                         transition={{ duration: 1, type: "spring" }}
-                        className={`w-full rounded-t-lg transition-colors ${isPeak ? "bg-linear-to-t from-[#0038A8] to-[#FFD700]" : "bg-[#0038A8]/60 group-hover:bg-[#0038A8]"}`}
+                        className={`w-full rounded-t-lg transition-colors ${isPeak ? "bg-gradient-to-t from-[#0038A8] to-[#FFD700]" : "bg-[#0038A8]/60 group-hover:bg-[#0038A8]"}`}
                       />
                     </div>
                     <span
-                      className={`text-[9px] font-black uppercase mt-3 ${isPeak ? "text-[#0038A8]" : "text-slate-400"}`}
+                      className={`text-[8px] sm:text-[9px] font-black uppercase mt-3 ${isPeak ? "text-[#0038A8]" : "text-slate-400"}`}
                     >
                       {label}
                     </span>
@@ -413,9 +532,8 @@ const ReportsAnalytics = () => {
           {/* SIDEBAR: Predictives & Demographics */}
           <div className="space-y-6 flex flex-col">
             {/* Predictive Insights Card */}
-            <div className="bg-[#0038A8] rounded-4xl p-6 lg:p-8 text-white shadow-xl relative overflow-hidden">
+            <div className="bg-[#0038A8] rounded-[2rem] p-6 lg:p-8 text-white shadow-xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFD700] rounded-full -translate-y-16 translate-x-16 opacity-10"></div>
-
               <div className="flex items-center gap-3 mb-6 relative z-10">
                 <div className="p-2 bg-white/10 rounded-xl">
                   <Activity className="text-[#FFD700]" />
@@ -424,7 +542,6 @@ const ReportsAnalytics = () => {
                   AI Insights
                 </h3>
               </div>
-
               <div className="space-y-6 relative z-10">
                 <div>
                   <div className="flex justify-between items-center text-[9px] font-black text-blue-200 uppercase tracking-widest mb-1.5">
@@ -454,7 +571,7 @@ const ReportsAnalytics = () => {
             </div>
 
             {/* Demographics List */}
-            <div className="bg-slate-50 rounded-4xl p-6 lg:p-8 border border-slate-200 flex-1">
+            <div className="bg-slate-50 rounded-[2rem] p-6 lg:p-8 border border-slate-200 flex-1">
               <h3 className="text-xs font-black text-[#0038A8] uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Briefcase size={16} /> Demographics
               </h3>
@@ -486,7 +603,7 @@ const ReportsAnalytics = () => {
         {/* Intelligence Footer */}
         <div className="mt-8 p-6 bg-slate-50 rounded-3xl border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white rounded-2xl border border-slate-200 flex items-center justify-center shadow-sm">
+            <div className="w-12 h-12 bg-white rounded-2xl border border-slate-200 flex items-center justify-center shadow-sm shrink-0">
               <ShieldCheck className="text-[#0038A8] text-xl" />
             </div>
             <div>
@@ -498,7 +615,7 @@ const ReportsAnalytics = () => {
               </p>
             </div>
           </div>
-          <button className="text-[9px] font-black text-slate-400 hover:text-[#0038A8] tracking-[0.2em] transition-colors border border-slate-200 px-4 py-2 rounded-lg bg-white shadow-sm">
+          <button className="text-[9px] font-black text-slate-400 hover:text-[#0038A8] tracking-[0.2em] transition-colors border border-slate-200 px-4 py-2 rounded-lg bg-white shadow-sm w-full md:w-auto text-center">
             REPORT ENGINE V2.0
           </button>
         </div>
