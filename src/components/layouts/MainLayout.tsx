@@ -56,7 +56,7 @@ const MainLayout = () => {
   const SidebarComponent = SIDEBAR_COMPONENTS[user.role];
 
   return (
-    <div className="flex min-h-screen bg-[#001233]">
+    <div className="flex min-h-screen bg-[#F8FAFC]">
       <div className="z-40 md:sticky md:top-0 md:h-screen">
         {SidebarComponent ? <SidebarComponent /> : null}
       </div>
