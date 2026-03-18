@@ -11,6 +11,7 @@ import {
   ScanLine,
   ShieldCheck,
   X,
+  Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -72,7 +73,7 @@ const OfficeSidebar = () => {
 
   const confirmLogout = () => {
     localStorage.clear();
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
   const menuItems = [
@@ -90,18 +91,18 @@ const OfficeSidebar = () => {
       {/* --------------------------- */}
       {/* MOBILE HEADER (Visible < LG) */}
       {/* --------------------------- */}
-      <div className="lg:hidden fixed top-0 left-0 w-full bg-[#0038A8] text-white border-b border-blue-800 h-16 px-6 flex items-center justify-between z-60 shadow-md">
+      <div className="lg:hidden fixed top-0 left-0 w-full bg-[#0038A8] text-white border-b border-[#002b82] h-20 px-6 flex items-center justify-between z-60 shadow-2xl">
         <div className="flex items-center gap-3">
-          <div className="bg-white/10 p-1.5 rounded-lg text-[#FFD700]">
-            <ShieldCheck size={20} />
+          <div className="bg-white/10 p-2 rounded-xl text-[#FFD700] shadow-[0_0_15px_rgba(255,215,0,0.3)] border border-white/20 backdrop-blur-md">
+            <ShieldCheck size={24} />
           </div>
-          <h1 className="font-black text-white uppercase tracking-wider text-lg">
-            UniVentry
+          <h1 className="font-black text-white uppercase tracking-[0.2em] text-xl leading-none">
+            Uni<span className="text-[#FFD700]">Ventry</span>
           </h1>
         </div>
         <button
           onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="p-2.5 bg-white/10 rounded-xl text-white active:scale-95 transition-transform"
+          className="p-3 bg-white/10 border border-white/20 rounded-2xl text-white active:scale-95 transition-all hover:bg-white/20 backdrop-blur-md"
         >
           {isMobileOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -117,7 +118,7 @@ const OfficeSidebar = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsMobileOpen(false)}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-70 lg:hidden"
+            className="fixed inset-0 bg-[#001233]/70 backdrop-blur-md z-70 lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -127,94 +128,97 @@ const OfficeSidebar = () => {
       {/* --------------------------- */}
       <aside
         className={`
-        fixed inset-y-0 left-0 z-80
-       lg:sticky lg:top-0
+        fixed inset-y-0 left-0 z-80 
+        lg:sticky lg:top-0
         w-80 min-h-screen
-      bg-[#0038A8] text-white 
+        bg-[#0038A8] text-white 
         flex flex-col 
-        border-r border-blue-900/50 
-        transition-transform duration-300 ease-out shadow-2xl lg:shadow-none
+        border-r border-[#002b82]
+        transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) shadow-[20px_0_60px_rgba(0,18,51,0.3)] lg:shadow-none
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}
       >
-        {/* === SCROLLABLE CONTENT (Branding + Profile + Menu) === */}
-        {/* flex-1 ensures this takes up all available space, pushing logout down */}
-        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+        {/* Subtle Tech Grid Background */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-size-[2rem_2rem] pointer-events-none" />
+        <div className="absolute top-0 left-0 w-full h-125 bg-linear-to-b from-[#FFD700]/5 to-transparent pointer-events-none blur-3xl" />
+
+        {/* === SCROLLABLE CONTENT === */}
+        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative z-10">
           {/* 1. BRANDING */}
-          <div className="p-8 pb-4">
-            <div className="flex items-center gap-4">
-              <div className="relative w-12 h-12 bg-linear-to-br from-white to-blue-100 rounded-2xl flex items-center justify-center text-[#0038A8] shadow-xl shadow-black/20 transform rotate-3 border border-white/50">
-                <ShieldCheck className="text-2xl stroke-[2.5]" />
-                <div className="absolute top-0 right-0 w-3 h-3 bg-[#FFD700] rounded-full border-2 border-[#0038A8] -mr-1 -mt-1"></div>
+          <div className="p-8 pb-6">
+            <div className="flex items-center gap-4 group">
+              <div className="relative w-14 h-14 bg-white/10 backdrop-blur-xl rounded-[1.25rem] flex items-center justify-center text-[#FFD700] shadow-[0_10px_30px_rgba(0,0,0,0.2)] border border-white/20 group-hover:rotate-12 transition-transform duration-500">
+                <ShieldCheck className="text-3xl stroke-[2.5]" />
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#FFD700] rounded-full border-2 border-[#0038A8] flex items-center justify-center shadow-[0_0_10px_#FFD700]">
+                  <Zap size={8} className="text-[#0038A8] fill-current" />
+                </div>
               </div>
               <div>
-                <h1 className="text-2xl font-black tracking-tighter uppercase leading-none text-white">
+                <h1 className="text-3xl font-black tracking-tighter uppercase leading-[0.9] text-white">
                   Uni
-                  <span className="text-[#FFD700] drop-shadow-md">Ventry</span>
+                  <span className="text-transparent bg-clip-text bg-linear-to-br from-[#FFD700] to-amber-300 drop-shadow-md">
+                    Ventry
+                  </span>
                 </h1>
-                <span className="text-[10px] font-bold text-blue-200 uppercase tracking-[0.25em] opacity-80">
-                  Command Center
+                <span className="text-[9px] font-black text-blue-200 uppercase tracking-[0.3em] mt-1 block">
+                  Office Console
                 </span>
               </div>
             </div>
           </div>
 
+          {/* 2. USER PROFILE HUD (Glassmorphism over Royal Blue) */}
           <div className="px-6 mb-8 mt-2">
-            <div className="relative bg-black/10 border border-white/10 rounded-2xl p-5 overflow-hidden group hover:bg-black/20 transition-all duration-300 shadow-inner">
-              {/* Left Anchor Bar (Replaces the Avatar's visual weight) */}
-              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#FFD700] shadow-[0_0_10px_rgba(255,215,0,0.5)]"></div>
+            <div className="relative bg-white/10 border border-white/20 backdrop-blur-lg rounded-4xl p-5 overflow-hidden group hover:bg-white/15 hover:border-white/30 transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.15)]">
+              {/* Left Gold Accent Line */}
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1/2 w-1.5 bg-linear-to-b from-[#FFD700] via-amber-300 to-[#FFD700] rounded-r-full shadow-[0_0_15px_#FFD700]"></div>
 
-              <div className="pl-3">
-                {/* Tiny System Label */}
-                <span className="text-[8px] font-bold text-blue-300 uppercase tracking-[0.2em] mb-1.5 block">
-                  Active Session
+              <div className="pl-3 relative z-10">
+                <span className="text-[7px] font-black text-blue-200 uppercase tracking-[0.3em] mb-2 flex items-center gap-2">
+                  Session Node{" "}
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                 </span>
 
-                {/* Name */}
                 <p
-                  className="text-[15px] font-black uppercase text-white truncate w-full tracking-wide leading-none mb-1.5"
+                  className="text-lg font-black uppercase text-white truncate w-full tracking-tight leading-none mb-1 drop-shadow-sm"
                   title={`${user.firstName} ${user.lastName}`}
                 >
-                  {user.firstName} {user.lastName}
+                  {user.firstName}{" "}
+                  <span className="font-bold text-blue-100">
+                    {user.lastName}
+                  </span>
                 </p>
 
-                {/* Email */}
-                <div className="flex items-center gap-1.5 text-blue-200/70 mb-4">
-                  <Mail size={10} className="shrink-0" />
+                <div className="flex items-center gap-2 text-blue-200 mb-5">
+                  <Mail size={12} className="shrink-0 text-[#FFD700]" />
                   <p
-                    className="text-[10px] font-medium truncate tracking-wide"
+                    className="text-[10px] font-bold truncate tracking-wider"
                     title={user.email}
                   >
                     {user.email}
                   </p>
                 </div>
 
-                {/* Bottom Row: Role & Status */}
-                <div className="flex items-center justify-between">
-                  {/* Role Badge */}
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#0038A8] border border-blue-400/30 shadow-md">
-                    <BadgeCheck size={10} className="text-[#FFD700]" />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-white">
+                <div className="flex items-center justify-between border-t border-white/10 pt-4">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/20 border border-white/10 shadow-inner">
+                    <BadgeCheck size={12} className="text-[#FFD700]" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">
                       {user.role}
                     </span>
                   </div>
 
-                  {/* Live Status */}
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_5px_rgba(52,211,153,0.8)]" />
-                    <span className="text-[8px] font-bold uppercase tracking-widest text-emerald-400">
-                      Online
-                    </span>
-                  </div>
+                  <span className="text-[8px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-400/10 px-2.5 py-1.5 rounded-lg border border-emerald-400/20">
+                    Authorized
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 3. MENU */}
-          <nav className="px-4 space-y-2 pb-6">
-            <p className="px-4 text-[10px] font-black text-blue-300/50 uppercase tracking-[0.3em] mb-2">
-              Main Menu
+          {/* 3. NAVIGATION MENU */}
+          <nav className="px-4 space-y-2 pb-6 flex-1">
+            <p className="px-6 text-[8px] font-black text-blue-300/50 uppercase tracking-[0.4em] mb-4">
+              System Modules
             </p>
 
             {menuItems.map(({ path, label, icon: Icon }) => {
@@ -224,33 +228,46 @@ const OfficeSidebar = () => {
                 <Link
                   key={path}
                   to={path}
-                  className={`relative flex items-center gap-4 px-6 py-4 rounded-xl transition-all duration-300 group overflow-hidden
-                      ${isActive ? "text-white" : "text-blue-200/70 hover:text-white"}`}
+                  className={`relative flex items-center gap-4 px-6 py-4 rounded-3xl transition-all duration-300 group overflow-hidden
+                      ${isActive ? "text-[#0038A8]" : "text-blue-100 hover:text-white"}`}
                 >
+                  {/* Active Background Animation (Floating White Card) */}
                   {isActive && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-linear-to-r from-white/20 to-transparent border-l-4 border-[#FFD700]"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    />
+                    <>
+                      <motion.div
+                        layoutId="activeTabOfficeBg"
+                        className="absolute inset-0 bg-white shadow-[0_10px_30px_rgba(0,0,0,0.25)] rounded-3xl"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 400,
+                          damping: 30,
+                        }}
+                      />
+                    </>
                   )}
 
-                  <Icon
-                    size={22}
-                    className={`relative z-10 transition-transform duration-300 
-                      ${isActive ? "text-[#FFD700] scale-110 drop-shadow-md" : "group-hover:scale-110 group-hover:text-white"}`}
-                  />
+                  {/* Icon Container */}
+                  <div
+                    className={`relative z-10 p-2.5 rounded-xl transition-all duration-300 ${
+                      isActive
+                        ? "bg-[#0038A8]/10 text-[#0038A8]"
+                        : "bg-white/5 border border-white/10 group-hover:bg-white/20 group-hover:scale-110 text-blue-200 group-hover:text-[#FFD700]"
+                    }`}
+                  >
+                    <Icon size={18} className="stroke-[2.5]" />
+                  </div>
 
                   <span
-                    className={`relative z-10 text-sm tracking-wide ${isActive ? "font-black" : "font-medium"}`}
+                    className={`relative z-10 text-[11px] tracking-widest uppercase ${isActive ? "font-black text-[#0038A8]" : "font-bold"}`}
                   >
                     {label}
                   </span>
 
                   {isActive && (
-                    <ChevronRight className="ml-auto relative z-10 text-[#FFD700] w-4 h-4 animate-pulse" />
+                    <ChevronRight className="ml-auto relative z-10 text-[#0038A8] w-4 h-4 animate-pulse opacity-90" />
                   )}
                 </Link>
               );
@@ -258,41 +275,41 @@ const OfficeSidebar = () => {
           </nav>
         </div>
 
-        {/* === BOTTOM SECTION (Pinned) === */}
-        {/* mt-auto ensures this stays at the bottom even if menu is short */}
-        <div className=" p-6 border-t border-white/10 bg-[#002b82] ">
+        {/* === BOTTOM SECTION (Pinned Logout) === */}
+        <div className="p-6 border-t border-[#002b82] bg-[#002b82]/50 relative z-10 backdrop-blur-md">
           <button
             onClick={() => setShowLogoutModal(true)}
-            className="group relative w-full flex items-center justify-between p-1 pl-1 pr-4 rounded-3xl cursor-pointer bg-black/20 border border-white/5 text-blue-200 hover:bg-red-600 hover:border-red-500 hover:text-white transition-all duration-300 shadow-inner"
+            className="group relative w-full flex items-center justify-between p-1.5 pl-1.5 pr-5 rounded-4xl cursor-pointer bg-white/5 border border-white/10 text-blue-100 hover:bg-red-500 hover:border-red-400 hover:text-white transition-all duration-500 shadow-sm"
           >
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center text-white group-hover:bg-white/20 transition-all duration-300">
-                <LogOut size={20} className="translate-x-0.5" />
+              <div className="w-12 h-12 rounded-3xl bg-white/10 flex items-center justify-center text-blue-200 group-hover:bg-white group-hover:text-red-600 group-hover:shadow-[0_10px_20px_rgba(239,68,68,0.4)] transition-all duration-500 border border-white/10 group-hover:border-white">
+                <LogOut size={18} className="translate-x-0.5 stroke-[2.5]" />
               </div>
               <div className="text-left">
-                <span className="block text-[11px] font-black uppercase tracking-wider text-white group-hover:text-white">
-                  Log Out
+                <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-white transition-colors">
+                  Terminate
                 </span>
-                <span className="block text-[10px] font-medium opacity-50 group-hover:text-red-100">
+                <span className="block text-[9px] font-bold opacity-60 uppercase tracking-widest mt-0.5 text-blue-200 group-hover:text-white">
                   End Session
                 </span>
               </div>
             </div>
 
-            <div className="w-2 h-2 rounded-full bg-emerald-400 group-hover:bg-white transition-colors animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.5)]"></div>
+            <div className="w-2 h-2 rounded-full bg-blue-400/50 group-hover:bg-white transition-colors shadow-[0_0_10px_rgba(255,255,255,0)] group-hover:shadow-[0_0_10px_rgba(255,255,255,0.8)]"></div>
           </button>
 
           {/* Footer Info */}
-          <div className="mt-6 flex justify-between items-center px-2 opacity-30 hover:opacity-100 transition-opacity cursor-default">
-            <span className="text-[9px] font-black uppercase tracking-widest text-white">
-              UniVentry OS
+          <div className="mt-6 text-center">
+            <span className="text-[8px] font-black uppercase tracking-[0.4em] text-blue-200/40">
+              UniVentry OS v2.0
             </span>
           </div>
         </div>
       </aside>
-      {/* --------------------------- */}
-      {/* LOGOUT CONFIRMATION MODAL  */}
-      {/* --------------------------- */}
+
+      {/* ------------------------------------------- */}
+      {/* 🔥 CUSTOM LOGOUT MODAL 🔥 */}
+      {/* ------------------------------------------- */}
       <AnimatePresence>
         {showLogoutModal && (
           <>
@@ -301,53 +318,59 @@ const OfficeSidebar = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.3 }}
               onClick={() => setShowLogoutModal(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-100"
+              className="fixed inset-0 bg-[#001233]/80 backdrop-blur-xl z-100"
             />
 
             {/* Modal */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.8, y: 40 }}
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 40 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
               className="fixed inset-0 z-110 flex items-center justify-center px-4"
             >
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 text-center relative overflow-hidden"
+                className="w-full max-w-md bg-white rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.4)] p-10 text-center relative overflow-hidden border-4 border-slate-50"
               >
+                <div className="absolute top-0 left-0 w-full h-2 bg-linear-to-r from-red-600 to-red-400" />
+
                 {/* Icon */}
-                <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-6">
-                  <LogOut size={28} className="text-red-600" />
+                <div className="mx-auto w-20 h-20 rounded-4xls bg-red-50 border border-red-100 flex items-center justify-center mb-6 shadow-inner relative">
+                  <div className="absolute inset-0 bg-red-500 opacity-10 blur-xl rounded-full" />
+                  <LogOut
+                    size={32}
+                    className="text-red-600 relative z-10 translate-x-1"
+                  />
                 </div>
 
                 {/* Title */}
-                <h2 className="text-xl font-black text-gray-800 mb-2">
-                  Are you sure?
+                <h2 className="text-3xl font-black text-[#0038A8] mb-2 tracking-tighter uppercase">
+                  System Logout
                 </h2>
 
                 {/* Message */}
-                <p className="text-sm text-gray-500 mb-8">
-                  Do you really want to log out? Your current session will be
-                  ended.
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-10 leading-relaxed max-w-xs mx-auto">
+                  Are you sure you want to terminate your current administrative
+                  session?
                 </p>
 
                 {/* Buttons */}
                 <div className="flex gap-4">
                   <button
                     onClick={() => setShowLogoutModal(false)}
-                    className="flex-1 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold transition"
+                    className="flex-1 py-4 rounded-2xl bg-slate-50 border-2 border-slate-200 hover:bg-slate-100 text-slate-500 font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 cursor-pointer"
                   >
                     Cancel
                   </button>
 
                   <button
                     onClick={confirmLogout}
-                    className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold shadow-lg shadow-red-500/30 transition"
+                    className="flex-1 py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-[10px] uppercase tracking-widest shadow-[0_10px_30px_rgba(239,68,68,0.3)] transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    Yes, Log Out
+                    Confirm <LogOut size={14} className="translate-x-0.5" />
                   </button>
                 </div>
               </div>
