@@ -111,7 +111,7 @@ const Login = () => {
         className="relative z-10 w-full max-w-6xl bg-white rounded-[2.5rem] lg:rounded-[3rem] shadow-[0_0_80px_rgba(0,56,168,0.3)] overflow-hidden flex flex-col md:flex-row min-h-160 lg:min-h-184"
       >
         {/* === LEFT SIDE: DEEP TECH BRANDING === */}
-        <div className="md:w-5/12 relative overflow-hidden bg-[#001233] p-10 lg:p-16 text-white flex flex-col justify-between border-r border-slate-800">
+        <div className="md:w-5/12 relative overflow-hidden bg-[#0038A8] p-10 lg:p-16 text-white flex flex-col justify-between border-r border-slate-800">
           <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(0,56,168,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,56,168,0.1)_1px,transparent_1px)] bg-size-[20px_20px]" />
 
           <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#0038A8] opacity-50 rounded-full blur-[100px]" />
