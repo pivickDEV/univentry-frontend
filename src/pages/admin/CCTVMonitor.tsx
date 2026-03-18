@@ -363,9 +363,9 @@ const CCTVMonitor = () => {
           </div>
           <div>
             <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
-              Surveillance{" "}
+              CCTV{" "}
               <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
-                Grid
+                Monitoring
               </span>
             </h1>
             <p className="text-[10px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
@@ -410,7 +410,7 @@ const CCTVMonitor = () => {
             </h3>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 xl:grid-cols-2 gap-6 auto-rows-min">
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 grid grid-cols-1 xl:grid-cols-2 gap-6 content-start pb-4">
             {cameras.map((cam) => (
               <CameraNode
                 key={cam.id}
