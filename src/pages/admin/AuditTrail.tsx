@@ -90,6 +90,7 @@ const AuditTrail = () => {
 
   // --- MODAL STATES ---
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [isModalLoading, setIsModalLoading] = useState(false); // 🔥 For heavy image loading
   const [cctvLogs, setCctvLogs] = useState<CCTVLog[]>([]);
   const [loadingCCTV, setLoadingCCTV] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
@@ -116,6 +117,7 @@ const AuditTrail = () => {
   // --- ROW CLICK HANDLER (🔥 FIX: Fetches full heavy image data) ---
   const handleRowClick = async (log: AuditLog) => {
     setSelectedLog(log); // Open modal instantly with text data
+    setIsModalLoading(true); // Show spinner for images
 
     try {
       // Fetch the full document which includes idFront, idBack, and faceEmbedding
@@ -126,6 +128,7 @@ const AuditTrail = () => {
     } catch (err) {
       console.error("Failed to fetch heavy visitor images", err);
     } finally {
+      setIsModalLoading(false);
     }
   };
 
@@ -761,12 +764,14 @@ const AuditTrail = () => {
                     title="ID Verification (Front)"
                     image={selectedLog.idFront}
                     text={selectedLog.ocrFront}
+                    loading={isModalLoading}
                     onClick={() => setFullscreenImage(selectedLog.idFront)}
                   />
                   <DocumentCard
                     title="ID Verification (Back)"
                     image={selectedLog.idBack}
                     text={selectedLog.ocrBack}
+                    loading={isModalLoading}
                     onClick={() => setFullscreenImage(selectedLog.idBack)}
                   />
                 </div>
