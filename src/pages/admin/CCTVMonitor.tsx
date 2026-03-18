@@ -747,13 +747,16 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
   }, [faceMatcher, modelsLoaded, camera.name, streamStatus, onMatch]);
 
   return (
+    // 🔥 FIX: Added 'z-0' to create an isolated stacking context.
+    // It will NEVER overlap the z-40 sidebar now!
     <div
       ref={containerRef}
-      className="relative bg-[#0a0f1c] rounded-4xl overflow-hidden aspect-video shadow-2xl group border-[6px] border-slate-100 flex items-center justify-center"
+      className="relative z-0 bg-[#0a0f1c] rounded-[2rem] overflow-hidden aspect-video shadow-2xl group border-[6px] border-slate-100 flex items-center justify-center"
     >
       {streamStatus !== "LIVE" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0f1c] z-40 overflow-hidden">
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[20px_20px] opacity-20"></div>
+        // 🔥 FIX: Lowered from z-50 to z-30
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0f1c] z-30 overflow-hidden">
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:20px_20px] opacity-20"></div>
 
           {streamStatus === "BUFFERING..." ||
           streamStatus.includes("CONNECTING") ? (
@@ -802,10 +805,12 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
 
       <canvas
         ref={drawCanvasRef}
-        className="absolute inset-0 w-full h-full pointer-events-none z-20"
+        // 🔥 FIX: Lowered from z-20 to z-10
+        className="absolute inset-0 w-full h-full pointer-events-none z-10"
       />
 
-      <div className="absolute top-4 left-4 z-30 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10 shadow-lg">
+      {/* 🔥 FIX: Lowered from z-30 to z-20 */}
+      <div className="absolute top-4 left-4 z-20 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2 border border-white/10 shadow-lg">
         <div
           className={`w-2 h-2 rounded-full ${
             streamStatus === "LIVE"
@@ -818,9 +823,10 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
         </span>
       </div>
 
+      {/* 🔥 FIX: Lowered from z-30 to z-20 */}
       <button
         onClick={toggleFullscreen}
-        className="absolute top-4 right-4 z-30 text-white/70 hover:text-[#FFD700] bg-black/40 p-3 rounded-xl backdrop-blur-md transition-colors opacity-0 group-hover:opacity-100 shadow-lg"
+        className="absolute top-4 right-4 z-20 text-white/70 hover:text-[#FFD700] bg-black/40 p-3 rounded-xl backdrop-blur-md transition-colors opacity-0 group-hover:opacity-100 shadow-lg"
       >
         <FiMaximize size={18} />
       </button>
