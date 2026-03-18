@@ -8,9 +8,11 @@ import {
   FiActivity,
   FiAlertTriangle,
   FiBriefcase,
+  FiCalendar,
   FiClock,
   FiCreditCard,
   FiCrosshair,
+  FiDatabase,
   FiDownload,
   FiEye,
   FiFilter,
@@ -28,7 +30,7 @@ import {
 
 // 🚀 VERCEL PREP: Global API Instance with Tunnel Headers
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
   headers: {
     "ngrok-skip-browser-warning": "69420",
     "Bypass-Tunnel-Reminder": "true",
@@ -79,19 +81,19 @@ const AuditTrail = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // --- FILTER, SORT & ARCHIVE STATES ---
   const [timeFilter, setTimeFilter] = useState("today");
+  const [customDate, setCustomDate] = useState("");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [isArchiving, setIsArchiving] = useState(false);
 
-  // Details Modal State
+  // --- MODAL STATES ---
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
-
-  // AI CCTV Logs State
+  const [isModalLoading, setIsModalLoading] = useState(false); // 🔥 For heavy image loading
   const [cctvLogs, setCctvLogs] = useState<CCTVLog[]>([]);
   const [loadingCCTV, setLoadingCCTV] = useState(false);
-
-  // Fullscreen Image State
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
-
-  // Custom Delete Modal State
   const [logToDelete, setLogToDelete] = useState<AuditLog | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -112,11 +114,28 @@ const AuditTrail = () => {
     fetchAuditLogs();
   }, []);
 
+  // --- ROW CLICK HANDLER (🔥 FIX: Fetches full heavy image data) ---
+  const handleRowClick = async (log: AuditLog) => {
+    setSelectedLog(log); // Open modal instantly with text data
+    setIsModalLoading(true); // Show spinner for images
+
+    try {
+      // Fetch the full document which includes idFront, idBack, and faceEmbedding
+      const res = await api.get(`/bookings/${log._id}`);
+      if (res.data) {
+        setSelectedLog((prev) => ({ ...prev, ...res.data })); // Merge heavy images in
+      }
+    } catch (err) {
+      console.error("Failed to fetch heavy visitor images", err);
+    } finally {
+      setIsModalLoading(false);
+    }
+  };
+
   // --- FETCH CCTV LOGS WHEN MODAL OPENS ---
   useEffect(() => {
     if (selectedLog) {
       setLoadingCCTV(true);
-
       const first = selectedLog.firstName || "";
       const last = selectedLog.lastName || "";
       const fullName = `${first} ${last}`.trim();
@@ -142,22 +161,7 @@ const AuditTrail = () => {
           );
           setCctvLogs(sorted);
         } catch (err) {
-          try {
-            const fallbackRes = await api.get("/cctv-logs");
-            const filtered = fallbackRes.data.filter(
-              (l: any) =>
-                l.visitorId === selectedLog._id || l.visitorName === fullName,
-            );
-            setCctvLogs(
-              filtered.sort(
-                (a: any, b: any) =>
-                  new Date(b.timestamp).getTime() -
-                  new Date(a.timestamp).getTime(),
-              ),
-            );
-          } catch (fallbackErr) {
-            setCctvLogs([]);
-          }
+          setCctvLogs([]);
         } finally {
           setLoadingCCTV(false);
         }
@@ -167,55 +171,54 @@ const AuditTrail = () => {
     } else {
       setCctvLogs([]);
     }
-  }, [selectedLog]);
+  }, [selectedLog?._id]); // Only re-run if ID changes, not when images load
 
-  // --- FILTERING LOGIC (Manila Time) ---
+  // --- FILTERING & SORTING LOGIC ---
   const filteredLogs = useMemo(() => {
-    return logs
-      .filter((log) => {
-        const first = log.firstName || "";
-        const last = log.lastName || "";
-        const office = log.office || "";
-        const fullName = `${first} ${last}`;
+    const filtered = logs.filter((log) => {
+      const first = log.firstName || "";
+      const last = log.lastName || "";
+      const office = log.office || "";
+      const fullName = `${first} ${last}`.toLowerCase();
 
-        const matchesSearch =
-          fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          office.toLowerCase().includes(searchTerm.toLowerCase());
+      // 1. Search Filter
+      const matchesSearch =
+        fullName.includes(searchTerm.toLowerCase()) ||
+        office.toLowerCase().includes(searchTerm.toLowerCase());
+      if (!matchesSearch) return false;
 
-        let matchesTime = true;
-        try {
-          if (timeFilter !== "all" && !log.bookingDate) return false;
+      // 2. Custom Date Filter (Overrides timeFilter)
+      if (customDate) return log.bookingDate === customDate;
 
-          const manilaNow = new Date(
-            new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }),
-          );
-          const todayStr = manilaNow.toLocaleDateString("en-CA");
+      // 3. Time Filter
+      if (timeFilter === "all") return true;
 
-          const yesterday = new Date(manilaNow);
-          yesterday.setDate(yesterday.getDate() - 1);
-          const yesterdayStr = yesterday.toLocaleDateString("en-CA");
+      const manilaNow = new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }),
+      );
+      const todayStr = manilaNow.toLocaleDateString("en-CA");
+      const yesterday = new Date(manilaNow);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toLocaleDateString("en-CA");
 
-          if (timeFilter === "today") {
-            matchesTime = log.bookingDate === todayStr;
-          } else if (timeFilter === "yesterday") {
-            matchesTime = log.bookingDate === yesterdayStr;
-          } else if (timeFilter === "week") {
-            const logTime = new Date(log.bookingDate).getTime();
-            const weekAgo = manilaNow.getTime() - 7 * 86400000;
-            matchesTime = logTime >= weekAgo;
-          }
-        } catch (e) {
-          matchesTime = true;
-        }
+      if (timeFilter === "today") return log.bookingDate === todayStr;
+      if (timeFilter === "yesterday") return log.bookingDate === yesterdayStr;
+      if (timeFilter === "week") {
+        const logTime = new Date(log.bookingDate).getTime();
+        const weekAgo = manilaNow.getTime() - 7 * 86400000;
+        return logTime >= weekAgo;
+      }
 
-        return matchesSearch && matchesTime;
-      })
-      .sort((a, b) => {
-        const dateA = new Date(a.bookingDate || 0).getTime();
-        const dateB = new Date(b.bookingDate || 0).getTime();
-        return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA);
-      });
-  }, [logs, searchTerm, timeFilter]);
+      return true;
+    });
+
+    // 4. Sorting
+    return filtered.sort((a, b) => {
+      const timeA = new Date(a.bookingDate || 0).getTime();
+      const timeB = new Date(b.bookingDate || 0).getTime();
+      return sortOrder === "desc" ? timeB - timeA : timeA - timeB;
+    });
+  }, [logs, searchTerm, timeFilter, customDate, sortOrder]);
 
   // --- CSV EXPORT ---
   const handleGenerateReport = () => {
@@ -287,6 +290,51 @@ const AuditTrail = () => {
     document.body.removeChild(link);
   };
 
+  // --- ARCHIVE LOGS (30 DAYS) ---
+  const handleArchiveOldData = async () => {
+    const thirtyDaysAgo = new Date().getTime() - 30 * 86400000;
+    const oldRecords = logs.filter(
+      (b) => new Date(b.bookingDate).getTime() < thirtyDaysAgo,
+    );
+
+    if (oldRecords.length === 0)
+      return alert("System Optimization: No records older than 30 days found.");
+
+    if (
+      !window.confirm(
+        `Found ${oldRecords.length} records older than 30 days.\n\nDo you want to backup these to your local computer and permanently delete them from the database?`,
+      )
+    )
+      return;
+
+    setIsArchiving(true);
+    try {
+      const dataStr = JSON.stringify(oldRecords, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `UniVentry_Archive_${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      await Promise.all(
+        oldRecords.map((b) => api.delete(`/bookings/${b._id}`)),
+      );
+
+      alert(
+        "Backup successful! Old data has been purged from the active database.",
+      );
+      fetchAuditLogs();
+    } catch (err) {
+      console.error("Archive Failed", err);
+      alert("Error purging some records from the database. Please check logs.");
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
   // --- DELETE FUNCTION ---
   const confirmDelete = async () => {
     if (!logToDelete) return;
@@ -304,86 +352,121 @@ const AuditTrail = () => {
   };
 
   return (
-    <div className="h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
-      {/* ================= HEADER (BRANDING) ================= */}
-      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
-              <FiShield className="text-2xl lg:text-3xl" />
-            </div>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
-                Audit{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
-                  Trail
-                </span>
-              </h1>
-              <p className="text-[10px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                Master Activity Log
-              </p>
-            </div>
+    <div className="min-h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
+      {/* ================= HEADER (RESPONSIVE) ================= */}
+      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
+            <FiShield className="text-2xl lg:text-3xl" />
+          </div>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
+              Audit{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
+                Trail
+              </span>
+            </h1>
+            <p className="text-[10px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+              Master Activity Log
+            </p>
+          </div>
+        </div>
+
+        {/* --- DYNAMIC ACTION BAR (Wraps on Mobile) --- */}
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+          {/* Quick Filters */}
+          <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar w-full sm:w-auto">
+            {["today", "yesterday", "week", "all"].map((f) => (
+              <button
+                key={f}
+                onClick={() => {
+                  setTimeFilter(f);
+                  setCustomDate("");
+                }}
+                className={`px-4 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex-1 sm:flex-none text-center ${timeFilter === f && !customDate ? "bg-[#0038A8] text-white shadow-md" : "text-slate-400 hover:text-slate-700"}`}
+              >
+                {f}
+              </button>
+            ))}
           </div>
 
-          <button
-            onClick={handleGenerateReport}
-            className="flex items-center justify-center gap-2 px-6 py-4 bg-[#0038A8] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#002b82] transition-all shadow-lg shadow-blue-900/20 active:scale-95"
-          >
-            <FiDownload size={16} /> <span>Export CSV Report</span>
-          </button>
+          {/* Date Picker & Sorting */}
+          <div className="flex gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-36">
+              <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="date"
+                value={customDate}
+                onChange={(e) => setCustomDate(e.target.value)}
+                onClick={(e: any) => e.currentTarget.showPicker()}
+                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-2 py-2.5 text-[10px] font-bold text-slate-600 focus:outline-none focus:border-[#0038A8] shadow-sm uppercase cursor-pointer"
+              />
+            </div>
+            <div className="relative flex-1 sm:w-36">
+              <FiFilter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as any)}
+                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-2 py-2.5 text-[10px] font-bold text-slate-600 focus:outline-none focus:border-[#0038A8] shadow-sm uppercase cursor-pointer appearance-none"
+              >
+                <option value="desc">Newest First</option>
+                <option value="asc">Oldest First</option>
+              </select>
+            </div>
+            <button
+              onClick={fetchAuditLogs}
+              disabled={loading}
+              className="p-2.5 bg-white text-[#0038A8] border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 disabled:opacity-50 shrink-0"
+            >
+              <FiRefreshCw
+                size={16}
+                className={loading ? "animate-spin" : ""}
+              />
+            </button>
+          </div>
+
+          {/* Critical Actions */}
+          <div className="flex gap-2 w-full md:w-auto">
+            <button
+              onClick={handleArchiveOldData}
+              disabled={isArchiving}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 text-white border border-slate-700 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
+            >
+              <FiDatabase
+                size={14}
+                className={isArchiving ? "animate-pulse" : ""}
+              />{" "}
+              {isArchiving ? "Archiving..." : "Archive Logs"}
+            </button>
+
+            <button
+              onClick={handleGenerateReport}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-[#0038A8] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#002b82] transition-all shadow-md active:scale-95"
+            >
+              <FiDownload size={14} strokeWidth={2.5} /> Export CSV
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ================= MASSIVE WHITE CONTAINER ================= */}
       <div className="max-w-[1600px] mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-hidden">
         {/* CONTROLS BAR */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 shrink-0">
-          {/* SEARCH */}
-          <div className="flex items-center gap-2 w-full md:w-auto bg-slate-50 p-2 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="pl-3">
-              <FiSearch className="text-slate-400 w-5 h-5" />
-            </div>
-            <input
-              type="text"
-              placeholder="SEARCH VISITOR OR OFFICE..."
-              className="flex-1 w-full lg:w-80 py-2.5 font-bold text-slate-700 outline-none placeholder:text-slate-300 uppercase text-xs bg-transparent"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <div className="flex items-center gap-2 w-full md:w-auto bg-slate-50 p-2 rounded-2xl border border-slate-200 shadow-sm mb-6 shrink-0">
+          <div className="pl-3">
+            <FiSearch className="text-slate-400 w-5 h-5" />
           </div>
-
-          {/* FILTERS & REFRESH */}
-          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-2 md:pb-0">
-            <FiFilter className="text-slate-400 mr-2 shrink-0 w-4 h-4" />
-            {["today", "yesterday", "week", "all"].map((f) => (
-              <button
-                key={f}
-                onClick={() => setTimeFilter(f)}
-                className={`px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                  timeFilter === f
-                    ? "bg-[#0038A8] text-white shadow-md"
-                    : "bg-slate-50 text-slate-400 border border-slate-200 hover:bg-slate-100"
-                }`}
-              >
-                {f === "all" ? "All Time" : f}
-              </button>
-            ))}
-            <div className="h-6 w-px bg-slate-200 mx-2 shrink-0" />
-            <button
-              onClick={fetchAuditLogs}
-              disabled={loading}
-              className="p-3 bg-slate-50 text-[#0038A8] border border-slate-200 rounded-xl hover:bg-[#0038A8] hover:text-white transition-all shadow-sm active:scale-95 disabled:opacity-50 shrink-0"
-            >
-              <FiRefreshCw
-                size={18}
-                className={loading ? "animate-spin" : ""}
-              />
-            </button>
-          </div>
+          <input
+            type="text"
+            placeholder="SEARCH VISITOR OR OFFICE..."
+            className="flex-1 w-full lg:w-80 py-2.5 font-bold text-slate-700 outline-none placeholder:text-slate-300 uppercase text-xs bg-transparent"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
         {/* TABLE WRAPPER (Responsive horizontal scrolling) */}
-        <div className="flex-1 overflow-auto border border-slate-200 rounded-[1.5rem] bg-slate-50 custom-scrollbar relative">
+        <div className="flex-1 overflow-auto border border-slate-200 rounded-3xl bg-slate-50 custom-scrollbar relative">
           <table className="w-full text-left border-collapse table-auto min-w-[1000px]">
             <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-200">
               <tr>
@@ -428,14 +511,14 @@ const AuditTrail = () => {
                     colSpan={8}
                     className="p-16 text-center text-slate-400 text-xs font-bold uppercase tracking-widest"
                   >
-                    No Records Found for Selected Filter
+                    No Records Found
                   </td>
                 </tr>
               ) : (
                 filteredLogs.map((log) => (
                   <tr
                     key={log._id}
-                    onClick={() => setSelectedLog(log)}
+                    onClick={() => handleRowClick(log)}
                     className="group hover:bg-blue-50/50 bg-white transition-all cursor-pointer"
                   >
                     <td className="px-8 py-5 whitespace-nowrap">
@@ -660,7 +743,6 @@ const AuditTrail = () => {
                     color="text-red-500"
                   />
 
-                  {/* TOTAL STAY BADGE */}
                   <div className="absolute top-4 right-4 md:static md:right-auto md:top-auto md:ml-4">
                     <div className="bg-[#0038A8] text-white px-5 py-3 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-blue-900/20">
                       <span className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-0.5">
@@ -676,18 +758,20 @@ const AuditTrail = () => {
                   </div>
                 </div>
 
-                {/* ROW 3: DOCUMENTS */}
+                {/* ROW 3: DOCUMENTS (🔥 FIX: Heavy Image Loader added) */}
                 <div className="grid md:grid-cols-2 gap-6">
                   <DocumentCard
                     title="ID Verification (Front)"
                     image={selectedLog.idFront}
                     text={selectedLog.ocrFront}
+                    loading={isModalLoading}
                     onClick={() => setFullscreenImage(selectedLog.idFront)}
                   />
                   <DocumentCard
                     title="ID Verification (Back)"
                     image={selectedLog.idBack}
                     text={selectedLog.ocrBack}
+                    loading={isModalLoading}
                     onClick={() => setFullscreenImage(selectedLog.idBack)}
                   />
                 </div>
@@ -739,11 +823,7 @@ const AuditTrail = () => {
                             {/* Camera Name Tag */}
                             <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 shadow-lg">
                               <div
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  log.status === "OUT"
-                                    ? "bg-slate-400"
-                                    : "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"
-                                }`}
+                                className={`w-1.5 h-1.5 rounded-full ${log.status === "OUT" ? "bg-slate-400" : "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"}`}
                               />
                               <span className="text-[8px] font-black text-white uppercase tracking-widest">
                                 {log.cameraName}
@@ -762,11 +842,7 @@ const AuditTrail = () => {
                           <div className="p-4 bg-white flex flex-col flex-1 justify-between">
                             <div className="flex justify-between items-center mb-3">
                               <span
-                                className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border ${
-                                  log.status === "OUT"
-                                    ? "bg-slate-100 text-slate-500 border-slate-200"
-                                    : "bg-blue-50 text-[#0038A8] border-blue-100"
-                                }`}
+                                className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border ${log.status === "OUT" ? "bg-slate-100 text-slate-500 border-slate-200" : "bg-blue-50 text-[#0038A8] border-blue-100"}`}
                               >
                                 {log.status === "OUT"
                                   ? "EXITED (OUT)"
@@ -846,7 +922,7 @@ const AuditTrail = () => {
                 </h2>
               </div>
 
-              <div className="p-8 -mt-6 bg-white rounded-t-[2rem] relative z-20">
+              <div className="p-8 -mt-6 bg-white rounded-t-4xl relative z-20">
                 <h3 className="text-2xl font-black text-slate-800 uppercase leading-none">
                   {logToDelete.firstName} {logToDelete.lastName}
                 </h3>
@@ -908,7 +984,6 @@ const AuditTrail = () => {
 };
 
 // --- HELPER COMPONENTS ---
-
 const DetailRow = ({ label, value, highlight = false, customColor }: any) => (
   <div className="flex justify-start items-center gap-4 border-b border-slate-200 pb-3 last:border-0 last:pb-0">
     <span className="w-24 shrink-0 text-[9px] font-black text-slate-400 uppercase tracking-widest">
@@ -957,30 +1032,38 @@ const TimeVisualizer = ({ icon, label, time, color }: any) => (
   </div>
 );
 
-const DocumentCard = ({ title, image, text, onClick }: any) => (
+// 🔥 FIX: Added "loading" state so it spins while fetching images from DB
+const DocumentCard = ({ title, image, text, onClick, loading }: any) => (
   <div className="space-y-4">
     <h3 className="text-[#0038A8] font-black uppercase text-xs tracking-widest flex items-center gap-2">
       <FiCreditCard /> {title}
     </h3>
     <div
-      className="relative h-56 bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 group cursor-pointer shadow-sm"
-      onClick={onClick}
+      className="relative h-56 bg-slate-100 rounded-3xl overflow-hidden border border-slate-200 group cursor-pointer shadow-sm flex items-center justify-center"
+      onClick={image ? onClick : undefined}
     >
-      {image ? (
+      {loading ? (
+        <FiRefreshCw className="animate-spin text-[#0038A8] text-3xl" />
+      ) : image ? (
         <img
           src={image}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
       ) : (
-        <div className="flex h-full items-center justify-center text-slate-300">
-          <FiCreditCard size={40} />
+        <div className="flex flex-col items-center justify-center text-slate-300">
+          <FiCreditCard size={40} className="mb-2" />
+          <span className="text-[10px] font-black uppercase tracking-widest">
+            Missing
+          </span>
         </div>
       )}
-      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
-        <p className="text-white text-xs font-bold uppercase flex items-center gap-2">
-          <FiEye /> Fullscreen
-        </p>
-      </div>
+      {image && !loading && (
+        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+          <p className="text-white text-xs font-bold uppercase flex items-center gap-2">
+            <FiEye /> Fullscreen
+          </p>
+        </div>
+      )}
     </div>
     <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
       <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">
