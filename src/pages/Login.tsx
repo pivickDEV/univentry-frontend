@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client";
 
 import axios from "axios";
@@ -101,10 +100,10 @@ const Login = () => {
     // 🔥 CHANGED: bg-slate-950 -> bg-slate-50
     <div className="min-h-screen flex items-center justify-center p-4 lg:p-8 font-sans relative overflow-hidden bg-slate-50 selection:bg-[#FFD700]/30 selection:text-[#0038A8]">
       {/* 1. BACKGROUND LAYER (LIGHT MODE EFFECTS) */}
-      <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#0038A808_1px,transparent_1px),linear-gradient(to_bottom,#0038A808_1px,transparent_1px)] bg-[size:4rem_4rem]"></div>
+      <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#0038A808_1px,transparent_1px),linear-gradient(to_bottom,#0038A808_1px,transparent_1px)] bg-size-[4rem_4rem]"></div>
       {/* Glow Orbs */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#0038A8]/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#FFD700]/15 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 right-0 w-150 h-150 bg-[#0038A8]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-125 h-125 bg-[#FFD700]/15 rounded-full blur-[120px] pointer-events-none" />
 
       {/* 2. MAIN CARD */}
       <motion.div
@@ -112,11 +111,11 @@ const Login = () => {
         initial="hidden"
         animate="show"
         // 🔥 Updated shadow for light background
-        className="relative z-10 w-full max-w-6xl bg-white rounded-[2.5rem] lg:rounded-[3rem] shadow-[0_20px_60px_-15px_rgba(0,56,168,0.15)] overflow-hidden flex flex-col md:flex-row min-h-[40rem] lg:min-h-[46rem] border border-white"
+        className="relative z-10 w-full max-w-6xl bg-white rounded-[2.5rem] lg:rounded-[3rem] shadow-[0_20px_60px_-15px_rgba(0,56,168,0.15)] overflow-hidden flex flex-col md:flex-row min-h-160 lg:min-h-184 border border-white"
       >
         {/* === LEFT SIDE: INSTITUTIONAL BRANDING (Bright Blue) === */}
-        <div className="md:w-5/12 relative overflow-hidden bg-gradient-to-b from-[#0038A8] to-blue-800 p-10 lg:p-16 text-white flex flex-col justify-between">
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:20px_20px]" />
+        <div className="md:w-5/12 relative overflow-hidden bg-linear-to-b from-[#0038A8] to-blue-800 p-10 lg:p-16 text-white flex flex-col justify-between">
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[20px_20px]" />
           <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#FFD700] opacity-20 rounded-full blur-[80px]" />
 
           {/* Top Logo */}
@@ -138,7 +137,7 @@ const Login = () => {
             {/* Title */}
             <h1 className="text-4xl lg:text-[3.25rem] font-black leading-[1.1] mb-6 tracking-tight">
               SECURE <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] to-yellow-200">
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#FFD700] to-yellow-200">
                 STAFF LOGIN
               </span>
             </h1>
