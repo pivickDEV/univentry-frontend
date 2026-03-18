@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client";
 
 import axios from "axios";
@@ -102,8 +101,8 @@ const ActiveLog = () => {
   };
 
   return (
-    <div className="min-h-[220px] h-screen bg-slate-50 p-4 md:p-6 font-sans text-slate-800 flex flex-col overflow-hidden">
-      <div className="max-w-[1800px] mx-auto w-full flex flex-col h-full">
+    <div className="min-h-55 h-screen bg-slate-50 p-4 md:p-6 font-sans text-slate-800 flex flex-col overflow-hidden">
+      <div className="max-w-450 mx-auto w-full flex flex-col h-full">
         {/* --- HEADER --- */}
         <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 mb-6 shrink-0 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <div>
@@ -117,7 +116,7 @@ const ActiveLog = () => {
             </div>
             <h1 className="text-2xl lg:text-3xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
               Active{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
                 Roster
               </span>
             </h1>
@@ -185,9 +184,9 @@ const ActiveLog = () => {
         </div>
 
         {/* --- HIGH DENSITY TABLE --- */}
-        <div className="bg-white border border-slate-200 rounded-[2rem] shadow-xl flex-1 flex flex-col overflow-hidden relative">
-          <div className="overflow-y-auto overflow-x-auto h-[130px] flex-1 custom-scrollbar relative">
-            <table className="w-full text-left border-collapse table-auto relative min-w-[225px]">
+        <div className="bg-white border border-slate-200 rounded-4xl shadow-xl flex-1 flex flex-col overflow-hidden relative">
+          <div className="overflow-y-auto overflow-x-auto h-32.5 flex-1 custom-scrollbar relative">
+            <table className="w-full text-left border-collapse table-auto relative min-w-56.25">
               <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-100">
                 <tr className="bg-slate-50/95 backdrop-blur-md">
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
@@ -266,7 +265,7 @@ const ActiveLog = () => {
                               <p className="text-xs font-black text-slate-700 uppercase">
                                 {v.office}
                               </p>
-                              <p className="text-[10px] font-bold text-slate-500 truncate max-w-[150px]">
+                              <p className="text-[10px] font-bold text-slate-500 truncate max-w-37.5">
                                 {v.purpose}
                               </p>
                             </div>

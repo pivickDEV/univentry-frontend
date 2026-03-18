@@ -532,16 +532,10 @@ const TransactionScan = () => {
                 {scanStep === "verify" ? (
                   <div className="flex gap-3 w-full md:w-auto">
                     <button
-                      onClick={handleCloseModal}
-                      className="px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
-                    >
-                      Reject
-                    </button>
-                    <button
                       onClick={handleConfirm}
                       className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 bg-[#0038A8] text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 hover:bg-blue-800"
                     >
-                      <CheckCircle size={16} /> Confirm Transaction
+                      <CheckCircle size={16} /> Done
                     </button>
                   </div>
                 ) : (
