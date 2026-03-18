@@ -751,12 +751,12 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
     // It will NEVER overlap the z-40 sidebar now!
     <div
       ref={containerRef}
-      className="relative z-0 bg-[#0a0f1c] rounded-[2rem] overflow-hidden aspect-video shadow-2xl group border-[6px] border-slate-100 flex items-center justify-center"
+      className="relative z-0 bg-[#0a0f1c] rounded-4xl overflow-hidden aspect-video shadow-2xl group border-[6px] border-slate-100 flex items-center justify-center"
     >
       {streamStatus !== "LIVE" && (
         // 🔥 FIX: Lowered from z-50 to z-30
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0f1c] z-30 overflow-hidden">
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:20px_20px] opacity-20"></div>
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[20px_20px] opacity-20"></div>
 
           {streamStatus === "BUFFERING..." ||
           streamStatus.includes("CONNECTING") ? (
