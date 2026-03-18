@@ -90,7 +90,6 @@ const AuditTrail = () => {
 
   // --- MODAL STATES ---
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
-  const [isModalLoading, setIsModalLoading] = useState(false); // 🔥 For heavy image loading
   const [cctvLogs, setCctvLogs] = useState<CCTVLog[]>([]);
   const [loadingCCTV, setLoadingCCTV] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
@@ -117,7 +116,6 @@ const AuditTrail = () => {
   // --- ROW CLICK HANDLER (🔥 FIX: Fetches full heavy image data) ---
   const handleRowClick = async (log: AuditLog) => {
     setSelectedLog(log); // Open modal instantly with text data
-    setIsModalLoading(true); // Show spinner for images
 
     try {
       // Fetch the full document which includes idFront, idBack, and faceEmbedding
@@ -128,7 +126,6 @@ const AuditTrail = () => {
     } catch (err) {
       console.error("Failed to fetch heavy visitor images", err);
     } finally {
-      setIsModalLoading(false);
     }
   };
 
@@ -354,7 +351,7 @@ const AuditTrail = () => {
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
       {/* ================= HEADER (RESPONSIVE) ================= */}
-      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+      <div className="max-w-400 mx-auto w-full mb-6 shrink-0 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
             <FiShield className="text-2xl lg:text-3xl" />
@@ -362,7 +359,7 @@ const AuditTrail = () => {
           <div>
             <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
               Audit{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
                 Trail
               </span>
             </h1>
@@ -450,7 +447,7 @@ const AuditTrail = () => {
       </div>
 
       {/* ================= MASSIVE WHITE CONTAINER ================= */}
-      <div className="max-w-[1600px] mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-hidden">
+      <div className="max-w-400 mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-hidden">
         {/* CONTROLS BAR */}
         <div className="flex items-center gap-2 w-full md:w-auto bg-slate-50 p-2 rounded-2xl border border-slate-200 shadow-sm mb-6 shrink-0">
           <div className="pl-3">
@@ -467,7 +464,7 @@ const AuditTrail = () => {
 
         {/* TABLE WRAPPER (Responsive horizontal scrolling) */}
         <div className="flex-1 overflow-auto border border-slate-200 rounded-3xl bg-slate-50 custom-scrollbar relative">
-          <table className="w-full text-left border-collapse table-auto min-w-[1000px]">
+          <table className="w-full text-left border-collapse table-auto min-w-250">
             <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-200">
               <tr>
                 <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
@@ -601,7 +598,7 @@ const AuditTrail = () => {
       {/* ================= DOSSIER MODAL (REDESIGNED) ================= */}
       <AnimatePresence>
         {selectedLog && (
-          <div className="fixed inset-0 z-[50] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -624,7 +621,7 @@ const AuditTrail = () => {
                   <FiUser size={32} />
                 </div>
                 <h2 className="text-white font-black text-2xl lg:text-3xl uppercase tracking-wide relative z-10">
-                  Visitor Dossier
+                  Visitor Details
                 </h2>
                 <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mt-1 relative z-10">
                   Ref ID: {selectedLog._id}
@@ -764,14 +761,12 @@ const AuditTrail = () => {
                     title="ID Verification (Front)"
                     image={selectedLog.idFront}
                     text={selectedLog.ocrFront}
-                    loading={isModalLoading}
                     onClick={() => setFullscreenImage(selectedLog.idFront)}
                   />
                   <DocumentCard
                     title="ID Verification (Back)"
                     image={selectedLog.idBack}
                     text={selectedLog.ocrBack}
-                    loading={isModalLoading}
                     onClick={() => setFullscreenImage(selectedLog.idBack)}
                   />
                 </div>
@@ -803,7 +798,7 @@ const AuditTrail = () => {
                       {cctvLogs.map((log) => (
                         <div
                           key={log._id}
-                          className="bg-slate-900 rounded-[1.5rem] overflow-hidden border-2 border-slate-200 shadow-md group flex flex-col"
+                          className="bg-slate-900 rounded-3xl overflow-hidden border-2 border-slate-200 shadow-md group flex flex-col"
                         >
                           {/* Image Section */}
                           <div className="relative aspect-video bg-slate-800 flex items-center justify-center overflow-hidden">
@@ -905,7 +900,7 @@ const AuditTrail = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
+            className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -966,7 +961,7 @@ const AuditTrail = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4"
+            className="fixed inset-0 z-80 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4"
             onClick={() => setFullscreenImage(null)}
           >
             <img
