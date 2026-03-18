@@ -692,7 +692,7 @@ const BookAppointment = () => {
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="lg:col-span-7 w-full bg-white rounded-[2.5rem] md:rounded-[3rem] shadow-[0_0_80px_rgba(0,56,168,0.3)] overflow-hidden flex flex-col relative text-slate-800 border-4 border-white/20 backdrop-blur-xl min-h-[600px]"
+          className="lg:col-span-7 w-full bg-white rounded-[2.5rem] md:rounded-[3rem] shadow-[0_0_80px_rgba(0,56,168,0.3)] overflow-hidden flex flex-col relative text-slate-800 border-4 border-white/20 backdrop-blur-xl min-h-150"
         >
           {/* STEPPER */}
           {step < 4 && (
@@ -995,7 +995,7 @@ const BookAppointment = () => {
                       className={`transition-all ${!bookingDate ? "opacity-30 pointer-events-none grayscale" : "opacity-100"}`}
                     >
                       <div className="bg-[#001233] rounded-4xl p-5 border-2 border-blue-900 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl relative overflow-hidden">
-                        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:10px_10px]"></div>
+                        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-size-[10px_10px]"></div>
                         <div className="flex items-center gap-4 relative z-10">
                           <div className="p-3 bg-[#0038A8] rounded-xl text-[#FFD700] shadow-[0_0_15px_rgba(0,56,168,0.8)]">
                             <FiCpu size={24} />
@@ -1320,7 +1320,7 @@ const BookAppointment = () => {
 
                       {/* AI FORGERY TERMINAL */}
                       <div className="bg-[#001233] p-4 rounded-2xl border-2 border-slate-800 shadow-xl flex flex-col relative overflow-hidden">
-                        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:10px_10px] opacity-30"></div>
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[10px_10px] opacity-30"></div>
                         <div className="flex justify-between items-center mb-2 border-b border-blue-900 pb-2 relative z-10">
                           <span className="text-[8px] font-black text-blue-300 uppercase tracking-[0.3em] flex items-center gap-1.5">
                             <FiCpu size={12} className="text-[#FFD700]" />{" "}

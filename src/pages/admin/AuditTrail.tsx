@@ -533,7 +533,7 @@ const AuditTrail = () => {
                     </td>
                     <td className="px-8 py-5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-slate-700 uppercase px-3 py-1.5 rounded-full border border-slate-200 bg-slate-100 truncate max-w-[150px]">
+                        <span className="text-[10px] font-black text-slate-700 uppercase px-3 py-1.5 rounded-full border border-slate-200 bg-slate-100 truncate max-w-37.5">
                           {log.office || "N/A"}
                         </span>
                       </div>
