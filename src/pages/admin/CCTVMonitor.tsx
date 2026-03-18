@@ -78,29 +78,22 @@ const normalizeEmbedding = (rawEmbedding: any): number[] => {
 
   let arr: any[] = [];
 
-  // Case 1: already a proper JS array
   if (Array.isArray(rawEmbedding)) {
     arr = rawEmbedding;
-  }
-  // Case 2: JSON string
-  else if (typeof rawEmbedding === "string") {
+  } else if (typeof rawEmbedding === "string") {
     try {
       const parsed = JSON.parse(rawEmbedding);
       if (Array.isArray(parsed)) arr = parsed;
     } catch (err) {
       return [];
     }
-  }
-  // Case 3: mongoose/buffer-like object { data: [...] }
-  else if (
+  } else if (
     typeof rawEmbedding === "object" &&
     rawEmbedding !== null &&
     Array.isArray(rawEmbedding.data)
   ) {
     arr = rawEmbedding.data;
-  }
-  // Case 4: object with numeric keys
-  else if (typeof rawEmbedding === "object" && rawEmbedding !== null) {
+  } else if (typeof rawEmbedding === "object" && rawEmbedding !== null) {
     const values = Object.values(rawEmbedding);
     if (Array.isArray(values)) arr = values;
   }
@@ -134,7 +127,7 @@ const CCTVMonitor = () => {
   const [cameras] = useState<Camera[]>([
     {
       id: "CAM_1",
-      name: "Main Gate Camera",
+      name: "Hallway Camera",
       wsUrl: import.meta.env.VITE_WS_CAM_1 || "ws://localhost:9999",
     },
   ]);
@@ -152,9 +145,9 @@ const CCTVMonitor = () => {
   const [filterDate, setFilterDate] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
-  const activeVisitors = useRef<
-    Map<string, { lastSeen: number; status: "IN" | "OUT"; visitorName: string }>
-  >(new Map());
+  // 🔥 5-MINUTE COOLDOWN TRACKER
+  // Maps "visitorId|||cameraName" -> timestamp (in ms)
+  const cooldownMap = useRef<Map<string, number>>(new Map());
 
   // ============================================================================
   // INITIALIZATION
@@ -174,7 +167,6 @@ const CCTVMonitor = () => {
 
         if (!isMounted) return;
 
-        // CHANGE THIS PART
         const visitorsRes = await api
           .get("/face-recognition/visitors")
           .catch((err) => {
@@ -199,42 +191,16 @@ const CCTVMonitor = () => {
               ? visitorsRes.data.bookings
               : [];
 
-        console.log("Visitors response:", visitorsRes.data);
-        console.log("Resolved visitors array:", rawVisitors);
-
         const labeledDescriptors: faceapi.LabeledFaceDescriptors[] = [];
 
         rawVisitors.forEach((record: DBVisitor, index: number) => {
           const { _id, faceEmbedding, fullName } =
             extractVisitorIdentity(record);
 
-          if (!_id) {
-            console.warn(`Visitor [${index}] skipped: missing _id`, record);
-            return;
-          }
-
-          if (!faceEmbedding) {
-            console.warn(
-              `Visitor [${index}] skipped: missing faceEmbedding`,
-              record,
-            );
-            return;
-          }
+          if (!_id || !faceEmbedding) return;
 
           const normalized = normalizeEmbedding(faceEmbedding);
-
-          if (normalized.length !== 128) {
-            console.warn(
-              `Visitor [${index}] skipped: invalid embedding length`,
-              {
-                _id,
-                name: fullName,
-                length: normalized.length,
-                rawFaceEmbedding: faceEmbedding,
-              },
-            );
-            return;
-          }
+          if (normalized.length !== 128) return;
 
           try {
             labeledDescriptors.push(
@@ -244,25 +210,13 @@ const CCTVMonitor = () => {
               ),
             );
           } catch (err) {
-            console.warn(
-              `Visitor [${index}] skipped: failed descriptor build`,
-              {
-                _id,
-                name: fullName,
-                err,
-              },
-            );
+            console.warn(`Failed descriptor build`, err);
           }
         });
 
-        console.log("Loaded labeled descriptors:", labeledDescriptors.length);
-
         if (labeledDescriptors.length > 0 && isMounted) {
-          // Slightly more forgiving than 0.6 for live CCTV conditions
           setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65));
-          console.log("FaceMatcher initialized successfully.");
         } else {
-          console.warn("⚠️ No faces found in DB to match against.");
           setFaceMatcher(null);
         }
 
@@ -306,51 +260,7 @@ const CCTVMonitor = () => {
   }, []);
 
   // ============================================================================
-  // AUTO-LOGOUT
-  // ============================================================================
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const currentDate = getCurrentPHDate();
-
-      activeVisitors.current.forEach((data, key) => {
-        if (data.status === "IN" && now - data.lastSeen > 30000) {
-          activeVisitors.current.set(key, { ...data, status: "OUT" });
-
-          const [visitorId, cameraName] = key.split("|||");
-
-          const outLog: RecognitionLog = {
-            _id: Math.random().toString(),
-            visitorId,
-            visitorName: data.visitorName,
-            cameraName,
-            confidence: 0,
-            screenshotBase64: "",
-            status: "OUT",
-            date: currentDate,
-            timestamp: new Date().toISOString(),
-          };
-
-          setLogs((prev) =>
-            [outLog, ...prev]
-              .sort(
-                (a, b) =>
-                  new Date(b.timestamp).getTime() -
-                  new Date(a.timestamp).getTime(),
-              )
-              .slice(0, 50),
-          );
-
-          api.post("/cctv-logs", outLog).catch(() => {});
-        }
-      });
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // ============================================================================
-  // MATCH HANDLER
+  // MATCH HANDLER (With 5-Minute Cooldown logic)
   // ============================================================================
   const handleFaceDetected = useCallback(
     async (
@@ -365,18 +275,16 @@ const CCTVMonitor = () => {
       const now = Date.now();
       const currentDate = getCurrentPHDate();
       const key = `${visitorId}|||${cameraName}`;
-      const activeInfo = activeVisitors.current.get(key);
 
-      if (activeInfo && activeInfo.status === "IN") {
-        activeVisitors.current.set(key, { ...activeInfo, lastSeen: now });
-        return;
+      const lastLogged = cooldownMap.current.get(key) || 0;
+
+      // 🔥 5 MINUTE COOLDOWN CHECK (300,000 ms)
+      if (now - lastLogged < 300000) {
+        return; // Ignore the detection. Prevents DB flooding!
       }
 
-      activeVisitors.current.set(key, {
-        lastSeen: now,
-        status: "IN",
-        visitorName,
-      });
+      // Update cooldown tracker
+      cooldownMap.current.set(key, now);
 
       const newLog: RecognitionLog = {
         _id: Math.random().toString(),
@@ -423,14 +331,15 @@ const CCTVMonitor = () => {
     });
 
   return (
-    <div className="h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden relative">
+    // 🔥 MOBILE FIX: min-h-screen and overflow-y-auto allows mobile scrolling!
+    <div className="min-h-screen lg:h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-y-auto lg:overflow-hidden relative">
       <AnimatePresence>
         {zoomedImage && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/90 backdrop-blur-xl p-4 cursor-zoom-out"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl p-4 cursor-zoom-out"
             onClick={() => setZoomedImage(null)}
           >
             <motion.img
@@ -447,7 +356,7 @@ const CCTVMonitor = () => {
         )}
       </AnimatePresence>
 
-      <div className="max-w-400 mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
+      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
         <div className="flex items-center gap-4">
           <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
             <FiShield className="text-2xl lg:text-3xl" />
@@ -483,15 +392,15 @@ const CCTVMonitor = () => {
             )}
             {systemStatus}
           </span>
-
           <span className="hidden md:flex items-center gap-2 text-white bg-[#0038A8] border border-blue-800 px-5 py-3 rounded-2xl shadow-lg">
             <FiCamera /> {cameras.length} NODE(S) ONLINE
           </span>
         </div>
       </div>
 
-      <div className="max-w-400 mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 overflow-hidden">
-        <div className="flex-[2.5] bg-white rounded-[2.5rem] border border-slate-200 p-6 lg:p-8 flex flex-col overflow-hidden shadow-xl">
+      <div className="max-w-[1600px] mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 lg:overflow-hidden">
+        {/* 🔥 MOBILE FIX: min-h-[400px] guarantees the camera box doesn't squash on phones */}
+        <div className="flex-[2.5] bg-white rounded-[2.5rem] border border-slate-200 p-6 lg:p-8 flex flex-col overflow-hidden shadow-xl min-h-[400px]">
           <div className="flex items-center gap-3 mb-6 shrink-0">
             <div className="p-2 bg-blue-50 text-[#0038A8] rounded-lg">
               <FiCamera size={16} />
@@ -514,7 +423,8 @@ const CCTVMonitor = () => {
           </div>
         </div>
 
-        <div className="flex-1 bg-white rounded-[2.5rem] border border-slate-200 shadow-xl p-6 lg:p-8 flex flex-col overflow-hidden xl:max-w-md">
+        {/* 🔥 MOBILE FIX: min-h-[500px] guarantees logs are visible and scrollable on phones */}
+        <div className="flex-1 bg-white rounded-[2.5rem] border border-slate-200 shadow-xl p-6 lg:p-8 flex flex-col xl:max-w-md min-h-[500px] lg:min-h-0 lg:overflow-hidden">
           <div className="shrink-0 mb-6 border-b border-slate-100 pb-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -526,7 +436,7 @@ const CCTVMonitor = () => {
                 </h3>
               </div>
               <span className="text-[9px] font-black text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-lg shadow-sm tracking-widest flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />{" "}
                 LIVE
               </span>
             </div>
@@ -542,7 +452,6 @@ const CCTVMonitor = () => {
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-xs font-bold focus:outline-none focus:border-[#0038A8] focus:ring-2 focus:ring-blue-50 transition-all placeholder:text-slate-400"
                 />
               </div>
-
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -554,7 +463,6 @@ const CCTVMonitor = () => {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-3 text-[10px] font-black text-slate-600 focus:outline-none focus:border-[#0038A8] transition-colors cursor-pointer uppercase"
                   />
                 </div>
-
                 <div className="relative flex-1">
                   <FiFilter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <select
@@ -590,11 +498,7 @@ const CCTVMonitor = () => {
                     className="bg-[#F8FAFC] border border-slate-200 p-4 rounded-3xl flex gap-4 items-center shadow-sm hover:shadow-md hover:border-blue-200 transition-all group"
                   >
                     <div
-                      className={`w-16 h-16 rounded-2xl overflow-hidden shrink-0 border-2 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_15px_rgba(0,56,168,0.2)] ${
-                        log.screenshotBase64
-                          ? "cursor-zoom-in border-white group-hover:border-[#0038A8]"
-                          : "bg-slate-200 border-slate-300"
-                      }`}
+                      className={`w-16 h-16 rounded-2xl overflow-hidden shrink-0 border-2 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_0_15px_rgba(0,56,168,0.2)] ${log.screenshotBase64 ? "cursor-zoom-in border-white group-hover:border-[#0038A8]" : "bg-slate-200 border-slate-300"}`}
                       onClick={() =>
                         log.screenshotBase64 &&
                         setZoomedImage(log.screenshotBase64)
@@ -652,7 +556,7 @@ const CCTVMonitor = () => {
 };
 
 // ============================================================================
-// CAMERA NODE
+// COMPONENT: HIGH-TECH CCTV NODE
 // ============================================================================
 const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -807,12 +711,6 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
             const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
             label = bestMatch.label;
             distance = bestMatch.distance;
-
-            console.log("Best match:", {
-              label,
-              distance,
-              confidence: Math.round((1 - distance) * 100),
-            });
           }
 
           const isKnown = label !== "unknown";
@@ -837,7 +735,7 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
           }
         });
       } catch (err) {
-        console.warn("Face scan error:", err);
+        // Suppressed to prevent console spam
       } finally {
         isScanning = false;
         scanTimeout = setTimeout(scanFace, 600);
@@ -845,17 +743,16 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
     };
 
     scanFace();
-
     return () => clearTimeout(scanTimeout);
   }, [faceMatcher, modelsLoaded, camera.name, streamStatus, onMatch]);
 
   return (
     <div
       ref={containerRef}
-      className="relative bg-[#0a0f1c] rounded-4xl overflow-hidden aspect-video shadow-2xl group border-[6px] border-slate-100 flex items-center justify-center"
+      className="relative bg-[#0a0f1c] rounded-[2rem] overflow-hidden aspect-video shadow-2xl group border-[6px] border-slate-100 flex items-center justify-center"
     >
       {streamStatus !== "LIVE" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0f1c] z-50 overflow-hidden">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0f1c] z-40 overflow-hidden">
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[20px_20px] opacity-20"></div>
 
           {streamStatus === "BUFFERING..." ||

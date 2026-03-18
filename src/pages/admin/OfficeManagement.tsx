@@ -166,7 +166,7 @@ const OfficeManagement = () => {
   return (
     <div className="min-h-screen lg:h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-y-auto lg:overflow-hidden">
       {/* ================= HEADER (BRANDING) ================= */}
-      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0">
+      <div className="max-w-400 mx-auto w-full mb-6 shrink-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
@@ -225,7 +225,7 @@ const OfficeManagement = () => {
             initial={{ opacity: 0, height: 0, marginBottom: 0 }}
             animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
             exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            className="max-w-[1600px] mx-auto w-full shrink-0"
+            className="max-w-400 mx-auto w-full shrink-0"
           >
             <div className="p-4 bg-red-50 text-red-600 rounded-xl border border-red-200 text-xs font-bold flex items-center gap-3 shadow-sm">
               <FiAlertTriangle size={16} /> {error}
@@ -237,7 +237,7 @@ const OfficeManagement = () => {
             initial={{ opacity: 0, height: 0, marginBottom: 0 }}
             animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
             exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            className="max-w-[1600px] mx-auto w-full shrink-0"
+            className="max-w-400 mx-auto w-full shrink-0"
           >
             <div className="p-4 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-200 text-xs font-bold flex items-center gap-3 shadow-sm">
               <FiCheck size={16} /> {success}
@@ -247,7 +247,7 @@ const OfficeManagement = () => {
       </AnimatePresence>
 
       {/* ================= MASSIVE WHITE CONTAINER ================= */}
-      <div className="max-w-[1600px] mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-visible lg:overflow-hidden h-auto lg:h-0">
+      <div className="max-w-400 mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-visible lg:overflow-hidden h-auto lg:h-0">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start h-full">
           {/* ================= LEFT: OFFICE LISTING ================= */}
           <div
@@ -269,8 +269,8 @@ const OfficeManagement = () => {
             </div>
 
             {/* List Wrapper */}
-            <div className="flex-1 max-h-[400px] lg:max-h-none overflow-y-auto overflow-x-auto border border-slate-200 rounded-[1.5rem] bg-slate-50 custom-scrollbar relative">
-              <table className="w-full text-left border-collapse table-auto min-w-[450px]">
+            <div className="flex-1 max-h-100 lg:max-h-none overflow-y-auto overflow-x-auto border border-slate-200 rounded-3xl bg-slate-50 custom-scrollbar relative">
+              <table className="w-full text-left border-collapse table-auto min-w-112.5">
                 <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-200">
                   <tr>
                     <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400">
@@ -356,7 +356,7 @@ const OfficeManagement = () => {
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className="lg:col-span-7 xl:col-span-8 h-auto lg:h-full flex flex-col mt-8 lg:mt-0"
               >
-                <div className="bg-slate-50 border border-slate-200 rounded-[2rem] p-6 lg:p-10 shadow-inner flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+                <div className="bg-slate-50 border border-slate-200 rounded-4xl p-6 lg:p-10 shadow-inner flex-1 overflow-y-auto custom-scrollbar flex flex-col">
                   <div className="flex justify-between items-center mb-8 shrink-0">
                     <div>
                       <h2 className="text-2xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
@@ -498,7 +498,7 @@ const OfficeManagement = () => {
                         </div>
 
                         {/* Rule List */}
-                        <div className="flex-1 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                        <div className="flex-1 max-h-75 overflow-y-auto pr-2 custom-scrollbar space-y-3">
                           {selectedOffice?.customLimits.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-center opacity-50 py-10">
                               <FiCalendar className="text-4xl text-slate-300 mb-3" />
@@ -558,7 +558,7 @@ const OfficeManagement = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
+            className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -575,7 +575,7 @@ const OfficeManagement = () => {
                 </h2>
               </div>
 
-              <div className="p-8 -mt-6 bg-white rounded-t-[2rem] relative z-20">
+              <div className="p-8 -mt-6 bg-white rounded-t-4xl relative z-20">
                 <h3 className="text-2xl font-black text-slate-800 uppercase leading-none mb-6">
                   Are you sure?
                 </h3>
