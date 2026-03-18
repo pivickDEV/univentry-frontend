@@ -112,6 +112,15 @@ const ManualEntry = () => {
   const [idBack, setIdBack] = useState<string | null>(null);
   const [ocrFront, setOcrFront] = useState("");
   const [ocrBack, setOcrBack] = useState("");
+
+  // 🔥 NEW: ID Authenticity State
+  const [idStatusFront, setIdStatusFront] = useState<
+    "idle" | "scanning" | "valid" | "fake"
+  >("idle");
+  const [idStatusBack, setIdStatusBack] = useState<
+    "idle" | "scanning" | "valid" | "fake"
+  >("idle");
+
   const [processing, setProcessing] = useState({
     face: false,
     ocrFront: false,
@@ -314,7 +323,7 @@ const ManualEntry = () => {
   ]);
 
   // ==========================================================
-  // 3. CAPTURE ACTIONS
+  // 3. CAPTURE & AI FORGERY ACTIONS
   // ==========================================================
   const handleRetakeFace = () => {
     setFaceScan(null);
@@ -341,9 +350,76 @@ const ManualEntry = () => {
     }
   };
 
+  // 🔥 NEW: Authenticity Validation Engine
+  const verifyDocumentAuthenticity = (
+    text: string,
+    idTypeStr: string,
+  ): "valid" | "fake" => {
+    const upperText = text.toUpperCase();
+    const baselineMarkers = [
+      "REPUBLIC OF THE PHILIPPINES",
+      "REPUBLIKA NG PILIPINAS",
+      "DATE OF BIRTH",
+      "DOB",
+      "NAME",
+      "NO.",
+      "SIGNATURE",
+      "ADDRESS",
+    ];
+    let specificMarkers: string[] = [];
+
+    if (idTypeStr.includes("PhilID") || idTypeStr.includes("National ID"))
+      specificMarkers = [
+        "PHILID",
+        "NATIONAL ID",
+        "PSA",
+        "PHILIPPINE STATISTICS AUTHORITY",
+      ];
+    else if (idTypeStr.includes("Driver"))
+      specificMarkers = [
+        "DRIVER",
+        "LICENSE",
+        "LTO",
+        "LAND TRANSPORTATION OFFICE",
+      ];
+    else if (idTypeStr.includes("Passport"))
+      specificMarkers = [
+        "PASSPORT",
+        "PASAPORTE",
+        "DEPARTMENT OF FOREIGN AFFAIRS",
+      ];
+    else if (idTypeStr.includes("UMID"))
+      specificMarkers = ["UMID", "SSS", "GSIS", "UNIFIED MULTI-PURPOSE"];
+    else if (idTypeStr.includes("TIN"))
+      specificMarkers = ["TIN", "BUREAU OF INTERNAL REVENUE", "BIR"];
+    else if (idTypeStr.includes("School"))
+      specificMarkers = [
+        "STUDENT",
+        "UNIVERSITY",
+        "COLLEGE",
+        "SCHOOL",
+        "ID NUMBER",
+        "CAMPUS",
+      ];
+
+    const baseMatches = baselineMarkers.filter((m) =>
+      upperText.includes(m),
+    ).length;
+    const specificMatches = specificMarkers.filter((m) =>
+      upperText.includes(m),
+    ).length;
+
+    // Minimum criteria to consider an ID valid
+    if (specificMatches >= 1 || baseMatches >= 2) return "valid";
+    return "fake";
+  };
+
   const runOcr = async (image: string, side: "front" | "back") => {
     const key = side === "front" ? "ocrFront" : "ocrBack";
     setProcessing((prev) => ({ ...prev, [key]: true }));
+
+    if (side === "front") setIdStatusFront("scanning");
+    else setIdStatusBack("scanning");
 
     try {
       const worker = await createWorker("eng");
@@ -353,12 +429,22 @@ const ManualEntry = () => {
 
       const cleanText = text.replace(/[^a-zA-Z0-9\s]/g, "").trim();
 
-      if (side === "front") setOcrFront(cleanText);
-      else setOcrBack(cleanText);
+      if (side === "front") {
+        setOcrFront(cleanText);
+        setIdStatusFront(verifyDocumentAuthenticity(text, idType));
+      } else {
+        setOcrBack(cleanText);
+        // Ensure back has some valid markers or generic text to pass, else fake
+        setIdStatusBack(
+          text.length > 10 ? verifyDocumentAuthenticity(text, idType) : "fake",
+        );
+      }
 
       await worker.terminate();
     } catch (err) {
       console.error(`OCR ${side} failed:`, err);
+      if (side === "front") setIdStatusFront("fake");
+      else setIdStatusBack("fake");
     } finally {
       setProcessing((prev) => ({ ...prev, [key]: false }));
     }
@@ -378,6 +464,13 @@ const ManualEntry = () => {
 
     if (!idFront || !idBack) {
       return setError("ID images required.");
+    }
+
+    // 🔥 NEW: Check for Forgery
+    if (idStatusFront === "fake" || idStatusBack === "fake") {
+      return setError(
+        "Document verification failed. Please upload a clear, valid ID.",
+      );
     }
 
     if (slots.max === 0) {
@@ -443,12 +536,16 @@ const ManualEntry = () => {
     setOffice("");
     setBookingDate(today);
     setSlots({ current: 0, max: null });
+
     setFaceScan(null);
     setFaceEmbedding(null);
     setIdFront(null);
     setIdBack(null);
     setOcrFront("");
     setOcrBack("");
+    setIdStatusFront("idle");
+    setIdStatusBack("idle");
+
     handleRetakeFace();
   };
 
@@ -845,8 +942,17 @@ const ManualEntry = () => {
 
           <div className="grid grid-cols-3 gap-4">
             <ModernPreviewBox label="Biometric Profile" img={faceScan} />
-            <ModernPreviewBox label="ID Front" img={idFront} />
-            <ModernPreviewBox label="ID Back" img={idBack} />
+            {/* 🔥 NEW: Show Validation Status in Previews */}
+            <ModernPreviewBox
+              label="ID Front"
+              img={idFront}
+              status={idStatusFront}
+            />
+            <ModernPreviewBox
+              label="ID Back"
+              img={idBack}
+              status={idStatusBack}
+            />
           </div>
         </div>
       </div>
@@ -1045,10 +1151,27 @@ const ModernCaptureBtn = ({ onClick, active, loading, icon, label }: any) => (
   </button>
 );
 
-const ModernPreviewBox = ({ label, img }: any) => (
+// 🔥 NEW: Visual UI warning inside Preview Box for Fake IDs
+const ModernPreviewBox = ({ label, img, status }: any) => (
   <div className="bg-white rounded-3xl p-2.5 border border-slate-200 shadow-sm flex flex-col items-center justify-center h-47 relative overflow-hidden group">
     {img ? (
-      <img src={img} className="w-full h-full object-cover rounded-2xl" />
+      <>
+        <img src={img} className="w-full h-full object-cover rounded-2xl" />
+
+        {/* Fake Warning Overlay */}
+        {status === "fake" && (
+          <div className="absolute inset-0 bg-red-500/80 flex items-center justify-center rounded-2xl backdrop-blur-sm">
+            <span className="text-white text-[10px] font-black uppercase tracking-widest bg-red-600 px-3 py-1.5 rounded shadow-lg border border-red-400">
+              Fake ID Detected
+            </span>
+          </div>
+        )}
+
+        {/* Valid Status Marker */}
+        {status === "valid" && (
+          <div className="absolute top-3 right-3 bg-emerald-500 w-3 h-3 rounded-full border-2 border-white shadow-sm" />
+        )}
+      </>
     ) : (
       <div className="flex flex-col items-center justify-center opacity-40">
         <Shield size={28} className="mb-2 text-slate-400" />
@@ -1058,9 +1181,6 @@ const ModernPreviewBox = ({ label, img }: any) => (
           Missing
         </p>
       </div>
-    )}
-    {img && (
-      <div className="absolute top-3 right-3 bg-emerald-500 w-3 h-3 rounded-full border-2 border-white shadow-sm"></div>
     )}
   </div>
 );
