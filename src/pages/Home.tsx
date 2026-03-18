@@ -499,7 +499,7 @@ const Home = () => {
       </section>
 
       {/* ================= MASSIVE FOOTER ================= */}
-      <footer className="bg-[#000a1f] text-white pt-32 pb-12 overflow-hidden">
+      <footer className="bg-[#0038A8] text-white pt-32 pb-12 overflow-hidden">
         <div className="max-w-7xl mx-auto px-6 relative">
           {/* Edge-to-Edge Typography */}
           <div className="text-center mb-24">
