@@ -193,7 +193,7 @@ const CCTVMonitor = () => {
 
         const labeledDescriptors: faceapi.LabeledFaceDescriptors[] = [];
 
-        rawVisitors.forEach((record: DBVisitor, index: number) => {
+        rawVisitors.forEach((record: DBVisitor) => {
           const { _id, faceEmbedding, fullName } =
             extractVisitorIdentity(record);
 
@@ -339,7 +339,7 @@ const CCTVMonitor = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl p-4 cursor-zoom-out"
+            className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/90 backdrop-blur-xl p-4 cursor-zoom-out"
             onClick={() => setZoomedImage(null)}
           >
             <motion.img
@@ -356,7 +356,7 @@ const CCTVMonitor = () => {
         )}
       </AnimatePresence>
 
-      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
+      <div className="max-w-400 mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
         <div className="flex items-center gap-4">
           <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
             <FiShield className="text-2xl lg:text-3xl" />
@@ -398,9 +398,9 @@ const CCTVMonitor = () => {
         </div>
       </div>
 
-      <div className="max-w-[1600px] mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 lg:overflow-hidden">
+      <div className="max-w-400 mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 lg:overflow-hidden">
         {/* 🔥 MOBILE FIX: min-h-[400px] guarantees the camera box doesn't squash on phones */}
-        <div className="flex-[2.5] bg-white rounded-[2.5rem] border border-slate-200 p-6 lg:p-8 flex flex-col overflow-hidden shadow-xl min-h-[400px]">
+        <div className="flex-[2.5] bg-white rounded-[2.5rem] border border-slate-200 p-6 lg:p-8 flex flex-col overflow-hidden shadow-xl min-h-100">
           <div className="flex items-center gap-3 mb-6 shrink-0">
             <div className="p-2 bg-blue-50 text-[#0038A8] rounded-lg">
               <FiCamera size={16} />
@@ -424,7 +424,7 @@ const CCTVMonitor = () => {
         </div>
 
         {/* 🔥 MOBILE FIX: min-h-[500px] guarantees logs are visible and scrollable on phones */}
-        <div className="flex-1 bg-white rounded-[2.5rem] border border-slate-200 shadow-xl p-6 lg:p-8 flex flex-col xl:max-w-md min-h-[500px] lg:min-h-0 lg:overflow-hidden">
+        <div className="flex-1 bg-white rounded-[2.5rem] border border-slate-200 shadow-xl p-6 lg:p-8 flex flex-col xl:max-w-md min-h-125 lg:min-h-0 lg:overflow-hidden">
           <div className="shrink-0 mb-6 border-b border-slate-100 pb-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -749,7 +749,7 @@ const CameraNode = ({ camera, faceMatcher, modelsLoaded, onMatch }: any) => {
   return (
     <div
       ref={containerRef}
-      className="relative bg-[#0a0f1c] rounded-[2rem] overflow-hidden aspect-video shadow-2xl group border-[6px] border-slate-100 flex items-center justify-center"
+      className="relative bg-[#0a0f1c] rounded-4xl overflow-hidden aspect-video shadow-2xl group border-[6px] border-slate-100 flex items-center justify-center"
     >
       {streamStatus !== "LIVE" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0f1c] z-40 overflow-hidden">
