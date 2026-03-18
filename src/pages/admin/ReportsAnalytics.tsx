@@ -315,7 +315,7 @@ const ReportsAnalytics = () => {
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
       {/* ================= HEADER (FULLY RESPONSIVE) ================= */}
-      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+      <div className="max-w-400 mx-auto w-full mb-6 shrink-0 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
         {/* Branding Title */}
         <div className="flex items-center gap-4">
           <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
@@ -324,7 +324,7 @@ const ReportsAnalytics = () => {
           <div>
             <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
               Reports &{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
                 Analytics
               </span>
             </h1>
@@ -408,7 +408,7 @@ const ReportsAnalytics = () => {
       </div>
 
       {/* ================= MASSIVE WHITE CONTAINER ================= */}
-      <div className="max-w-[1600px] mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-6 lg:p-8 flex flex-col overflow-y-auto custom-scrollbar">
+      <div className="max-w-400 mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-6 lg:p-8 flex flex-col overflow-y-auto custom-scrollbar">
         {/* === TOP METRICS GRID === */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard
@@ -476,7 +476,7 @@ const ReportsAnalytics = () => {
               </span>
             </div>
 
-            <div className="flex-1 min-h-[250px] relative flex items-end justify-between gap-1 sm:gap-2 px-1 sm:px-2 pt-10 pb-6 border-b-2 border-slate-200">
+            <div className="flex-1 min-h-62.5 relative flex items-end justify-between gap-1 sm:gap-2 px-1 sm:px-2 pt-10 pb-6 border-b-2 border-slate-200">
               {/* Horizontal Grid Lines */}
               <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-30 pb-6 pt-10">
                 <div className="w-full h-px bg-slate-400"></div>
@@ -508,14 +508,14 @@ const ReportsAnalytics = () => {
                       {count} Visits
                     </div>
                     <div
-                      className="w-full max-w-[40px] bg-slate-200 rounded-t-lg relative flex items-end justify-center overflow-hidden"
+                      className="w-full max-w-10 bg-slate-200 rounded-t-lg relative flex items-end justify-center overflow-hidden"
                       style={{ height: "100%" }}
                     >
                       <motion.div
                         initial={{ height: 0 }}
                         animate={{ height: `${heightPct}%` }}
                         transition={{ duration: 1, type: "spring" }}
-                        className={`w-full rounded-t-lg transition-colors ${isPeak ? "bg-gradient-to-t from-[#0038A8] to-[#FFD700]" : "bg-[#0038A8]/60 group-hover:bg-[#0038A8]"}`}
+                        className={`w-full rounded-t-lg transition-colors ${isPeak ? "bg-linear-to-t from-[#0038A8] to-[#FFD700]" : "bg-[#0038A8]/60 group-hover:bg-[#0038A8]"}`}
                       />
                     </div>
                     <span
@@ -532,7 +532,7 @@ const ReportsAnalytics = () => {
           {/* SIDEBAR: Predictives & Demographics */}
           <div className="space-y-6 flex flex-col">
             {/* Predictive Insights Card */}
-            <div className="bg-[#0038A8] rounded-[2rem] p-6 lg:p-8 text-white shadow-xl relative overflow-hidden">
+            <div className="bg-[#0038A8] rounded-4xl p-6 lg:p-8 text-white shadow-xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFD700] rounded-full -translate-y-16 translate-x-16 opacity-10"></div>
               <div className="flex items-center gap-3 mb-6 relative z-10">
                 <div className="p-2 bg-white/10 rounded-xl">
@@ -571,7 +571,7 @@ const ReportsAnalytics = () => {
             </div>
 
             {/* Demographics List */}
-            <div className="bg-slate-50 rounded-[2rem] p-6 lg:p-8 border border-slate-200 flex-1">
+            <div className="bg-slate-50 rounded-4xl p-6 lg:p-8 border border-slate-200 flex-1">
               <h3 className="text-xs font-black text-[#0038A8] uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Briefcase size={16} /> Demographics
               </h3>

@@ -306,7 +306,7 @@ const AuditTrail = () => {
   return (
     <div className="h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
       {/* ================= HEADER (BRANDING) ================= */}
-      <div className="max-w-400 mx-auto w-full mb-6 shrink-0">
+      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
@@ -315,7 +315,7 @@ const AuditTrail = () => {
             <div>
               <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
                 Audit{" "}
-                <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
                   Trail
                 </span>
               </h1>
@@ -335,7 +335,7 @@ const AuditTrail = () => {
       </div>
 
       {/* ================= MASSIVE WHITE CONTAINER ================= */}
-      <div className="max-w-400 mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-hidden">
+      <div className="max-w-[1600px] mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-hidden">
         {/* CONTROLS BAR */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 shrink-0">
           {/* SEARCH */}
@@ -382,9 +382,9 @@ const AuditTrail = () => {
           </div>
         </div>
 
-        {/* TABLE WRAPPER */}
-        <div className="flex-1 overflow-auto border border-slate-200 rounded-3xl bg-slate-50 custom-scrollbar relative">
-          <table className="w-full text-left border-collapse table-auto">
+        {/* TABLE WRAPPER (Responsive horizontal scrolling) */}
+        <div className="flex-1 overflow-auto border border-slate-200 rounded-[1.5rem] bg-slate-50 custom-scrollbar relative">
+          <table className="w-full text-left border-collapse table-auto min-w-[1000px]">
             <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-200">
               <tr>
                 <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
@@ -409,7 +409,7 @@ const AuditTrail = () => {
                   Gate Out
                 </th>
                 <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">
-                  Appointments
+                  Created By
                 </th>
               </tr>
             </thead>
@@ -450,7 +450,7 @@ const AuditTrail = () => {
                     </td>
                     <td className="px-8 py-5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-slate-700 uppercase  px-3 py-1.5 rounded-full truncate max-w-37.5 ">
+                        <span className="text-[10px] font-black text-slate-700 uppercase px-3 py-1.5 rounded-full border border-slate-200 bg-slate-100 truncate max-w-[150px]">
                           {log.office || "N/A"}
                         </span>
                       </div>
@@ -503,7 +503,7 @@ const AuditTrail = () => {
                       </span>
                     </td>
                     <td className="px-8 py-5 text-right whitespace-nowrap">
-                      <span className="text-[9px] font-black text-slate-500 uppercase px-2.5 py-1  rounded-lg ">
+                      <span className="text-[9px] font-black text-slate-500 uppercase px-2.5 py-1 bg-slate-50 rounded-lg border border-slate-200">
                         {log.actionBy ? log.actionBy.split(" ")[0] : "SYSTEM"}
                       </span>
                     </td>
@@ -518,7 +518,7 @@ const AuditTrail = () => {
       {/* ================= DOSSIER MODAL (REDESIGNED) ================= */}
       <AnimatePresence>
         {selectedLog && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[50] flex items-center justify-center p-4">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -536,12 +536,12 @@ const AuditTrail = () => {
               className="relative bg-white w-full max-w-6xl max-h-[95vh] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden border border-white/20"
             >
               {/* === BLUE HEADER === */}
-              <div className="bg-[#0038A8] p-8 pb-12 text-center relative shrink-0">
+              <div className="bg-[#0038A8] p-6 lg:p-8 pb-12 text-center relative shrink-0">
                 <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/20 shadow-lg text-white">
                   <FiUser size={32} />
                 </div>
                 <h2 className="text-white font-black text-2xl lg:text-3xl uppercase tracking-wide relative z-10">
-                  Visitor Details
+                  Visitor Dossier
                 </h2>
                 <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mt-1 relative z-10">
                   Ref ID: {selectedLog._id}
@@ -660,6 +660,7 @@ const AuditTrail = () => {
                     color="text-red-500"
                   />
 
+                  {/* TOTAL STAY BADGE */}
                   <div className="absolute top-4 right-4 md:static md:right-auto md:top-auto md:ml-4">
                     <div className="bg-[#0038A8] text-white px-5 py-3 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-blue-900/20">
                       <span className="text-[9px] font-black uppercase tracking-widest opacity-80 mb-0.5">
@@ -714,11 +715,11 @@ const AuditTrail = () => {
                       </p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                       {cctvLogs.map((log) => (
                         <div
                           key={log._id}
-                          className="bg-slate-900 rounded-3xl overflow-hidden border-2 border-slate-200 shadow-md group flex flex-col"
+                          className="bg-slate-900 rounded-[1.5rem] overflow-hidden border-2 border-slate-200 shadow-md group flex flex-col"
                         >
                           {/* Image Section */}
                           <div className="relative aspect-video bg-slate-800 flex items-center justify-center overflow-hidden">
@@ -738,7 +739,11 @@ const AuditTrail = () => {
                             {/* Camera Name Tag */}
                             <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10 shadow-lg">
                               <div
-                                className={`w-1.5 h-1.5 rounded-full ${log.status === "OUT" ? "bg-slate-400" : "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"}`}
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  log.status === "OUT"
+                                    ? "bg-slate-400"
+                                    : "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+                                }`}
                               />
                               <span className="text-[8px] font-black text-white uppercase tracking-widest">
                                 {log.cameraName}
@@ -824,7 +829,7 @@ const AuditTrail = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -841,7 +846,7 @@ const AuditTrail = () => {
                 </h2>
               </div>
 
-              <div className="p-8 -mt-6 bg-white rounded-t-4xl relative z-20">
+              <div className="p-8 -mt-6 bg-white rounded-t-[2rem] relative z-20">
                 <h3 className="text-2xl font-black text-slate-800 uppercase leading-none">
                   {logToDelete.firstName} {logToDelete.lastName}
                 </h3>
@@ -885,7 +890,7 @@ const AuditTrail = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-80 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4"
+            className="fixed inset-0 z-[80] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4"
             onClick={() => setFullscreenImage(null)}
           >
             <img
