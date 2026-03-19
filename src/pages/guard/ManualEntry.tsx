@@ -859,7 +859,8 @@ const ManualEntry = () => {
 
         <div className="lg:col-span-6 xl:col-span-7 flex flex-col gap-6">
           <div className="bg-white rounded-[2.5rem] p-6 lg:p-8 border border-slate-200 shadow-xl flex flex-col">
-            <div className="relative rounded-4xl overflow-hidden bg-slate-900 mb-6 aspect-video border-4 border-slate-50 shadow-inner group flex items-center justify-center">
+            {/* 🔥 UPDATED: aspect-[3/4] makes it taller on mobile, aspect-video for desktop */}
+            <div className="relative rounded-4xl overflow-hidden bg-slate-900 mb-6 aspect-3/4 md:aspect-video border-4 border-slate-50 shadow-inner group flex items-center justify-center">
               <Webcam
                 ref={webcamRef}
                 screenshotFormat="image/jpeg"
@@ -876,9 +877,9 @@ const ManualEntry = () => {
               )}
 
               {!faceScan && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-6 py-2.5 rounded-full shadow-lg border border-slate-200 z-20">
+                <div className="absolute bottom-6 md:bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-8 py-3 md:px-6 md:py-2.5 rounded-full shadow-lg border border-slate-200 z-20 w-[85%] md:w-auto text-center flex justify-center">
                   <p
-                    className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                    className={`text-xs md:text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
                       faceStatus === "stable"
                         ? "text-[#0038A8]"
                         : "text-slate-500"
@@ -886,12 +887,12 @@ const ManualEntry = () => {
                   >
                     {loadingModels ? (
                       <>
-                        <Loader2 className="w-3 h-3 animate-spin" /> AI
-                        Loading...
+                        <Loader2 className="w-4 h-4 md:w-3 md:h-3 animate-spin" />{" "}
+                        AI Loading...
                       </>
                     ) : faceStatus === "stable" ? (
                       <>
-                        <Loader2 className="w-3 h-3 animate-spin text-[#0038A8]" />{" "}
+                        <Loader2 className="w-4 h-4 md:w-3 md:h-3 animate-spin text-[#0038A8]" />{" "}
                         Hold Still...
                       </>
                     ) : (
@@ -902,13 +903,15 @@ const ManualEntry = () => {
               )}
 
               {faceScan && (
-                <div className="absolute top-4 right-4 bg-emerald-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 border border-emerald-400">
-                  <CheckCircle size={14} /> Biometric Secured
+                <div className="absolute top-4 right-4 bg-emerald-500 text-white px-5 py-2 md:px-4 md:py-1.5 rounded-full text-xs md:text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 border border-emerald-400">
+                  <CheckCircle size={16} className="md:w-3.5 md:h-3.5" />{" "}
+                  Biometric Secured
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            {/* 🔥 UPDATED: Stacked on mobile (grid-cols-1), side-by-side on desktop (md:grid-cols-3) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <ModernCaptureBtn
                 onClick={handleRetakeFace}
                 active={!!faceScan}
@@ -940,9 +943,9 @@ const ManualEntry = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          {/* 🔥 UPDATED: Previews stacked on mobile, side-by-side on desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <ModernPreviewBox label="Biometric Profile" img={faceScan} />
-            {/* 🔥 NEW: Show Validation Status in Previews */}
             <ModernPreviewBox
               label="ID Front"
               img={idFront}
