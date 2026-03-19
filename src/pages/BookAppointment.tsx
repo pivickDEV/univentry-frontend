@@ -281,7 +281,7 @@ const BookAppointment = () => {
     setIsValidating(true);
     setError(null);
     api
-      .get("/bookings/slots", {
+      .get("/offices/slots", {
         params: { bookingDate, office: office.trim() },
       })
       .then((res) =>
@@ -1320,10 +1320,12 @@ const BookAppointment = () => {
                   initial="hidden"
                   animate="visible"
                   exit="exit"
-                  className="py-4"
+                  // 🔥 FIX: Added px-2 and w-full so it can stretch wider on mobile
+                  className="py-4 px-2 sm:px-0 w-full"
                 >
-                  <div className="w-full max-w-sm mx-auto bg-white rounded-[2.5rem] shadow-[0_0_80px_rgba(0,56,168,0.2)] border-4 border-slate-50 overflow-hidden relative">
-                    <div className="bg-[#0038A8] pt-10 pb-10 px-8 text-center relative overflow-hidden">
+                  {/* 🔥 FIX: Changed max-w-sm to max-w-md to make the card much bigger! */}
+                  <div className="w-full max-w-md mx-auto bg-white rounded-[2.5rem] shadow-[0_0_80px_rgba(0,56,168,0.2)] border-4 border-slate-50 overflow-hidden relative">
+                    <div className="bg-[#0038A8] pt-10 pb-10 px-6 sm:px-8 text-center relative overflow-hidden">
                       <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
                       <div className="absolute top-0 left-0 w-full h-1.5 bg-[#FFD700]" />
                       <motion.div
@@ -1334,10 +1336,10 @@ const BookAppointment = () => {
                       >
                         <FiCheck size={28} strokeWidth={3} />
                       </motion.div>
-                      <h2 className="text-white font-black text-xl uppercase tracking-widest leading-tight relative z-10">
+                      <h2 className="text-white font-black text-xl sm:text-2xl uppercase tracking-widest leading-tight relative z-10">
                         Clearance Granted
                       </h2>
-                      <p className="text-blue-200 text-[9px] font-black uppercase tracking-[0.3em] mt-1.5 relative z-10">
+                      <p className="text-blue-200 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] mt-1.5 relative z-10">
                         Encrypted Digital Pass
                       </p>
                     </div>
