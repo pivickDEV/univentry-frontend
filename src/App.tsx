@@ -19,6 +19,8 @@ import GuardDashboard from "./pages/guard/GuardDashboard";
 import ManualEntry from "./pages/guard/ManualEntry";
 
 // --- PUBLIC & OFFICE PAGES ---
+import SurveillanceWorker from "./components/SurveillanceWorker";
+import { CCTVProvider } from "./pages/context/CCTVContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import DepartmentHistory from "./pages/office/DepartmentHistory";
@@ -26,8 +28,6 @@ import OfficeDashboard from "./pages/office/OfficeDashboard";
 import TransactionScan from "./pages/office/TransactionScan";
 
 // --- 🛡️ SURVEILLANCE PERSISTENCE ENGINE ---
-import SurveillanceWorker from "../src/components/SurveillanceWorker";
-import { CCTVProvider } from "../src/pages/context/CCTVContext";
 
 const App = () => {
   return (
