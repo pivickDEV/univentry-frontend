@@ -26,21 +26,86 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
   const [systemStatus, setSystemStatus] = useState("INITIALIZING...");
   const cooldownMap = useRef<Map<string, number>>(new Map());
 
-  // 🛡️ 1. FETCH LOGS FROM DATABASE
+  /* eslint-disable */
+
+  // 🛡️ 1. IMPROVED FETCH LOGS (Handles different response shapes)
   const fetchLogs = async () => {
     try {
       const res = await api.get("/cctv-logs");
-      // Ensure the logs are sorted by time (newest first)
-      const data = Array.isArray(res.data) ? res.data : res.data.data || [];
-      const sortedData = data.sort(
+      console.log("📥 CCTV Logs Received:", res.data); // DEBUG LOG
+
+      // Handle nested data structures (res.data, res.data.data, or res.data.logs)
+      let rawData = [];
+      if (Array.isArray(res.data)) {
+        rawData = res.data;
+      } else if (res.data.data && Array.isArray(res.data.data)) {
+        rawData = res.data.data;
+      } else if (res.data.logs && Array.isArray(res.data.logs)) {
+        rawData = res.data.logs;
+      }
+
+      const sortedData = rawData.sort(
         (a: any, b: any) =>
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
       );
+
       setLogs(sortedData);
     } catch (err) {
       console.error("🔥 Context Error: Could not fetch initial logs", err);
     }
   };
+
+  // 🛡️ 2. SEPARATED INITIALIZATION
+  useEffect(() => {
+    // Fetch logs IMMEDIATELY, don't wait for AI
+    fetchLogs();
+
+    const initAI = async () => {
+      try {
+        setSystemStatus("LOADING MODELS...");
+        const MODEL_URL =
+          "https://justadudewhohacks.github.io/face-api.js/models";
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        ]);
+
+        setSystemStatus("SYNCING VECTORS...");
+        const res = await api.get("/face-recognition/visitors");
+
+        // Handle the various ways the visitor data might be returned
+        const visitors = res.data?.bookings || res.data?.data || res.data || [];
+
+        const labeledDescriptors: any[] = [];
+        visitors.forEach((v: any) => {
+          if (v.faceEmbedding && v.faceEmbedding.length === 128) {
+            labeledDescriptors.push(
+              new faceapi.LabeledFaceDescriptors(
+                `${v.firstName} ${v.lastName}__${v._id}`,
+                [new Float32Array(v.faceEmbedding)],
+              ),
+            );
+          }
+        });
+
+        if (labeledDescriptors.length > 0) {
+          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.6));
+          setSystemStatus("SURVEILLANCE ACTIVE");
+        } else {
+          setSystemStatus("NO VECTORS LOADED");
+        }
+
+        setModelsLoaded(true);
+      } catch (e) {
+        console.error("AI Initialization Failed:", e);
+        setSystemStatus("AI OFFLINE");
+        // Don't set ModelsLoaded to false if you want the logs to show anyway
+      }
+    };
+
+    initAI();
+  }, []);
 
   // 🛡️ 2. INITIALIZE SYSTEM
   useEffect(() => {
