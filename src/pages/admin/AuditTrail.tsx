@@ -77,13 +77,12 @@ const AuditTrail = () => {
   const [timeFilter, setTimeFilter] = useState("today");
   const [customDate, setCustomDate] = useState("");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
-  const [isArchiving, setIsArchiving] = useState(false);
 
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
-  const [isModalLoading, setIsModalLoading] = useState(false);
+  const [, setIsModalLoading] = useState(false);
   const [cctvLogs, setCctvLogs] = useState<CCTVLog[]>([]);
   const [loadingCCTV, setLoadingCCTV] = useState(false);
-  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+
   const [logToDelete, setLogToDelete] = useState<AuditLog | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
