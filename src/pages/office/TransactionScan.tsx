@@ -99,14 +99,14 @@ const TransactionScan = () => {
           </div>
         </div>
 
-        <div className="relative z-10 w-72 h-72">
+        <div className="relative z-10 w-full h-full flex items-center justify-center">
           <div className="absolute inset-0 border-2 border-white/10 rounded-[2.5rem]"></div>
           <Scanner
             onScan={handleScan}
             allowMultiple={true}
             scanDelay={2000}
             styles={{
-              container: { borderRadius: "2.5rem", overflow: "hidden" },
+              container: { width: "100%", height: "100%", overflow: "hidden" },
             }}
           />
 
