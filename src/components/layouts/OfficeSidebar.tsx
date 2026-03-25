@@ -529,7 +529,7 @@ const OfficeSidebar = () => {
                       {user.role === "office" && (
                         <div className="space-y-2 text-left opacity-70">
                           <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">
-                            Assigned Node
+                            Assigned Office
                           </label>
                           <div className="bg-slate-50 rounded-2xl py-4 px-6 flex items-center gap-3 border-2 border-slate-100">
                             <Building2 size={16} className="text-slate-400" />
@@ -813,10 +813,10 @@ const OfficeSidebar = () => {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="fixed inset-0 z-110 flex items-center justify-center px-4"
             >
-              <div className="w-full max-w-sm bg-white rounded-[2.5rem] p-8 text-center border-4 border-slate-50 shadow-2xl relative overflow-hidden">
+              <div className="w-full max-w-sm bg-white rounded-[2.5rem] p-10 text-center border-4 border-slate-50 shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-2 bg-red-500" />
 
-                <div className="mx-auto w-25 h-25 rounded-3xl bg-red-50 flex items-center justify-center mb-6 border border-red-100 transform rotate-3">
+                <div className="mx-auto w-20 h-20 rounded-3xl bg-red-50 flex items-center justify-center mb-6 border border-red-100 transform rotate-3">
                   <LogOut size={32} className="text-red-600 translate-x-1" />
                 </div>
 
