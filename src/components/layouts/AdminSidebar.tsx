@@ -367,7 +367,7 @@ const AdminSidebar = () => {
           </div>
 
           {/* 3. NAVIGATION MENU */}
-          <nav className="px-4 space-y-2 pb-6 flex-1  overflow-y-auto">
+          <nav className="px-4 space-y-2 pb-6 flex-1 h-full overflow-y-auto custom-scrollbar">
             <p className="px-6 text-[8px] font-black text-blue-300/50 uppercase tracking-[0.4em] mb-4">
               System Modules
             </p>
