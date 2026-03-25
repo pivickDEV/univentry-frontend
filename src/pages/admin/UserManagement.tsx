@@ -20,7 +20,7 @@ import {
 
 // 🚀 VERCEL PREP: Global API Instance with Tunnel Headers
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
+  baseURL: import.meta.env.VITE_API_URL,
   headers: {
     "ngrok-skip-browser-warning": "69420",
     "Bypass-Tunnel-Reminder": "true",
@@ -65,7 +65,7 @@ const UserManagement = () => {
   const [editingOfficeId, setEditingOfficeId] = useState<string | null>(null);
   const [editOfficeValue, setEditOfficeValue] = useState("");
 
-  // --- STATE: Create Form ---
+  // --- STATE: Create Form (🔥 FIXED: Default to empty string to force selection) ---
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -82,6 +82,7 @@ const UserManagement = () => {
       try {
         const res = await api.get("/offices");
         setOffices(res.data);
+        // We removed the auto-select here so the user is forced to pick one manually
       } catch (err) {
         console.error("Failed to fetch offices");
       }
@@ -188,6 +189,7 @@ const UserManagement = () => {
     e.preventDefault();
     setFormError(null);
 
+    // 🔥 FIX: Strict Validation checks before sending
     if (!role) {
       setFormError("Please select an Access Level.");
       return;
@@ -222,12 +224,13 @@ const UserManagement = () => {
       await api.post("/auth/signup", payload);
 
       setShowCreateModal(false);
+      // Reset Form
       setName("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
-      setRole("");
-      setAssignedOffice("");
+      setRole(""); // Reset to empty
+      setAssignedOffice(""); // Reset to empty
       fetchUsers();
     } catch (err: any) {
       console.error("Registration Error:", err.response || err);
@@ -260,7 +263,7 @@ const UserManagement = () => {
   return (
     <div className="h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
       {/* ================= HEADER (BRANDING) ================= */}
-      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0">
+      <div className="max-w-350 mx-auto w-full mb-6 shrink-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
@@ -269,7 +272,7 @@ const UserManagement = () => {
             <div>
               <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
                 User{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
+                <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
                   Management
                 </span>
               </h1>
@@ -300,22 +303,22 @@ const UserManagement = () => {
       </div>
 
       {/* ================= MASSIVE WHITE CONTAINER ================= */}
-      <div className="max-w-[1600px] mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-hidden">
+      <div className="max-w-350 mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-hidden">
         {/* TABLE WRAPPER */}
-        <div className="flex-1 overflow-auto border border-slate-200 rounded-[1.5rem] bg-slate-50 custom-scrollbar relative">
-          <table className="w-full text-left border-collapse table-auto min-w-[900px]">
+        <div className="flex-1 overflow-auto border border-slate-200 rounded-3xl bg-slate-50 custom-scrollbar relative">
+          <table className="w-full text-left border-collapse table-auto min-w-200">
             <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-200">
               <tr>
-                <th className="px-6 lg:px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/3">
+                <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/3">
                   Identity & Credentials
                 </th>
-                <th className="px-6 lg:px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/4">
-                  Office Allocation
+                <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  Office
                 </th>
-                <th className="px-6 lg:px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                  Clearance Level
+                <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  ROLE
                 </th>
-                <th className="px-6 lg:px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">
+                <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">
                   Actions
                 </th>
               </tr>
@@ -324,16 +327,16 @@ const UserManagement = () => {
               {loading ? (
                 [...Array(6)].map((_, i) => (
                   <tr key={i} className="animate-pulse bg-white">
-                    <td className="px-6 lg:px-8 py-6">
+                    <td className="px-4 lg:px-8 py-6">
                       <div className="h-10 w-48 bg-slate-100 rounded-xl" />
                     </td>
-                    <td className="px-6 lg:px-8 py-6">
-                      <div className="h-8 w-24 bg-slate-100 rounded-full" />
+                    <td className="px-4 lg:px-8 py-6">
+                      <div className="h-6 w-24 bg-slate-100 rounded-full" />
                     </td>
-                    <td className="px-6 lg:px-8 py-6">
+                    <td className="px-4 lg:px-8 py-6">
                       <div className="h-10 w-32 bg-slate-100 rounded-xl" />
                     </td>
-                    <td className="px-6 lg:px-8 py-6">
+                    <td className="px-4 lg:px-8 py-6">
                       <div className="h-10 w-10 bg-slate-100 rounded-xl ml-auto" />
                     </td>
                   </tr>
@@ -342,210 +345,202 @@ const UserManagement = () => {
                 <tr className="bg-white">
                   <td
                     colSpan={4}
-                    className="px-6 lg:px-8 py-24 text-center text-slate-400 font-bold text-xs uppercase tracking-widest"
+                    className="px-4 lg:px-8 py-24 text-center text-slate-400 font-bold text-xs uppercase tracking-widest"
                   >
                     No Authorized Personnel Found
                   </td>
                 </tr>
               ) : (
-                users.map((user) => {
-                  // 🔥 SECURITY RULE: If target is Super Admin, and I am NOT Super Admin, lock the controls.
-                  const isLockedForMe =
-                    user.role === "super-admin" &&
-                    currentUser?.role !== "super-admin";
-                  const isSelf = user._id === currentUser?._id;
-
-                  return (
-                    <tr
-                      key={user._id}
-                      className="group hover:bg-blue-50/50 bg-white transition-colors"
-                    >
-                      {/* IDENTITY (With Inline Email Edit) */}
-                      <td className="px-6 lg:px-8 py-5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-[#0038A8] text-lg shadow-sm shrink-0">
-                            {user.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-black text-[#0038A8] text-sm uppercase truncate mb-0.5">
-                              {user.name}
-                            </p>
-
-                            {/* INLINE EMAIL EDITOR */}
-                            {editingUserId === user._id ? (
-                              <div className="flex items-center gap-2 mt-1">
-                                <input
-                                  type="email"
-                                  value={editEmailValue}
-                                  onChange={(e) =>
-                                    setEditEmailValue(e.target.value)
-                                  }
-                                  className="px-3 py-1.5 border border-[#0038A8]/30 rounded-lg text-[10px] font-bold w-48 outline-none focus:ring-2 focus:ring-[#0038A8]/20 shadow-sm"
-                                />
-                                <button
-                                  onClick={() => saveEmailUpdate(user._id)}
-                                  className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 shadow-sm"
-                                >
-                                  <FiSave size={12} />
-                                </button>
-                                <button
-                                  onClick={() => setEditingUserId(null)}
-                                  className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 shadow-sm"
-                                >
-                                  <FiX size={12} />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2 group/email">
-                                <p className="text-[10px] text-slate-500 font-bold truncate">
-                                  {user.email}
-                                </p>
-                                {!isLockedForMe && (
-                                  <button
-                                    onClick={() => {
-                                      setEditingUserId(user._id);
-                                      setEditEmailValue(user.email);
-                                    }}
-                                    className="opacity-0 group-hover/email:opacity-100 p-1 text-slate-400 hover:text-[#0038A8] transition-opacity"
-                                  >
-                                    <FiEdit2 size={10} />
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                users.map((user) => (
+                  <tr
+                    key={user._id}
+                    className="group hover:bg-blue-50/50 bg-white transition-colors"
+                  >
+                    {/* IDENTITY (With Inline Email Edit) */}
+                    <td className="px-4 lg:px-8 py-4 lg:py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-[#0038A8]">
+                          {user.name.charAt(0).toUpperCase()}
                         </div>
-                      </td>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-[#0038A8] text-sm uppercase truncate">
+                            {user.name}
+                          </p>
 
-                      {/* ASSIGNED OFFICE (With Inline Office Edit) */}
-                      <td className="px-6 lg:px-8 py-5 whitespace-nowrap">
-                        {user.role === "office" ? (
-                          editingOfficeId === user._id ? (
-                            <div className="flex items-center gap-2">
-                              <select
-                                value={editOfficeValue}
+                          {/* INLINE EMAIL EDITOR */}
+                          {editingUserId === user._id ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              <input
+                                type="email"
+                                value={editEmailValue}
                                 onChange={(e) =>
-                                  setEditOfficeValue(e.target.value)
+                                  setEditEmailValue(e.target.value)
                                 }
-                                className="px-3 py-1.5 border border-[#0038A8]/30 rounded-lg text-[9px] font-black uppercase w-40 outline-none focus:ring-2 focus:ring-[#0038A8]/20 shadow-sm"
-                              >
-                                <option value="" disabled>
-                                  Select Office...
-                                </option>
-                                {offices.map((o) => (
-                                  <option key={o._id} value={o.name}>
-                                    {o.name}
-                                  </option>
-                                ))}
-                              </select>
+                                className="px-2 py-1 border border-blue-300 rounded text-[10px] font-bold w-48 outline-none focus:ring-2 focus:ring-blue-100"
+                              />
                               <button
-                                onClick={() => saveOfficeUpdate(user._id)}
-                                className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 shadow-sm"
+                                onClick={() => saveEmailUpdate(user._id)}
+                                className="p-1 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-200"
                               >
                                 <FiSave size={12} />
                               </button>
                               <button
-                                onClick={() => setEditingOfficeId(null)}
-                                className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 shadow-sm"
+                                onClick={() => setEditingUserId(null)}
+                                className="p-1 bg-slate-100 text-slate-500 rounded hover:bg-slate-200"
                               >
                                 <FiX size={12} />
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2 group/office">
-                              <span
-                                className={`text-[10px] font-black uppercase ${user.office ? "text-slate-600" : "text-red-400"}`}
+                            <div className="flex items-center gap-2 group/email">
+                              <p className="text-[10px] text-slate-500 font-bold truncate mt-0.5">
+                                {user.email}
+                              </p>
+                              <button
+                                onClick={() => {
+                                  setEditingUserId(user._id);
+                                  setEditEmailValue(user.email);
+                                }}
+                                className="opacity-0 group-hover/email:opacity-100 p-1 text-slate-400 hover:text-[#0038A8] transition-opacity"
                               >
-                                {user.office || "Unassigned"}
-                              </span>
-                              {!isLockedForMe && (
-                                <button
-                                  onClick={() => {
-                                    setEditingOfficeId(user._id);
-                                    setEditOfficeValue(user.office || "");
-                                  }}
-                                  className="opacity-0 group-hover/office:opacity-100 p-1 text-slate-400 hover:text-[#0038A8] transition-opacity"
-                                >
-                                  <FiEdit2 size={10} />
-                                </button>
-                              )}
+                                <FiEdit2 size={10} />
+                              </button>
                             </div>
-                          )
-                        ) : (
-                          <span className="text-[10px] font-black uppercase text-slate-300 tracking-widest">
-                            --
-                          </span>
-                        )}
-                      </td>
+                          )}
+                        </div>
+                      </div>
+                    </td>
 
-                      {/* CLEARANCE LEVEL (ROLE DROPDOWN) */}
-                      <td className="px-6 lg:px-8 py-5">
-                        {isLockedForMe ? (
-                          <div
-                            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest ${getRoleBadge(user.role)}`}
-                          >
-                            <FiShield size={12} /> {user.role} (LOCKED)
-                          </div>
-                        ) : (
-                          <div className="relative w-full min-w-[130px] max-w-[180px]">
+                    {/* ASSIGNED OFFICE (With Inline Office Edit) */}
+                    <td className="px-4 lg:px-8 py-4 lg:py-5 whitespace-nowrap">
+                      {user.role === "office" ? (
+                        editingOfficeId === user._id ? (
+                          <div className="flex items-center gap-2">
+                            {/* 🔥 Inline Dropdown forced select */}
                             <select
-                              value={user.role}
-                              disabled={actionLoading === user._id}
+                              value={editOfficeValue}
                               onChange={(e) =>
-                                handleUpdateRole(
-                                  user._id,
-                                  e.target.value as UserRole,
-                                )
+                                setEditOfficeValue(e.target.value)
                               }
-                              className={`appearance-none w-full text-[9px] font-black uppercase tracking-widest pl-8 pr-8 py-2.5 outline-none focus:ring-2 focus:ring-[#0038A8]/20 transition-all cursor-pointer rounded-xl shadow-sm ${getRoleBadge(user.role)} disabled:opacity-60`}
+                              className="px-2 py-1 border border-blue-300 rounded text-[9px] font-black uppercase w-32 outline-none focus:ring-2 focus:ring-blue-100"
                             >
-                              <option value="office">Office Staff</option>
-                              <option value="guard">Security Guard</option>
-                              <option value="admin">Administrator</option>
-                              {currentUser?.role === "super-admin" && (
-                                <option value="super-admin">Super Admin</option>
-                              )}
+                              <option value="" disabled>
+                                Select Office...
+                              </option>
+                              {offices.map((o) => (
+                                <option key={o._id} value={o.name}>
+                                  {o.name}
+                                </option>
+                              ))}
                             </select>
-                            <FiShield
-                              className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60"
-                              size={12}
-                            />
-                            <FiChevronDown
-                              className="absolute right-3 top-1/2 -translate-y-1/2 opacity-60 pointer-events-none"
-                              size={14}
-                            />
+                            <button
+                              onClick={() => saveOfficeUpdate(user._id)}
+                              className="p-1 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-200"
+                            >
+                              <FiSave size={12} />
+                            </button>
+                            <button
+                              onClick={() => setEditingOfficeId(null)}
+                              className="p-1 bg-slate-100 text-slate-500 rounded hover:bg-slate-200"
+                            >
+                              <FiX size={12} />
+                            </button>
                           </div>
-                        )}
-                      </td>
-
-                      {/* ACTIONS (DELETE) */}
-                      <td className="px-6 lg:px-8 py-5 text-right">
-                        {isLockedForMe ? (
-                          <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">
-                            Secure
-                          </span>
                         ) : (
-                          <button
-                            onClick={() => setUserToDelete(user)}
-                            disabled={actionLoading === user._id || isSelf}
-                            className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all disabled:opacity-30 border border-transparent hover:border-red-100"
-                            title={
-                              isSelf
-                                ? "Cannot delete yourself"
-                                : "Revoke Access"
-                            }
-                          >
-                            {actionLoading === user._id ? (
-                              <FiLoader className="animate-spin text-[#0038A8]" />
-                            ) : (
-                              <FiTrash2 size={18} />
-                            )}
-                          </button>
+                          <div className="flex items-center gap-2 group/office">
+                            <span
+                              className={`text-[10px] font-black uppercase ${user.office ? "text-slate-600" : "text-red-400"}`}
+                            >
+                              {user.office || "Unassigned"}
+                            </span>
+                            <button
+                              onClick={() => {
+                                setEditingOfficeId(user._id);
+                                setEditOfficeValue(user.office || "");
+                              }}
+                              className="opacity-0 group-hover/office:opacity-100 p-1 text-slate-400 hover:text-[#0038A8] transition-opacity"
+                            >
+                              <FiEdit2 size={10} />
+                            </button>
+                          </div>
+                        )
+                      ) : (
+                        <span className="text-[10px] font-black uppercase text-slate-300 tracking-widest">
+                          --
+                        </span>
+                      )}
+                    </td>
+
+                    {/* CLEARANCE LEVEL (ROLE) */}
+                    <td className="px-4 lg:px-8 py-4 lg:py-5">
+                      <div className="relative w-full min-w-32.5 max-w-45">
+                        <select
+                          value={user.role}
+                          disabled={
+                            actionLoading === user._id ||
+                            (user.role === "super-admin" &&
+                              currentUser?.role !== "super-admin")
+                          }
+                          onChange={(e) =>
+                            handleUpdateRole(
+                              user._id,
+                              e.target.value as UserRole,
+                            )
+                          }
+                          className={`appearance-none w-full text-[9px] font-black uppercase tracking-widest pl-8 pr-8 py-2.5 outline-none focus:ring-2 focus:ring-[#0038A8]/20 transition-all cursor-pointer rounded-lg ${getRoleBadge(user.role)} disabled:opacity-60`}
+                        >
+                          <option value="office">Office Staff</option>
+                          <option value="guard">Security Guard</option>
+                          <option value="admin">Administrator</option>
+                          {currentUser?.role === "super-admin" && (
+                            <option value="super-admin">Super Admin</option>
+                          )}
+                        </select>
+                        <FiShield
+                          className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50"
+                          size={12}
+                        />
+                        <FiChevronDown
+                          className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none"
+                          size={14}
+                        />
+                      </div>
+                    </td>
+
+                    {/* ACTIONS (Delete) */}
+                    <td className="px-4 lg:px-8 py-4 lg:py-5 text-right">
+                      <button
+                        onClick={() => {
+                          if (
+                            user.role === "super-admin" &&
+                            currentUser?.role !== "super-admin"
+                          ) {
+                            return alert(
+                              "Action Denied: You cannot delete a Super-Admin account.",
+                            );
+                          }
+                          setUserToDelete(user);
+                        }}
+                        disabled={
+                          actionLoading === user._id ||
+                          user._id === currentUser?._id
+                        }
+                        className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all disabled:opacity-30 border border-transparent hover:border-red-100"
+                        title={
+                          user._id === currentUser?._id
+                            ? "Cannot delete yourself"
+                            : "Revoke Access"
+                        }
+                      >
+                        {actionLoading === user._id ? (
+                          <FiLoader className="animate-spin text-[#0038A8]" />
+                        ) : (
+                          <FiTrash2 size={18} />
                         )}
-                      </td>
-                    </tr>
-                  );
-                })
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -559,7 +554,7 @@ const UserManagement = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -620,7 +615,7 @@ const UserManagement = () => {
       {/* ================= ADD USER MODAL ================= */}
       <AnimatePresence>
         {showCreateModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -636,7 +631,7 @@ const UserManagement = () => {
             >
               {/* Modal Header */}
               <div className="bg-[#0038A8] p-8 pb-10 text-center relative shrink-0">
-                <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-3 border border-white/20 shadow-lg text-white">
+                <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mx-auto mb-3 border border-white/20 shadow-lg text-white">
                   <FiUserPlus size={32} />
                 </div>
                 <h2 className="text-white font-black text-2xl uppercase tracking-wide relative z-10">
@@ -666,14 +661,14 @@ const UserManagement = () => {
                   <Input
                     label="Full Name"
                     value={name}
-                    onChange={(val: any) => setName(val)}
+                    onChange={(e: any) => setName(e.target.value)}
                     placeholder="e.g. Juan Dela Cruz"
                   />
                   <Input
                     label="Institutional Email"
                     type="email"
                     value={email}
-                    onChange={(val: any) => setEmail(val)}
+                    onChange={(e: any) => setEmail(e.target.value)}
                     placeholder="employee@rtu.edu.ph"
                   />
 
@@ -683,6 +678,7 @@ const UserManagement = () => {
                         Access Level
                       </label>
                       <div className="relative">
+                        {/* 🔥 FIX: Forced 'Select Role' option */}
                         <select
                           value={role}
                           onChange={(e) =>
@@ -704,7 +700,7 @@ const UserManagement = () => {
                       </div>
                     </div>
 
-                    {/* DYNAMIC OFFICE ASSIGNMENT */}
+                    {/* 🔥 DYNAMIC OFFICE ASSIGNMENT (Only shows if role === 'office') */}
                     <div
                       className={`space-y-2 transition-all ${role !== "office" ? "opacity-30 pointer-events-none grayscale" : ""}`}
                     >
@@ -712,6 +708,7 @@ const UserManagement = () => {
                         Department
                       </label>
                       <div className="relative">
+                        {/* 🔥 FIX: Forced 'Select Office' option */}
                         <select
                           value={assignedOffice}
                           onChange={(e) => setAssignedOffice(e.target.value)}
@@ -737,14 +734,14 @@ const UserManagement = () => {
                       label="Password"
                       type="password"
                       value={password}
-                      onChange={(val: any) => setPassword(val)}
+                      onChange={(e: any) => setPassword(e.target.value)}
                       placeholder="••••••"
                     />
                     <Input
                       label="Confirm Pass"
                       type="password"
                       value={confirmPassword}
-                      onChange={(val: any) => setConfirmPassword(val)}
+                      onChange={(e: any) => setConfirmPassword(e.target.value)}
                       placeholder="••••••"
                     />
                   </div>
@@ -757,7 +754,7 @@ const UserManagement = () => {
                       <FiLoader className="animate-spin text-lg" />
                     ) : (
                       <>
-                        <FiCheck size={16} /> Authorize Personnel
+                        Authorize Personnel <FiCheck size={16} />
                       </>
                     )}
                   </button>
@@ -772,17 +769,15 @@ const UserManagement = () => {
 };
 
 // --- CUSTOM INPUT COMPONENT ---
-const Input = ({ label, value, onChange, ...props }: any) => (
+const Input = ({ label, ...props }: any) => (
   <div className="space-y-2">
     <label className="text-[9px] font-black uppercase text-slate-400 ml-1 tracking-widest">
       {label}
     </label>
     <input
       {...props}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
       required
-      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:border-[#0038A8] focus:ring-4 focus:ring-[#0038A8]/10 outline-none transition-all"
+      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:border-[#0038A8] focus:ring-4 focus:ring-blue-50 outline-none transition-all"
     />
   </div>
 );
