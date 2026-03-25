@@ -1,6 +1,4 @@
 /* eslint-disable */
-"use client";
-
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -220,7 +218,7 @@ const GuardSidebar = () => {
           {/* 3. NAVIGATION MENU */}
           <nav className="px-4 space-y-2 pb-6 flex-1">
             <p className="px-6 text-[8px] font-black text-blue-300/50 uppercase tracking-[0.4em] mb-4">
-              System Modules
+              Operation Modules
             </p>
 
             {menuItems.map(({ path, label, icon: Icon }) => {
@@ -289,10 +287,10 @@ const GuardSidebar = () => {
               </div>
               <div className="text-left">
                 <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-white transition-colors">
-                  LOG OUT
+                  Relieve Duty
                 </span>
                 <span className="block text-[9px] font-bold opacity-60 uppercase tracking-widest mt-0.5 text-blue-200 group-hover:text-white">
-                  End Session
+                  End Shift
                 </span>
               </div>
             </div>
@@ -350,13 +348,12 @@ const GuardSidebar = () => {
 
                 {/* Title */}
                 <h2 className="text-3xl font-black text-[#0038A8] mb-2 tracking-tighter uppercase">
-                  System Logout
+                  Logout
                 </h2>
 
                 {/* Message */}
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-10 leading-relaxed max-w-xs mx-auto">
-                  Are you sure you want to terminate your current administrative
-                  session?
+                  Are you sure you want to Log out?
                 </p>
 
                 {/* Buttons */}

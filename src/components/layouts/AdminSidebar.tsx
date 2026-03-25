@@ -781,7 +781,7 @@ const AdminSidebar = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowLogoutModal(false)}
-              className="fixed inset-0 bg-[#001233]/70 backdrop-blur-md z-70"
+              className="fixed inset-0 bg-[#001233]/70 backdrop-blur-md z-100"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -789,7 +789,7 @@ const AdminSidebar = () => {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="fixed inset-0 z-110 flex items-center justify-center px-4"
             >
-              <div className="w-full max-w-sm bg-white rounded-[2.5rem] p-8 text-center border-4 border-slate-50 shadow-2xl relative overflow-hidden">
+              <div className="w-full max-w-md bg-white rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.4)] p-10 text-center relative overflow-hidden border-4 border-slate-50">
                 <div className="absolute top-0 left-0 w-full h-2 bg-red-500" />
 
                 <div className="mx-auto w-20 h-20 rounded-3xl bg-red-50 flex items-center justify-center mb-6 border border-red-100 transform rotate-3">
