@@ -486,7 +486,7 @@ const GuardDashboard = () => {
               <div className="flex items-center gap-2 mb-6">
                 <Calendar size={16} className="text-[#0038A8]" />
                 <h2 className="text-[10px] font-black text-[#0038A8] uppercase tracking-[0.2em]">
-                  Today's Manifest
+                  Today's Expected Visitor
                 </h2>
               </div>
 

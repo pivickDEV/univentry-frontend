@@ -530,9 +530,7 @@ const CCTVMonitor = () => {
                               : "bg-blue-50 text-[#0038A8] border-blue-100 shadow-sm"
                           }`}
                         >
-                          {log.status === "OUT"
-                            ? "EXITED (OUT)"
-                            : "DETECTED (IN)"}
+                          {log.status === "OUT" ? "EXITED (OUT)" : "DETECTED"}
                         </span>
 
                         <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1.5 font-mono">

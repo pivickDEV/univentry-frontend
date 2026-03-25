@@ -8,8 +8,10 @@ import {
   FiAlertTriangle,
   FiCheck,
   FiChevronDown,
+  FiEdit2,
   FiLoader,
   FiRefreshCcw,
+  FiSave,
   FiShield,
   FiTrash2,
   FiUserPlus,
@@ -25,33 +27,67 @@ const api = axios.create({
   },
 });
 
-type UserRole = "admin" | "guard" | "office";
+type UserRole = "super-admin" | "admin" | "guard" | "office";
 
 interface User {
   _id: string;
   name: string;
   email: string;
   role: UserRole;
+  office?: string; // Newly added to tie staff to specific offices
+}
+
+interface OfficeDef {
+  _id: string;
+  name: string;
 }
 
 const UserManagement = () => {
+  // --- STATE: Data ---
   const [users, setUsers] = useState<User[]>([]);
+  const [offices, setOffices] = useState<OfficeDef[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Modal States
+  // --- STATE: Current Logged In User ---
+  // To check hierarchy rules (Admin vs Super-Admin)
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  // --- STATE: Modals ---
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Form State
+  // --- STATE: Inline Editing (Email) ---
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editEmailValue, setEditEmailValue] = useState("");
+
+  // --- STATE: Create Form ---
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<UserRole>("office");
+  const [assignedOffice, setAssignedOffice] = useState<string>("");
 
-  // --- FETCH DATA ---
+  // --- INITIAL FETCH ---
+  useEffect(() => {
+    const localUser = localStorage.getItem("userInfo");
+    if (localUser) setCurrentUser(JSON.parse(localUser));
+
+    const fetchOffices = async () => {
+      try {
+        const res = await api.get("/offices");
+        setOffices(res.data);
+        if (res.data.length > 0) setAssignedOffice(res.data[0].name);
+      } catch (err) {
+        console.error("Failed to fetch offices");
+      }
+    };
+    fetchOffices();
+    fetchUsers();
+  }, []);
+
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
@@ -63,10 +99,6 @@ const UserManagement = () => {
       setLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
 
   // --- UPDATE ROLE ---
   const handleUpdateRole = async (userId: string, newRole: UserRole) => {
@@ -85,13 +117,35 @@ const UserManagement = () => {
     }
   };
 
+  // --- EDIT EMAIL ---
+  const saveEmailUpdate = async (userId: string) => {
+    try {
+      setActionLoading(userId);
+      // Ensure backend has a PATCH /users/:id/email route
+      await api.patch(`/users/${userId}/email`, { email: editEmailValue });
+      setUsers((prev) =>
+        prev.map((user) =>
+          user._id === userId ? { ...user, email: editEmailValue } : user,
+        ),
+      );
+      setEditingUserId(null);
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to update email.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // --- DELETE LOGIC ---
   const confirmDeleteUser = async () => {
-    if (!userToDelete) return;
+    if (!userToDelete || !currentUser) return;
 
-    // 🚀 FIX 2: Prevent deletion of Administrator accounts
-    if (userToDelete.role === "admin") {
-      alert("Action Denied: You cannot delete an Administrator account.");
+    // 🚀 HIERARCHY RULE: Admin cannot delete Super-Admin
+    if (
+      userToDelete.role === "super-admin" &&
+      currentUser.role !== "super-admin"
+    ) {
+      alert("Action Denied: You cannot delete a Super-Admin account.");
       setUserToDelete(null);
       return;
     }
@@ -100,7 +154,7 @@ const UserManagement = () => {
       setActionLoading(userToDelete._id);
       await api.delete(`/users/${userToDelete._id}`);
       setUsers((prev) => prev.filter((u) => u._id !== userToDelete._id));
-      setUserToDelete(null); // Close modal
+      setUserToDelete(null);
     } catch (err) {
       alert("System could not remove user. Check permissions.");
     } finally {
@@ -118,10 +172,25 @@ const UserManagement = () => {
       return;
     }
 
+    // 🚀 HIERARCHY RULE: Admin cannot create Super-Admin
+    if (role === "super-admin" && currentUser?.role !== "super-admin") {
+      setFormError("Only a Super-Admin can create another Super-Admin.");
+      return;
+    }
+
     try {
       setActionLoading("create");
 
-      await api.post("/auth/signup", { name, email, password, role });
+      // Include office assignment if role is office staff
+      const payload = {
+        name,
+        email,
+        password,
+        role,
+        office: role === "office" ? assignedOffice : undefined,
+      };
+
+      await api.post("/auth/signup", payload);
 
       setShowCreateModal(false);
       // Reset Form
@@ -133,26 +202,27 @@ const UserManagement = () => {
       fetchUsers();
     } catch (err: any) {
       console.error("Registration Error:", err.response || err);
-      // Safely extract the exact error message from the backend
       setFormError(
         err.response?.data?.message ||
           err.response?.data?.error ||
           "Registration failed. Check your API route.",
       );
     } finally {
-      setActionLoading(null); // This ensures the loading spinner stops no matter what!
+      setActionLoading(null);
     }
   };
 
   // --- HELPER ---
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
+      case "super-admin":
+        return "bg-purple-100 text-purple-700 border border-purple-200";
       case "admin":
-        return " text-[#0038A8] ";
+        return "bg-blue-100 text-[#0038A8] border border-blue-200";
       case "office":
-        return " text-blue-600 ";
+        return "bg-slate-100 text-slate-600 border border-slate-200";
       case "guard":
-        return " text-emerald-600 ";
+        return "bg-emerald-100 text-emerald-700 border border-emerald-200";
       default:
         return "bg-slate-100 text-slate-500";
     }
@@ -161,7 +231,7 @@ const UserManagement = () => {
   return (
     <div className="h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
       {/* ================= HEADER (BRANDING) ================= */}
-      <div className="max-w-400 mx-auto w-full mb-6 shrink-0">
+      <div className="max-w-[1400px] mx-auto w-full mb-6 shrink-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
@@ -170,7 +240,7 @@ const UserManagement = () => {
             <div>
               <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
                 User{" "}
-                <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
                   Management
                 </span>
               </h1>
@@ -201,20 +271,20 @@ const UserManagement = () => {
       </div>
 
       {/* ================= MASSIVE WHITE CONTAINER ================= */}
-      <div className="max-w-400 mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-hidden">
+      <div className="max-w-[1400px] mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-hidden">
         {/* TABLE WRAPPER */}
         <div className="flex-1 overflow-auto border border-slate-200 rounded-3xl bg-slate-50 custom-scrollbar relative">
-          <table className="w-full text-left border-collapse table-auto">
+          <table className="w-full text-left border-collapse table-auto min-w-[800px]">
             <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-200">
               <tr>
                 <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/3">
-                  Identity
+                  Identity & Credentials
+                </th>
+                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  Department
                 </th>
                 <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
                   Clearance Level
-                </th>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                  Modify Access
                 </th>
                 <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">
                   Actions
@@ -229,10 +299,10 @@ const UserManagement = () => {
                       <div className="h-10 w-48 bg-slate-100 rounded-xl" />
                     </td>
                     <td className="px-8 py-6">
-                      <div className="h-8 w-24 bg-slate-100 rounded-full" />
+                      <div className="h-6 w-24 bg-slate-100 rounded-full" />
                     </td>
                     <td className="px-8 py-6">
-                      <div className="h-10 w-full bg-slate-100 rounded-xl" />
+                      <div className="h-10 w-32 bg-slate-100 rounded-xl" />
                     </td>
                     <td className="px-8 py-6">
                       <div className="h-10 w-10 bg-slate-100 rounded-xl ml-auto" />
@@ -254,67 +324,130 @@ const UserManagement = () => {
                     key={user._id}
                     className="group hover:bg-blue-50/50 bg-white transition-colors"
                   >
-                    {/* IDENTITY */}
+                    {/* IDENTITY (With Inline Email Edit) */}
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
-                        <div>
-                          <p className="font-black text-[#0038A8] text-sm uppercase">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-[#0038A8]">
+                          {user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-[#0038A8] text-sm uppercase truncate">
                             {user.name}
                           </p>
-                          <p className="text-[10px] text-slate-400 font-bold">
-                            {user.email}
-                          </p>
+
+                          {/* INLINE EMAIL EDITOR */}
+                          {editingUserId === user._id ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              <input
+                                type="email"
+                                value={editEmailValue}
+                                onChange={(e) =>
+                                  setEditEmailValue(e.target.value)
+                                }
+                                className="px-2 py-1 border border-blue-300 rounded text-[10px] font-bold w-48 outline-none focus:ring-2 focus:ring-blue-100"
+                              />
+                              <button
+                                onClick={() => saveEmailUpdate(user._id)}
+                                className="p-1 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-200"
+                              >
+                                <FiSave size={12} />
+                              </button>
+                              <button
+                                onClick={() => setEditingUserId(null)}
+                                className="p-1 bg-slate-100 text-slate-500 rounded hover:bg-slate-200"
+                              >
+                                <FiX size={12} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 group/email">
+                              <p className="text-[10px] text-slate-500 font-bold truncate mt-0.5">
+                                {user.email}
+                              </p>
+                              <button
+                                onClick={() => {
+                                  setEditingUserId(user._id);
+                                  setEditEmailValue(user.email);
+                                }}
+                                className="opacity-0 group-hover/email:opacity-100 p-1 text-slate-400 hover:text-[#0038A8] transition-opacity"
+                              >
+                                <FiEdit2 size={10} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
 
-                    {/* CLEARANCE LEVEL BADGE */}
-                    <td className="px-8 py-5">
-                      <div
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg  text-[10px] font-black uppercase tracking-widest ${getRoleBadge(user.role)}`}
-                      >
-                        <FiShield /> {user.role}
-                      </div>
+                    {/* ASSIGNED OFFICE */}
+                    <td className="px-8 py-5 whitespace-nowrap">
+                      <span className="text-[10px] font-black uppercase text-slate-600">
+                        {user.role === "office"
+                          ? user.office || "Unassigned"
+                          : "System-Wide"}
+                      </span>
                     </td>
 
-                    {/* MODIFY ACCESS (Dropdown) */}
+                    {/* CLEARANCE LEVEL (Dropdown) */}
                     <td className="px-8 py-5">
-                      <div className="relative w-full max-w-50">
+                      <div className="relative w-full max-w-[180px]">
                         <select
                           value={user.role}
-                          disabled={actionLoading === user._id}
+                          disabled={
+                            actionLoading === user._id ||
+                            (user.role === "super-admin" &&
+                              currentUser?.role !== "super-admin")
+                          }
                           onChange={(e) =>
                             handleUpdateRole(
                               user._id,
                               e.target.value as UserRole,
                             )
                           }
-                          className="appearance-none w-full text-[10px] font-black uppercase tracking-widest text-slate-600 border border-slate-200 rounded-xl px-4 py-3 bg-slate-50 outline-none focus:border-[#0038A8] focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer disabled:opacity-50"
+                          className={`appearance-none w-full text-[9px] font-black uppercase tracking-widest pl-8 pr-8 py-2.5 outline-none focus:ring-2 focus:ring-[#0038A8]/20 transition-all cursor-pointer rounded-lg ${getRoleBadge(user.role)} disabled:opacity-60`}
                         >
                           <option value="office">Office Staff</option>
                           <option value="guard">Security Guard</option>
                           <option value="admin">Administrator</option>
+                          {currentUser?.role === "super-admin" && (
+                            <option value="super-admin">Super Admin</option>
+                          )}
                         </select>
-                        <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <FiShield
+                          className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50"
+                          size={12}
+                        />
+                        <FiChevronDown
+                          className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 pointer-events-none"
+                          size={14}
+                        />
                       </div>
                     </td>
 
                     {/* ACTIONS (Delete) */}
                     <td className="px-8 py-5 text-right">
                       <button
-                        // Prevent opening the delete modal for admins
                         onClick={() => {
-                          if (user.role === "admin") {
-                            alert(
-                              "Action Denied: You cannot delete an Administrator account.",
+                          if (
+                            user.role === "super-admin" &&
+                            currentUser?.role !== "super-admin"
+                          ) {
+                            return alert(
+                              "Action Denied: You cannot delete a Super-Admin account.",
                             );
-                            return;
                           }
                           setUserToDelete(user);
                         }}
-                        disabled={actionLoading === user._id}
+                        disabled={
+                          actionLoading === user._id ||
+                          user._id === currentUser?._id
+                        }
                         className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all disabled:opacity-30 border border-transparent hover:border-red-100"
-                        title="Revoke Access"
+                        title={
+                          user._id === currentUser?._id
+                            ? "Cannot delete yourself"
+                            : "Revoke Access"
+                        }
                       >
                         {actionLoading === user._id ? (
                           <FiLoader className="animate-spin text-[#0038A8]" />
@@ -338,13 +471,13 @@ const UserManagement = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden text-center"
+              className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden text-center border border-white/20"
             >
               <div className="bg-red-600 p-8 pb-10 relative">
                 <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto shadow-xl text-red-600 mb-4 relative z-10">
@@ -355,7 +488,7 @@ const UserManagement = () => {
                 </h2>
               </div>
 
-              <div className="p-8 -mt-6 bg-white rounded-t-4xl relative z-20">
+              <div className="p-8 -mt-6 bg-white rounded-t-[2.5rem] relative z-20">
                 <h3 className="text-2xl font-black text-slate-800 uppercase leading-none">
                   {userToDelete.name}
                 </h3>
@@ -399,7 +532,7 @@ const UserManagement = () => {
       {/* ================= ADD USER MODAL ================= */}
       <AnimatePresence>
         {showCreateModal && (
-          <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -411,11 +544,11 @@ const UserManagement = () => {
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-white/20"
             >
               {/* Modal Header */}
               <div className="bg-[#0038A8] p-8 pb-10 text-center relative shrink-0">
-                <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mx-auto mb-3 text-white">
+                <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mx-auto mb-3 border border-white/20 shadow-lg text-white">
                   <FiUserPlus size={32} />
                 </div>
                 <h2 className="text-white font-black text-2xl uppercase tracking-wide relative z-10">
@@ -434,7 +567,7 @@ const UserManagement = () => {
               </div>
 
               {/* Modal Body (Scrollable) */}
-              <div className="p-8 -mt-6 bg-white rounded-t-4xl relative z-20 overflow-y-auto custom-scrollbar">
+              <div className="p-8 -mt-6 bg-white rounded-t-[2.5rem] relative z-20 overflow-y-auto custom-scrollbar">
                 {formError && (
                   <div className="mb-6 p-4 bg-red-50 text-red-600 text-[10px] font-black uppercase tracking-widest rounded-2xl border border-red-100 flex items-center gap-3">
                     <FiAlertTriangle className="text-lg shrink-0" /> {formError}
@@ -456,21 +589,49 @@ const UserManagement = () => {
                     placeholder="employee@rtu.edu.ph"
                   />
 
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase text-slate-400 ml-1 tracking-widest">
-                      Access Level
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={role}
-                        onChange={(e) => setRole(e.target.value as UserRole)}
-                        className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 uppercase focus:border-[#0038A8] focus:ring-4 focus:ring-blue-50 outline-none transition-all appearance-none cursor-pointer"
-                      >
-                        <option value="office">Office Staff</option>
-                        <option value="guard">Security Guard</option>
-                        <option value="admin">Administrator</option>
-                      </select>
-                      <FiChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-black uppercase text-slate-400 ml-1 tracking-widest">
+                        Access Level
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={role}
+                          onChange={(e) => setRole(e.target.value as UserRole)}
+                          className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 uppercase focus:border-[#0038A8] focus:ring-4 focus:ring-[#0038A8]/10 outline-none transition-all appearance-none cursor-pointer"
+                        >
+                          <option value="office">Office Staff</option>
+                          <option value="guard">Security Guard</option>
+                          <option value="admin">Administrator</option>
+                          {currentUser?.role === "super-admin" && (
+                            <option value="super-admin">Super Admin</option>
+                          )}
+                        </select>
+                        <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* 🔥 DYNAMIC OFFICE ASSIGNMENT (Only shows if role === 'office') */}
+                    <div
+                      className={`space-y-2 transition-all ${role !== "office" ? "opacity-30 pointer-events-none grayscale" : ""}`}
+                    >
+                      <label className="text-[9px] font-black uppercase text-slate-400 ml-1 tracking-widest">
+                        Department
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={assignedOffice}
+                          onChange={(e) => setAssignedOffice(e.target.value)}
+                          className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 uppercase focus:border-[#0038A8] focus:ring-4 focus:ring-[#0038A8]/10 outline-none transition-all appearance-none cursor-pointer"
+                        >
+                          {offices.map((o) => (
+                            <option key={o._id} value={o.name}>
+                              {o.name}
+                            </option>
+                          ))}
+                        </select>
+                        <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      </div>
                     </div>
                   </div>
 
@@ -493,10 +654,10 @@ const UserManagement = () => {
 
                   <button
                     disabled={actionLoading === "create"}
-                    className="w-full py-5 bg-[#0038A8] text-white font-black uppercase tracking-[0.2em] text-[11px] rounded-2xl shadow-xl shadow-blue-900/20 hover:bg-[#002b82] transition-all flex justify-center items-center gap-2 mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="w-full py-5 bg-[#0038A8] text-[#FFD700] font-black uppercase tracking-[0.2em] text-[11px] rounded-2xl shadow-xl shadow-blue-900/20 hover:bg-[#002b82] transition-all flex justify-center items-center gap-2 mt-6 disabled:opacity-70 disabled:cursor-not-allowed active:scale-95"
                   >
                     {actionLoading === "create" ? (
-                      <FiLoader className="animate-spin" />
+                      <FiLoader className="animate-spin text-lg" />
                     ) : (
                       <>
                         Authorize Personnel <FiCheck size={16} />
@@ -522,7 +683,7 @@ const Input = ({ label, ...props }: any) => (
     <input
       {...props}
       required
-      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:border-[#0038A8] focus:ring-4 focus:ring-blue-50 outline-none transition-all"
+      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:border-[#0038A8] focus:ring-4 focus:ring-[#0038A8]/10 outline-none transition-all"
     />
   </div>
 );

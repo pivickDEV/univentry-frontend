@@ -289,7 +289,7 @@ const GuardSidebar = () => {
               </div>
               <div className="text-left">
                 <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-white transition-colors">
-                  Terminate
+                  LOG OUT
                 </span>
                 <span className="block text-[9px] font-bold opacity-60 uppercase tracking-widest mt-0.5 text-blue-200 group-hover:text-white">
                   End Session
