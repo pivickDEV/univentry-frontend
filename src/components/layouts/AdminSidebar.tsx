@@ -4,18 +4,19 @@ import {
   AlertTriangle,
   BadgeCheck,
   CheckCircle2,
+  ClipboardEdit,
   Eye,
   EyeOff,
-  FileText, // For Audit
+  FileText,
   Key,
   LayoutDashboard,
   Loader2,
-  Lock, // For Office Management
+  Lock,
   LogOut,
   Mail,
   Menu,
-  PieChart, // For Reports
-  Save, // For User Management
+  PieChart,
+  Save,
   Settings2,
   ShieldCheck,
   Tag,
@@ -247,6 +248,11 @@ const AdminSidebar = () => {
       path: "/admin/cctv-monitor",
       label: "CCTV Monitoring",
       icon: ShieldCheck,
+    },
+    {
+      path: "/office/department-history",
+      label: "Department History Logs",
+      icon: ClipboardEdit,
     },
   ];
 

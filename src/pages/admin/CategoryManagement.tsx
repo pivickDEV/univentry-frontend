@@ -93,7 +93,7 @@ const CategoryManagement = () => {
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
             Category{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
               Settings
             </span>
           </h1>
@@ -154,7 +154,7 @@ const CategoryManagement = () => {
         </div>
 
         {/* CATEGORY LIST */}
-        <div className="flex-1 bg-white border border-slate-200 rounded-[2rem] shadow-sm flex flex-col overflow-hidden max-h-[500px]">
+        <div className="flex-1 bg-white border border-slate-200 rounded-4xl shadow-sm flex flex-col overflow-hidden max-h-125">
           <div className="p-5 border-b border-slate-100 bg-slate-50">
             <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">
               Active Classifications

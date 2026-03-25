@@ -6,30 +6,32 @@ import PublicRoute from "./components/layouts/PublicRoute";
 // --- ADMIN PAGES ---
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AuditTrail from "./pages/admin/AuditTrail";
+import CategoryManagement from "./pages/admin/CategoryManagement";
 import CCTVMonitor from "./pages/admin/CCTVMonitor";
 import OfficeManagement from "./pages/admin/OfficeManagement";
 import ReportsAnalytics from "./pages/admin/ReportsAnalytics";
 import UserManagement from "./pages/admin/UserManagement";
 
 // --- GUARD PAGES ---
-import BookAppointment from "./pages/BookAppointment";
 import ActiveLog from "./pages/guard/ActiveLog";
 import GateScanner from "./pages/guard/GateScanner";
 import GuardDashboard from "./pages/guard/GuardDashboard";
 import ManualEntry from "./pages/guard/ManualEntry";
 
-// --- PUBLIC & OFFICE PAGES ---
-import SurveillanceWorker from "./components/SurveillanceWorker";
-import ForgotPassword from "./ForgotPassword";
-import CategoryManagement from "./pages/admin/CategoryManagement";
-import { CCTVProvider } from "./pages/context/CCTVContext";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
+// --- OFFICE PAGES ---
 import DepartmentHistory from "./pages/office/DepartmentHistory";
 import OfficeDashboard from "./pages/office/OfficeDashboard";
 import TransactionScan from "./pages/office/TransactionScan";
 
-// --- 🛡️ SURVEILLANCE PERSISTENCE ENGINE ---
+// --- PUBLIC & SUPER ADMIN PAGES ---
+import ForgotPassword from "./ForgotPassword";
+import BookAppointment from "./pages/BookAppointment";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+
+// --- CONTEXT & BACKGROUND WORKERS ---
+import SurveillanceWorker from "./components/SurveillanceWorker";
+import { CCTVProvider } from "./pages/context/CCTVContext";
 
 const App = () => {
   return (
@@ -37,8 +39,7 @@ const App = () => {
       {/* 
         🔥 PERSISTENT AI NODE 
         This component has no UI. It lives here so that the JSMpeg stream 
-        and Face-API logic never stop, even when you switch between 
-        the Dashboard, Audit Trail, and User Management.
+        and Face-API logic never stop, even when you switch between pages.
       */}
       <SurveillanceWorker />
 
@@ -53,8 +54,12 @@ const App = () => {
 
         {/* ================= PROTECTED ROUTES ================= */}
         <Route element={<MainLayout />}>
-          {/* Admin-only routes */}
-          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+          {/* 🔥 ADMIN + SUPER ADMIN ROUTES 
+              (Both roles can access these pages) 
+          */}
+          <Route
+            element={<ProtectedRoute allowedRoles={["admin", "super-admin"]} />}
+          >
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/audit-trail" element={<AuditTrail />} />
             <Route path="/admin/reports" element={<ReportsAnalytics />} />
@@ -64,8 +69,14 @@ const App = () => {
             <Route path="/admin/categories" element={<CategoryManagement />} />
           </Route>
 
-          {/* Office-only routes */}
-          <Route element={<ProtectedRoute allowedRoles={["office"]} />}>
+          {/* 🔥 OFFICE + SUPER ADMIN ROUTES */}
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoles={["office", "super-admin", "admin"]}
+              />
+            }
+          >
             <Route path="/office" element={<OfficeDashboard />} />
             <Route path="/office/transactions" element={<TransactionScan />} />
             <Route
@@ -74,12 +85,25 @@ const App = () => {
             />
           </Route>
 
-          {/* Guard-only routes */}
-          <Route element={<ProtectedRoute allowedRoles={["guard"]} />}>
+          {/* 🔥 GUARD + SUPER ADMIN ROUTES */}
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoles={["guard", "super-admin", "admin"]}
+              />
+            }
+          >
             <Route path="/guard" element={<GuardDashboard />} />
             <Route path="/guard/scanner" element={<GateScanner />} />
             <Route path="/guard/manual-entry" element={<ManualEntry />} />
             <Route path="/guard/active-log" element={<ActiveLog />} />
+          </Route>
+
+          {/* 🔥 SUPER ADMIN ONLY ROUTES 
+              (Pages strictly for developers/system engineers) 
+          */}
+          <Route element={<ProtectedRoute allowedRoles={["super-admin"]} />}>
+            {/* Add any other pure Super Admin routes here later like /super-admin/network */}
           </Route>
         </Route>
 
