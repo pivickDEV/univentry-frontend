@@ -236,16 +236,54 @@ const DepartmentHistory = () => {
           <div className="flex flex-col lg:flex-row items-center gap-3 w-full xl:w-auto">
             {/* OFFICE DROPDOWN */}
             <div className="relative w-full lg:w-auto shrink-0">
-              <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-[#0038A8] w-4 h-4" />
-              <select
-                value={selectedOffice}
-                onChange={(e) => setSelectedOffice(e.target.value)}
-                className="w-full lg:w-48 pl-10 pr-4 py-3 bg-white border-2 border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-700 outline-none focus:border-[#0038A8] transition-all cursor-pointer appearance-none shadow-sm"
-              >
-                {offices.map((o) => (
-                  <option key={o._id} value={o.name}></option>
-                ))}
-              </select>
+              {/* Check if user is office staff */}
+              {JSON.parse(localStorage.getItem("userInfo") || "{}").role ===
+              "office" ? (
+                /* 🔒 LOCKED VIEW: For Office Staff (Non-clickable) */
+                <div className="flex items-center gap-3 px-5 py-3 bg-slate-100 border-2 border-slate-200 rounded-2xl shadow-inner group">
+                  <div className="relative">
+                    <Building className="text-[#0038A8] w-4 h-4" />
+                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-0.5">
+                      Assigned Hub
+                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#0038A8] whitespace-nowrap">
+                      {
+                        JSON.parse(localStorage.getItem("userInfo") || "{}")
+                          .office
+                      }
+                    </span>
+                  </div>
+                  {/* Lucide Shield or Lock to show it's locked */}
+                  <Shield
+                    size={12}
+                    className="ml-2 text-slate-300 group-hover:text-[#0038A8] transition-colors"
+                  />
+                </div>
+              ) : (
+                /* 🔓 SELECT VIEW: For Admins (Interactive) */
+                <div className="relative group">
+                  <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-[#0038A8] w-4 h-4 z-10" />
+                  <select
+                    value={selectedOffice}
+                    onChange={(e) => setSelectedOffice(e.target.value)}
+                    className="w-full lg:w-56 pl-10 pr-10 py-3 bg-white border-2 border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-700 outline-none focus:border-[#0038A8] transition-all cursor-pointer appearance-none shadow-sm"
+                  >
+                    <option value="All">ALL OFFICES</option>
+                    {offices.map((o) => (
+                      <option key={o._id} value={o.name}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
+                  {/* Add a chevron so they know it's a dropdown */}
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-[#0038A8]">
+                    <RefreshCw size={12} className="rotate-90" />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 🔥 COMBINED DATE FILTERS (Quick Buttons + Custom Picker Beside it) */}
