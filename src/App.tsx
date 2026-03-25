@@ -26,8 +26,8 @@ import OfficeDashboard from "./pages/office/OfficeDashboard";
 import TransactionScan from "./pages/office/TransactionScan";
 
 // --- 🛡️ SURVEILLANCE PERSISTENCE ENGINE ---
+import SurveillanceWorker from "../src/components/SurveillanceWorker";
 import { CCTVProvider } from "../src/pages/context/CCTVContext";
-import SurveillanceWorker from "./components/SurveillanceWorker";
 
 const App = () => {
   return (
