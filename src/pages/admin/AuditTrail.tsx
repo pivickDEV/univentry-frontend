@@ -396,7 +396,7 @@ const AuditTrail = () => {
                     <td className="px-8 py-5 whitespace-nowrap text-[10px] font-bold text-slate-500 font-mono">
                       {log.phoneNumber}
                     </td>
-                    <td className="px-8 py-5 whitespace-nowrap text-[10px] font-black uppercase text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+                    <td className="px-8 py-5 whitespace-nowrap text-[10px] font-black uppercase text-slate-700 bg-slate-100 rounded-full border border-slate-200">
                       {log.office}
                     </td>
                     <td className="px-8 py-5 whitespace-nowrap text-[10px] font-bold text-slate-600">
@@ -612,7 +612,7 @@ const AuditTrail = () => {
       {/* DELETE DIALOG */}
       <AnimatePresence>
         {logToDelete && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -650,7 +650,7 @@ const AuditTrail = () => {
       {/* FULLSCREEN PREVIEW */}
       {fullscreenImage && (
         <div
-          className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-4 cursor-pointer"
+          className="fixed inset-0 z-110 bg-black/95 flex items-center justify-center p-4 cursor-pointer"
           onClick={() => setFullscreenImage(null)}
         >
           <img
@@ -671,7 +671,7 @@ const DetailRow = ({ label, value, highlight, customColor }: any) => (
       {label}
     </span>
     <span
-      className={`text-[11px] font-black uppercase tracking-wide leading-relaxed break-words ${customColor ? customColor : highlight ? "text-[#0038A8]" : "text-slate-700"}`}
+      className={`text-[11px] font-black uppercase tracking-wide leading-relaxed wrap-break-word ${customColor ? customColor : highlight ? "text-[#0038A8]" : "text-slate-700"}`}
     >
       {value || "N/A / PENDING"}
     </span>
@@ -684,7 +684,7 @@ const DocumentCard = ({ title, image, text, onClick, loading }: any) => (
       <FiCreditCard /> {title}
     </h3>
     <div
-      className="relative h-56 bg-slate-100 rounded-[2rem] overflow-hidden border-2 border-slate-200 group cursor-pointer flex items-center justify-center"
+      className="relative h-56 bg-slate-100 rounded-4xl overflow-hidden border-2 border-slate-200 group cursor-pointer flex items-center justify-center"
       onClick={image ? onClick : undefined}
     >
       {loading ? (
