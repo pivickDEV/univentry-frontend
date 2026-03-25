@@ -283,14 +283,14 @@ const OfficeSidebar = () => {
       {/* SIDEBAR CONTAINER */}
       {/* --------------------------- */}
       <aside
-        className={`fixed inset-y-0 left-0 z-80 lg:sticky lg:top-0 w-80 min-h-screen bg-[#0038A8] text-white flex flex-col border-r border-[#002b82] transition-transform duration-500 shadow-[20px_0_60px_rgba(0,18,51,0.3)] lg:shadow-none ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        className={`fixed inset-y-0 left-0 z-80 lg:sticky lg:top-0 w-80 h-screen max-h-screen bg-[#0038A8] text-white flex flex-col border-r border-[#002b82] transition-transform duration-500 shadow-[20px_0_60px_rgba(0,18,51,0.3)] lg:shadow-none ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         {/* Tech Grid Background */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-size-[2rem_2rem] pointer-events-none" />
 
-        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative z-10">
+        <div className="flex-1 flex flex-col min-h-0 relative z-10">
           {/* 1. BRANDING */}
-          <div className="p-8 pb-6">
+          <div className="p-8 pb-6 shrink-0 relative z-10">
             <div className="flex items-center gap-4 group">
               <div className="relative w-14 h-14 bg-white/10 backdrop-blur-xl rounded-[1.25rem] flex items-center justify-center text-[#FFD700] border border-white/20 shadow-lg group-hover:rotate-12 transition-transform duration-500">
                 <ShieldCheck size={28} className="stroke-[2.5]" />
@@ -307,7 +307,7 @@ const OfficeSidebar = () => {
           </div>
 
           {/* 2. USER PROFILE HUD */}
-          <div className="px-6 mb-8 mt-2">
+          <div className="px-6 mb-8 mt-2 shrink-0 relative z-10">
             <div className="relative bg-white/10 border border-white/20 backdrop-blur-lg rounded-4xl p-5 overflow-hidden group hover:bg-white/15 transition-all duration-500 shadow-xl">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1/2 w-1.5 bg-[#FFD700] rounded-r-full shadow-[0_0_15px_#FFD700]"></div>
 
@@ -367,8 +367,8 @@ const OfficeSidebar = () => {
             </div>
           </div>
 
-          {/* 3. NAVIGATION MENU */}
-          <nav className="px-4 space-y-2 pb-6 flex-1">
+          {/* 3. NAVIGATION MENU (Perfect Natural Scroll Container) */}
+          <nav className="px-4 space-y-2 pb-6 flex-1 min-h-0 overflow-y-auto custom-scrollbar relative z-10">
             <p className="px-6 text-[8px] font-black text-blue-300/50 uppercase tracking-[0.4em] mb-4">
               System Modules
             </p>
@@ -403,7 +403,7 @@ const OfficeSidebar = () => {
         </div>
 
         {/* BOTTOM SECTION */}
-        <div className="p-6 border-t border-[#002b82] bg-[#002b82]/50 relative z-10 backdrop-blur-md">
+        <div className="p-6 border-t border-[#002b82] bg-[#002b82]/50 shrink-0 relative z-10 backdrop-blur-md">
           <button
             onClick={() => setShowLogoutModal(true)}
             className="group relative w-full flex items-center justify-between p-1.5 pr-5 rounded-4xl cursor-pointer bg-white/5 border border-white/10 text-blue-100 hover:bg-red-500 transition-all duration-500"
@@ -766,7 +766,7 @@ const OfficeSidebar = () => {
                             passwordForm.newPassword !==
                               passwordForm.confirmPassword
                           }
-                          className={`w-full py-4.5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg cursor-pointer ${
+                          className={`w-full py-4 md:py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg cursor-pointer active:scale-95 ${
                             updateSuccess
                               ? "bg-emerald-500 text-white shadow-emerald-500/20"
                               : "bg-red-600 text-white hover:bg-red-700 shadow-red-600/20"
@@ -821,7 +821,7 @@ const OfficeSidebar = () => {
                 </div>
 
                 <h2 className="text-3xl font-black text-[#0038A8] mb-2 tracking-tighter uppercase">
-                  Logout
+                  Log out
                 </h2>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-10 leading-relaxed mx-auto">
                   Are you sure you want to Log out?
