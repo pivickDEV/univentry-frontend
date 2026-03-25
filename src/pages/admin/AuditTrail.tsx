@@ -56,7 +56,7 @@ const AuditTrail = () => {
       const res = await api.get("/bookings");
       setLogs(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("Connection failed", err);
+      console.error("Fetch failed", err);
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,6 @@ const AuditTrail = () => {
     fetchAuditLogs();
   }, []);
 
-  // 🔥 PURGE 30 DAY STALE LOGIC
   const handlePurgeStale = async () => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -78,21 +77,24 @@ const AuditTrail = () => {
 
     if (stale.length === 0)
       return alert(
-        "System Check: No unscanned bookings found older than 30 days.",
+        "System Intelligence: No bookings older than 30 days require purging.",
       );
-    if (!confirm(`Delete ${stale.length} stale bookings older than 30 days?`))
+    if (
+      !confirm(
+        `CRITICAL ACTION: Purge ${stale.length} unscanned bookings older than 30 days?`,
+      )
+    )
       return;
 
     try {
       await Promise.all(stale.map((l) => api.delete(`/bookings/${l._id}`)));
-      alert("Purge successful.");
+      alert("Database purged of stale records.");
       fetchAuditLogs();
     } catch (err) {
-      alert("Purge failed partially.");
+      alert("Purge failed.");
     }
   };
 
-  // 🔥 ARCHIVE LOGIC (Download + Delete)
   const handleArchive = async () => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -101,8 +103,13 @@ const AuditTrail = () => {
     );
 
     if (oldRecords.length === 0)
-      return alert("No records older than 30 days available for archiving.");
-    if (!confirm(`Archive and delete ${oldRecords.length} records?`)) return;
+      return alert(
+        "System Intelligence: No records found for 30-day archiving.",
+      );
+    if (
+      !confirm(`Archive and permanently delete ${oldRecords.length} records?`)
+    )
+      return;
 
     setIsArchiving(true);
     try {
@@ -111,7 +118,7 @@ const AuditTrail = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Audit_Archive_${new Date().toISOString().split("T")[0]}.json`;
+      link.download = `UniVentry_Archive_${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -121,19 +128,19 @@ const AuditTrail = () => {
       );
       fetchAuditLogs();
     } catch (e) {
-      alert("Archive failed.");
+      alert("Archiving failed.");
     } finally {
       setIsArchiving(false);
     }
   };
 
   const handleDeleteCCTV = async (id: string) => {
-    if (!confirm("Delete surveillance track?")) return;
+    if (!confirm("Erase surveillance track?")) return;
     try {
       await api.delete(`/cctv-logs/${id}`);
       setCctvLogs((prev) => prev.filter((l) => l._id !== id));
     } catch (err) {
-      alert("Failed to delete track. Ensure backend DELETE route exists.");
+      alert("Delete failed. Backend route required.");
     }
   };
 
@@ -171,13 +178,11 @@ const AuditTrail = () => {
     }
   }, [selectedLog?._id]);
 
-  // 🔥 FIXED FILTER LOGIC (Today vs Yesterday vs All)
   const filteredLogs = useMemo(() => {
     const manilaNow = new Date(
       new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }),
     );
     const todayStr = manilaNow.toLocaleDateString("en-CA");
-
     const yesterday = new Date(manilaNow);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toLocaleDateString("en-CA");
@@ -196,7 +201,7 @@ const AuditTrail = () => {
       if (customDate) return log.bookingDate === customDate;
       if (timeFilter === "today") return log.bookingDate === todayStr;
       if (timeFilter === "yesterday") return log.bookingDate === yesterdayStr;
-      return true; // "all"
+      return true;
     });
 
     return filtered.sort((a, b) => {
@@ -215,7 +220,7 @@ const AuditTrail = () => {
       setLogToDelete(null);
       setSelectedLog(null);
     } catch (err) {
-      alert("Delete failed");
+      alert("Deletion error");
     } finally {
       setIsDeleting(false);
     }
@@ -230,11 +235,11 @@ const AuditTrail = () => {
             <FiShield size={32} />
           </div>
           <div>
-            <h1 className="text-3xl lg:text-4xl font-black text-[#0038A8] uppercase tracking-tighter">
+            <h1 className="text-3xl lg:text-4xl font-black text-[#0038A8] uppercase tracking-tighter italic">
               Audit <span className="text-[#FFD700]">Trail</span>
             </h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-              Registry Control Center
+              Registry Command Hub
             </p>
           </div>
         </div>
@@ -262,7 +267,7 @@ const AuditTrail = () => {
                   setTimeFilter(f);
                   setCustomDate("");
                 }}
-                className={`px-4 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${timeFilter === f && !customDate ? "bg-[#0038A8] text-white" : "text-slate-400"}`}
+                className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${timeFilter === f && !customDate ? "bg-[#0038A8] text-white" : "text-slate-400"}`}
               >
                 {f}
               </button>
@@ -273,19 +278,19 @@ const AuditTrail = () => {
               type="date"
               value={customDate}
               onChange={(e) => setCustomDate(e.target.value)}
-              className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-bold uppercase shadow-sm outline-none"
+              className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-bold uppercase shadow-sm outline-none cursor-pointer"
             />
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as any)}
-              className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-bold uppercase shadow-sm appearance-none outline-none"
+              className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-bold uppercase outline-none shadow-sm appearance-none cursor-pointer"
             >
               <option value="desc">Newest First</option>
               <option value="asc">Oldest First</option>
             </select>
             <button
               onClick={fetchAuditLogs}
-              className="p-2.5 bg-white text-[#0038A8] border border-slate-200 rounded-xl shadow-sm"
+              className="p-2.5 bg-white text-[#0038A8] border border-slate-200 rounded-xl shadow-sm active:scale-95"
             >
               <FiRefreshCw
                 size={16}
@@ -296,18 +301,18 @@ const AuditTrail = () => {
           {activeTab === "pre-arrivals" ? (
             <button
               onClick={handlePurgeStale}
-              className="px-6 py-2.5 bg-red-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center gap-2"
+              className="px-6 py-2.5 bg-red-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95"
             >
-              <FiTrash2 /> Purge 30d Bookings
+              <FiTrash2 /> Purge Stale (30d)
             </button>
           ) : (
             <button
               onClick={handleArchive}
               disabled={isArchiving}
-              className="px-6 py-2.5 bg-slate-800 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center gap-2"
+              className="px-6 py-2.5 bg-slate-800 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95"
             >
               <FiDatabase className={isArchiving ? "animate-pulse" : ""} />{" "}
-              Archive Logs (30d)
+              {isArchiving ? "Archiving..." : "Archive Logs"}
             </button>
           )}
         </div>
@@ -332,35 +337,35 @@ const AuditTrail = () => {
           <table className="w-full text-left border-collapse table-auto min-w-300">
             <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-200">
               <tr>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">
                   Visitor
                 </th>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">
                   Contact
                 </th>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">
                   Office
                 </th>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">
                   Date
                 </th>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-center">
+                <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-400 text-center tracking-widest">
                   Gate In
                 </th>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-center">
+                <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-400 text-center tracking-widest">
                   Office Tx
                 </th>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-center">
+                <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-400 text-center tracking-widest">
                   Gate Out
                 </th>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">
+                <th className="px-8 py-5 text-[9px] font-black uppercase text-slate-400 text-right tracking-widest">
                   Created By
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {loading ? (
-                [...Array(6)].map((_, i) => (
+                [...Array(5)].map((_, i) => (
                   <tr key={i} className="animate-pulse bg-white">
                     <td colSpan={8} className="px-8 py-6">
                       <div className="h-6 bg-slate-100 rounded-lg w-full" />
@@ -371,9 +376,9 @@ const AuditTrail = () => {
                 <tr className="bg-white">
                   <td
                     colSpan={8}
-                    className="p-16 text-center text-slate-400 text-xs font-black uppercase tracking-widest"
+                    className="p-16 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest"
                   >
-                    No Logs Found
+                    End of Log - No Matching Data
                   </td>
                 </tr>
               ) : (
@@ -432,7 +437,7 @@ const AuditTrail = () => {
         </div>
       </div>
 
-      {/* MODAL (ORIGINAL HIGH-END DESIGN RESTORED) */}
+      {/* MODAL (ORIGINAL DESIGN WITH FIXED WRAPPING & HANDLERS) */}
       <AnimatePresence>
         {selectedLog && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -449,29 +454,30 @@ const AuditTrail = () => {
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               className="relative bg-white w-full max-w-6xl max-h-[95vh] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden"
             >
-              <div className="bg-[#0038A8] p-8 pb-12 text-center relative shrink-0">
+              {/* MODAL HEADER */}
+              <div className="bg-[#0038A8] p-8 pb-12 text-center relative shrink-0 shadow-lg">
                 <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/20 shadow-lg text-white">
                   <FiUser size={32} />
                 </div>
-                <h2 className="text-white font-black text-3xl uppercase tracking-wide">
-                  Visitor Details
+                <h2 className="text-white font-black text-3xl uppercase tracking-tighter">
+                  Visitor Intelligence Dossier
                 </h2>
-                <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mt-1">
-                  Ref ID: {selectedLog._id}
+                <p className="text-blue-200 text-[10px] font-black uppercase tracking-[0.4em] mt-1">
+                  Registry Record: {selectedLog._id}
                 </p>
                 <button
                   onClick={() => setSelectedLog(null)}
-                  className="absolute top-6 right-6 p-2.5 bg-white/10 text-white hover:bg-red-500 rounded-full transition-colors z-20"
+                  className="absolute top-6 right-6 p-2.5 bg-white/10 text-white hover:bg-red-500 rounded-full transition-all z-20"
                 >
                   <FiX size={20} />
                 </button>
               </div>
 
-              <div className="p-10 -mt-8 bg-white rounded-t-[2.5rem] relative z-20 overflow-y-auto custom-scrollbar flex-1 space-y-8">
-                <div className="grid lg:grid-cols-3 gap-6">
-                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4">
+              <div className="p-10 -mt-8 bg-white rounded-t-[2.5rem] relative z-20 overflow-y-auto custom-scrollbar flex-1 space-y-10">
+                <div className="grid lg:grid-cols-3 gap-8">
+                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm">
                     <h3 className="text-[#0038A8] font-black uppercase text-xs flex items-center gap-2 tracking-widest">
-                      <FiUser /> Identification
+                      <FiUser /> Subject Identity
                     </h3>
                     <DetailRow
                       label="Full Name"
@@ -480,25 +486,34 @@ const AuditTrail = () => {
                     />
                     <DetailRow label="Category" value={selectedLog.category} />
                     <DetailRow label="Email" value={selectedLog.email} />
-                    <DetailRow label="Phone" value={selectedLog.phoneNumber} />
+                    <DetailRow
+                      label="Contact"
+                      value={selectedLog.phoneNumber}
+                    />
                   </div>
-                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4">
+                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm">
                     <h3 className="text-[#0038A8] font-black uppercase text-xs flex items-center gap-2 tracking-widest">
                       <FiMapPin /> Logistics
                     </h3>
                     <DetailRow label="Destination" value={selectedLog.office} />
-                    <DetailRow label="Date" value={selectedLog.bookingDate} />
-                    <DetailRow label="Purpose" value={selectedLog.purpose} />
                     <DetailRow
-                      label="Status"
+                      label="Booking Date"
+                      value={selectedLog.bookingDate}
+                    />
+                    <DetailRow
+                      label="Declared Purpose"
+                      value={selectedLog.purpose}
+                    />
+                    <DetailRow
+                      label="Registry Status"
                       value={selectedLog.status}
                       customColor="text-emerald-600"
                     />
                   </div>
-                  {/* 🔥 HANDLER BY FIELDS RESTORED */}
-                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4">
+                  {/* 🔥 FIXED BY HANDLERS */}
+                  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm">
                     <h3 className="text-[#0038A8] font-black uppercase text-xs flex items-center gap-2 tracking-widest">
-                      <FiShield /> Handlers
+                      <FiShield /> Authorized Handlers
                     </h3>
                     <DetailRow
                       label="Entry Guard"
@@ -516,22 +531,26 @@ const AuditTrail = () => {
                       highlight
                     />
                     <DetailRow
-                      label="Stay (H)"
-                      value={selectedLog.hours?.toFixed(2)}
+                      label="Stay Duration"
+                      value={
+                        selectedLog.hours
+                          ? `${selectedLog.hours.toFixed(2)} Hours`
+                          : "---"
+                      }
                     />
                   </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8">
                   <DocumentCard
-                    title="ID (Front)"
+                    title="ID Credential (Front)"
                     image={selectedLog.idFront}
                     text={selectedLog.ocrFront}
                     loading={isModalLoading}
                     onClick={() => setFullscreenImage(selectedLog.idFront)}
                   />
                   <DocumentCard
-                    title="ID (Back)"
+                    title="ID Credential (Back)"
                     image={selectedLog.idBack}
                     text={selectedLog.ocrBack}
                     loading={isModalLoading}
@@ -539,32 +558,31 @@ const AuditTrail = () => {
                   />
                 </div>
 
-                {/* CCTV WITH WORKING DELETE UI */}
                 <div className="pt-8 border-t border-slate-100">
                   <h3 className="text-[#0038A8] font-black uppercase text-sm mb-6 flex items-center gap-2 tracking-widest">
-                    <FiCrosshair /> AI Surveillance Tracks
+                    <FiCrosshair /> Surveillance Tracks
                   </h3>
                   {loadingCCTV ? (
-                    <FiRefreshCw className="animate-spin text-[#0038A8] mx-auto text-3xl" />
+                    <FiRefreshCw className="animate-spin text-3xl mx-auto text-[#0038A8]" />
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                       {cctvLogs.map((log) => (
                         <div
                           key={log._id}
-                          className="relative bg-slate-900 rounded-3xl overflow-hidden group shadow-lg"
+                          className="relative bg-slate-900 rounded-3xl overflow-hidden group shadow-xl"
                         >
                           <img
                             src={log.screenshotBase64}
-                            className="w-full aspect-video object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                            className="w-full aspect-video object-cover opacity-80 group-hover:opacity-100 transition-all"
                           />
                           <button
                             onClick={() => handleDeleteCCTV(log._id)}
-                            className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-xl z-20"
+                            className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-xl z-30"
                           >
                             <FiTrash2 size={12} />
                           </button>
-                          <div className="p-4 bg-white">
-                            <p className="text-[8px] font-black text-slate-400 uppercase mb-1 tracking-widest">
+                          <div className="p-4 bg-white border-t border-slate-100">
+                            <p className="text-[8px] font-black text-slate-400 uppercase mb-1">
                               {log.cameraName}
                             </p>
                             <span className="text-[9px] font-black uppercase text-[#0038A8]">
@@ -578,12 +596,12 @@ const AuditTrail = () => {
                 </div>
               </div>
 
-              <div className="p-6 bg-slate-50 border-t flex justify-end gap-4">
+              <div className="p-6 bg-slate-50 border-t flex justify-end gap-4 shadow-inner">
                 <button
                   onClick={() => setLogToDelete(selectedLog)}
-                  className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-red-600 hover:text-white transition-all"
+                  className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 font-black text-[10px] uppercase rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm"
                 >
-                  <FiTrash2 size={14} /> Delete Record
+                  <FiTrash2 size={14} /> Delete Audit Record
                 </button>
               </div>
             </motion.div>
@@ -591,23 +609,24 @@ const AuditTrail = () => {
         )}
       </AnimatePresence>
 
-      {/* CONFIRMATION */}
+      {/* DELETE DIALOG */}
       <AnimatePresence>
         {logToDelete && (
-          <div className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-white w-full max-w-md rounded-[2.5rem] p-8 text-center shadow-2xl"
+              className="bg-white w-full max-w-md rounded-[2.5rem] p-10 text-center shadow-2xl relative overflow-hidden"
             >
-              <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="absolute top-0 left-0 w-full h-2 bg-red-600" />
+              <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
                 <FiAlertTriangle size={40} />
               </div>
-              <h2 className="text-xl font-black uppercase tracking-tighter text-slate-800">
+              <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800">
                 Erase Data?
               </h2>
-              <p className="text-xs text-slate-400 mt-2 mb-8 italic tracking-widest">
-                ID: {logToDelete._id}
+              <p className="text-xs text-slate-400 mt-2 mb-8 uppercase tracking-widest font-bold">
+                This action cannot be undone.
               </p>
               <div className="flex gap-4">
                 <button
@@ -620,7 +639,7 @@ const AuditTrail = () => {
                   onClick={confirmDelete}
                   className="flex-1 py-4 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-xl"
                 >
-                  {isDeleting ? "Deleting..." : "Erase Now"}
+                  {isDeleting ? "Processing..." : "Confirm Erase"}
                 </button>
               </div>
             </motion.div>
@@ -628,58 +647,59 @@ const AuditTrail = () => {
         )}
       </AnimatePresence>
 
-      {/* FULLSCREEN */}
+      {/* FULLSCREEN PREVIEW */}
       {fullscreenImage && (
         <div
-          className="fixed inset-0 z-[999] bg-black/95 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[110] bg-black/95 flex items-center justify-center p-4 cursor-pointer"
           onClick={() => setFullscreenImage(null)}
         >
           <img
             src={fullscreenImage}
-            className="max-w-full max-h-full rounded-2xl shadow-2xl"
+            className="max-w-full max-h-full rounded-2xl shadow-2xl border-2 border-white/10"
           />
+          <FiX className="absolute top-8 right-8 text-white text-3xl opacity-50 hover:opacity-100 transition-opacity" />
         </div>
       )}
     </div>
   );
 };
 
-// HELPERS
+// 🔥 SMART DETAIL ROW (Flow logic, No truncation)
 const DetailRow = ({ label, value, highlight, customColor }: any) => (
-  <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
-    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">
+  <div className="flex flex-col py-2.5 border-b border-slate-100 last:border-0">
+    <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">
       {label}
     </span>
     <span
-      className={`text-[11px] font-black uppercase tracking-widest truncate max-w-[150px] ${customColor ? customColor : highlight ? "text-[#0038A8]" : "text-slate-700"}`}
+      className={`text-[11px] font-black uppercase tracking-wide leading-relaxed break-words ${customColor ? customColor : highlight ? "text-[#0038A8]" : "text-slate-700"}`}
     >
-      {value || "---"}
+      {value || "N/A / PENDING"}
     </span>
   </div>
 );
 
 const DocumentCard = ({ title, image, text, onClick, loading }: any) => (
   <div className="space-y-4">
-    <h3 className="text-[#0038A8] font-black uppercase text-[10px] flex items-center gap-2 tracking-[0.3em]">
+    <h3 className="text-[#0038A8] font-black uppercase text-[10px] flex items-center gap-2 tracking-[0.4em]">
       <FiCreditCard /> {title}
     </h3>
     <div
-      className="relative h-56 bg-slate-100 rounded-3xl overflow-hidden border-2 border-slate-200 group cursor-pointer flex items-center justify-center"
+      className="relative h-56 bg-slate-100 rounded-[2rem] overflow-hidden border-2 border-slate-200 group cursor-pointer flex items-center justify-center"
       onClick={image ? onClick : undefined}
     >
       {loading ? (
-        <FiRefreshCw className="animate-spin text-[#0038A8] text-3xl" />
+        <FiRefreshCw className="animate-spin text-3xl text-[#0038A8]" />
       ) : image ? (
         <img
           src={image}
-          className="w-full h-full object-cover group-hover:scale-105 transition-all"
+          className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500"
         />
       ) : (
         <FiVideoOff className="text-slate-300" size={32} />
       )}
     </div>
-    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-[10px] font-mono text-slate-500 overflow-y-auto max-h-24 custom-scrollbar leading-relaxed uppercase">
-      {text || "No OCR extraction found."}
+    <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-[9px] font-mono text-slate-500 overflow-y-auto max-h-24 custom-scrollbar leading-relaxed uppercase shadow-inner italic">
+      {text || "AI Processing Data not found."}
     </div>
   </div>
 );
