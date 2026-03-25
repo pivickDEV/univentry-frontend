@@ -12,6 +12,7 @@ import {
   EyeOff,
   FileText,
   Key,
+  LayoutDashboard,
   Loader2,
   Lock,
   LogOut,
@@ -241,6 +242,7 @@ const SuperAdminSidebar = () => {
 
   // SUPER ADMIN MENU ITEMS
   const menuItems = [
+    { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { path: "/admin/users", label: "User Management", icon: Users },
     { path: "/admin/offices", label: "Office Management", icon: Lock },
     { path: "/admin/categories", label: "Category Management", icon: Tag },
