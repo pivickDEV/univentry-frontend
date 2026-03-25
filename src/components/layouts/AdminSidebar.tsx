@@ -258,7 +258,7 @@ const AdminSidebar = () => {
       {/* --------------------------- */}
       {/* MOBILE HEADER (Visible < LG) */}
       {/* --------------------------- */}
-      <div className="lg:hidden fixed top-0 left-0 w-full bg-[#0038A8] text-white border-b border-[#002b82] h-20 px-6 flex items-center justify-between z-[60] shadow-2xl">
+      <div className="lg:hidden fixed top-0 left-0 w-full bg-[#0038A8] text-white border-b border-[#002b82] h-20 px-6 flex items-center justify-between z-60 shadow-2xl">
         <div className="flex items-center gap-3">
           <div className="bg-white/10 p-2 rounded-xl text-[#FFD700] shadow-[0_0_15px_rgba(255,215,0,0.3)] border border-white/20 backdrop-blur-md">
             <ShieldCheck size={24} />
@@ -285,7 +285,7 @@ const AdminSidebar = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsMobileOpen(false)}
-            className="fixed inset-0 bg-[#001233]/70 backdrop-blur-md z-[70] lg:hidden"
+            className="fixed inset-0 bg-[#001233]/70 backdrop-blur-md z-70 lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -295,7 +295,7 @@ const AdminSidebar = () => {
       {/* --------------------------- */}
       <aside
         className={`
-        fixed inset-y-0 left-0 z-[80] 
+        fixed inset-y-0 left-0 z-80 
         lg:sticky lg:top-0
         w-80 min-h-screen
         bg-[#0038A8] text-white 
@@ -306,8 +306,8 @@ const AdminSidebar = () => {
       `}
       >
         {/* Subtle Tech Grid Background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:2rem_2rem] pointer-events-none" />
-        <div className="absolute top-0 left-0 w-full h-[125px] bg-gradient-to-b from-[#FFD700]/5 to-transparent pointer-events-none blur-3xl" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-size-[2rem_2rem] pointer-events-none" />
+        <div className="absolute top-0 left-0 w-full h-32.5 bg-linear-to-b from-[#FFD700]/5 to-transparent pointer-events-none blur-3xl" />
 
         {/* === SCROLLABLE CONTENT === */}
         <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative z-10">
@@ -323,7 +323,7 @@ const AdminSidebar = () => {
               <div>
                 <h1 className="text-3xl font-black tracking-tighter uppercase leading-[0.9] text-white">
                   Uni
-                  <span className="text-transparent bg-clip-text bg-gradient-to-br from-[#FFD700] to-amber-300 drop-shadow-md">
+                  <span className="text-transparent bg-clip-text bg-lienar-to-br from-[#FFD700] to-amber-300 drop-shadow-md">
                     Ventry
                   </span>
                 </h1>
@@ -338,7 +338,7 @@ const AdminSidebar = () => {
           <div className="px-6 mb-8 mt-2">
             <div className="relative bg-white/10 border border-white/20 backdrop-blur-lg rounded-4xl p-5 overflow-hidden group hover:bg-white/15 hover:border-white/30 transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.15)]">
               {/* Left Gold Accent Line */}
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1/2 w-1.5 bg-gradient-to-b from-[#FFD700] via-amber-300 to-[#FFD700] rounded-r-full shadow-[0_0_15px_#FFD700]"></div>
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1/2 w-1.5 bg-lienar-to-b from-[#FFD700] via-amber-300 to-[#FFD700] rounded-r-full shadow-[0_0_15px_#FFD700]"></div>
 
               {/* Edit Trigger */}
               <button
@@ -494,13 +494,13 @@ const AdminSidebar = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => !isUpdating && setShowProfileModal(false)}
-              className="fixed inset-0 bg-[#001233]/90 backdrop-blur-xl z-[100]"
+              className="fixed inset-0 bg-[#001233]/90 backdrop-blur-xl z-100"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6"
+              className="fixed inset-0 z-110 flex items-center justify-center p-4 sm:p-6"
             >
               <div
                 onClick={(e) => e.stopPropagation()}
@@ -850,7 +850,7 @@ const AdminSidebar = () => {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               onClick={() => setShowLogoutModal(false)}
-              className="fixed inset-0 bg-[#001233]/80 backdrop-blur-xl z-[100]"
+              className="fixed inset-0 bg-[#001233]/80 backdrop-blur-xl z-100"
             />
 
             {/* Modal */}
@@ -859,16 +859,16 @@ const AdminSidebar = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="fixed inset-0 z-[110] flex items-center justify-center px-4"
+              className="fixed inset-0 z-110 flex items-center justify-center px-4"
             >
               <div
                 onClick={(e) => e.stopPropagation()}
                 className="w-full max-w-md bg-white rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.4)] p-10 text-center relative overflow-hidden border-4 border-slate-50"
               >
-                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-600 to-red-400" />
+                <div className="absolute top-0 left-0 w-full h-2 bg-linear-to-r from-red-600 to-red-400" />
 
                 {/* Icon */}
-                <div className="mx-auto w-20 h-20 rounded-[2rem] bg-red-50 border border-red-100 flex items-center justify-center mb-6 shadow-inner relative">
+                <div className="mx-auto w-20 h-20 rounded-4xl bg-red-50 border border-red-100 flex items-center justify-center mb-6 shadow-inner relative">
                   <div className="absolute inset-0 bg-red-500 opacity-10 blur-xl rounded-full" />
                   <LogOut
                     size={32}
