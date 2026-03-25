@@ -338,7 +338,7 @@ const GuardSidebar = () => {
               <button
                 onClick={() => setShowProfileModal(true)}
                 className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-[#FFD700] hover:text-[#0038A8] rounded-xl transition-all duration-300 opacity-0 group-hover:opacity-100 cursor-pointer z-20 shadow-sm"
-                title="System Credentials"
+                title="Profile Settings"
               >
                 <Settings2 size={14} />
               </button>
@@ -378,7 +378,7 @@ const GuardSidebar = () => {
                   </div>
 
                   <span className="text-[8px] font-black uppercase tracking-widest text-emerald-400 bg-emerald-400/10 px-2.5 py-1.5 rounded-lg border border-emerald-400/20">
-                    On Post
+                    Authorized
                   </span>
                 </div>
               </div>
@@ -445,8 +445,6 @@ const GuardSidebar = () => {
           </nav>
         </div>
 
-        {/* === BOTTOM SECTION (Pinned Logout) === */}
-        {/* 🔥 DELETED: UniVentry OS v2.0 */}
         <div className="p-6 border-t border-[#002b82] bg-[#002b82]/50 relative z-10 backdrop-blur-md">
           <button
             onClick={() => setShowLogoutModal(true)}
@@ -458,10 +456,10 @@ const GuardSidebar = () => {
               </div>
               <div className="text-left">
                 <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-white transition-colors">
-                  Relieve Duty
+                  Logout
                 </span>
                 <span className="block text-[9px] font-bold opacity-60 uppercase tracking-widest mt-0.5 text-blue-200 group-hover:text-white">
-                  End Shift
+                  End Session
                 </span>
               </div>
             </div>
@@ -866,13 +864,12 @@ const GuardSidebar = () => {
 
                 {/* Title */}
                 <h2 className="text-3xl font-black text-[#0038A8] mb-2 tracking-tighter uppercase">
-                  System Logout
+                  Logout
                 </h2>
 
                 {/* Message */}
                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-10 leading-relaxed max-w-xs mx-auto">
-                  Are you sure you want to terminate your current administrative
-                  session?
+                  Are you sure you want to Log out?
                 </p>
 
                 {/* Buttons */}

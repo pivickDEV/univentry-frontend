@@ -316,7 +316,7 @@ const AdminSidebar = () => {
               <button
                 onClick={() => setShowProfileModal(true)}
                 className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-[#FFD700] hover:text-[#0038A8] rounded-xl transition-all duration-300 opacity-0 group-hover:opacity-100 cursor-pointer z-20"
-                title="System Credentials"
+                title="Profile Settings"
               >
                 <Settings2 size={14} />
               </button>
@@ -808,7 +808,7 @@ const AdminSidebar = () => {
                     onClick={() => setShowLogoutModal(false)}
                     className="flex-1 py-4 rounded-2xl bg-slate-50 text-slate-500 hover:bg-slate-100 font-black text-[10px] uppercase tracking-widest cursor-pointer transition-colors border border-slate-200"
                   >
-                    Abort
+                    Cancel
                   </button>
                   <button
                     onClick={confirmLogout}
