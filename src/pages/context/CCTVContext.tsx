@@ -12,10 +12,7 @@ import React, {
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
-  headers: {
-    "Content-Type": "application/json",
-    "ngrok-skip-browser-warning": "69420",
-  },
+  headers: { "ngrok-skip-browser-warning": "69420" },
 });
 
 const CCTVContext = createContext<any>(null);
@@ -29,11 +26,27 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
   const [systemStatus, setSystemStatus] = useState("INITIALIZING...");
   const cooldownMap = useRef<Map<string, number>>(new Map());
 
-  // 🔥 Initial Model & Face Database Sync
+  // 🛡️ 1. FETCH LOGS FROM DATABASE
+  const fetchLogs = async () => {
+    try {
+      const res = await api.get("/cctv-logs");
+      // Ensure the logs are sorted by time (newest first)
+      const data = Array.isArray(res.data) ? res.data : res.data.data || [];
+      const sortedData = data.sort(
+        (a: any, b: any) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
+      setLogs(sortedData);
+    } catch (err) {
+      console.error("🔥 Context Error: Could not fetch initial logs", err);
+    }
+  };
+
+  // 🛡️ 2. INITIALIZE SYSTEM
   useEffect(() => {
     const init = async () => {
       try {
-        setSystemStatus("LOADING AI MODELS...");
+        setSystemStatus("LOADING MODELS...");
         const MODEL_URL =
           "https://justadudewhohacks.github.io/face-api.js/models";
         await Promise.all([
@@ -42,7 +55,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
         ]);
 
-        setSystemStatus("SYNCING VISITOR VECTORS...");
+        setSystemStatus("SYNCING VECTORS...");
         const res = await api.get("/face-recognition/visitors");
         const visitors = res.data?.bookings || res.data || [];
 
@@ -62,14 +75,8 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
           setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.6));
         }
 
-        // Load initial logs
-        const logsRes = await api.get("/cctv-logs");
-        setLogs(
-          logsRes.data?.sort(
-            (a: any, b: any) =>
-              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-          ) || [],
-        );
+        // 🔥 CRITICAL: Fetch the logs after models/matcher are ready
+        await fetchLogs();
 
         setModelsLoaded(true);
         setSystemStatus("SURVEILLANCE ACTIVE");
@@ -80,18 +87,25 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     init();
   }, []);
 
+  // 🛡️ 3. ADD LOG (Real-time)
   const addLog = useCallback(async (newLog: any) => {
     const key = `${newLog.visitorId}|||${newLog.cameraName}`;
     const now = Date.now();
-    if (now - (cooldownMap.current.get(key) || 0) < 300000) return; // 5m cooldown
+    if (now - (cooldownMap.current.get(key) || 0) < 300000) return;
 
     cooldownMap.current.set(key, now);
+
+    // Update local state immediately for UI response
     setLogs((prev) => [newLog, ...prev].slice(0, 50));
+
     try {
       await api.post("/cctv-logs", newLog);
-    } catch (e) {}
+    } catch (e) {
+      console.error("Failed to save log to DB");
+    }
   }, []);
 
+  // 🛡️ 4. DELETE LOG
   const deleteLog = async (id: string) => {
     try {
       await api.delete(`/cctv-logs/${id}`);
@@ -105,6 +119,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     <CCTVContext.Provider
       value={{
         logs,
+        setLogs,
         faceMatcher,
         modelsLoaded,
         systemStatus,

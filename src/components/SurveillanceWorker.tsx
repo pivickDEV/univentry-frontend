@@ -64,13 +64,13 @@ const SurveillanceWorker = () => {
                 _id: Math.random().toString(36).substr(2, 9),
                 visitorId: id,
                 visitorName: name,
-                cameraName: "Main Entrance",
+                cameraName: "Hallway Cam 1",
                 confidence: Math.round((1 - bestMatch.distance) * 100),
                 screenshotBase64: workerCanvas.current?.toDataURL(
                   "image/jpeg",
                   0.5,
                 ),
-                status: "IN",
+                status: "Detected",
                 timestamp: new Date().toISOString(),
               });
             }
