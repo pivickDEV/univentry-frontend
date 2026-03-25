@@ -21,6 +21,7 @@ import ManualEntry from "./pages/guard/ManualEntry";
 // --- PUBLIC & OFFICE PAGES ---
 import SurveillanceWorker from "./components/SurveillanceWorker";
 import ForgotPassword from "./ForgotPassword";
+import CategoryManagement from "./pages/admin/CategoryManagement";
 import { CCTVProvider } from "./pages/context/CCTVContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -60,6 +61,7 @@ const App = () => {
             <Route path="/admin/users" element={<UserManagement />} />
             <Route path="/admin/offices" element={<OfficeManagement />} />
             <Route path="/admin/cctv-monitor" element={<CCTVMonitor />} />
+            <Route path="/admin/categories" element={<CategoryManagement />} />
           </Route>
 
           {/* Office-only routes */}

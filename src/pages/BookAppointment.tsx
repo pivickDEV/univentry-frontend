@@ -63,6 +63,10 @@ const BookAppointment = () => {
   const [purpose, setPurpose] = useState("");
   const [bookingDate, setBookingDate] = useState("");
 
+  const [categoriesList, setCategoriesList] = useState<
+    { _id: string; name: string }[]
+  >([]);
+
   const [slots, setSlots] = useState<{ current: number; max: number | null }>({
     current: 0,
     max: null,
@@ -266,6 +270,20 @@ const BookAppointment = () => {
   };
 
   // --- INITIAL DATA FETCHING ---
+
+  // Add this inside an existing or new useEffect
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get("/categories");
+        setCategoriesList(res.data);
+      } catch (err) {
+        console.error("Category fetch failed");
+      }
+    };
+    fetchCategories();
+  }, []);
+
   useEffect(() => {
     api
       .get("/offices")
@@ -785,20 +803,12 @@ const BookAppointment = () => {
                           className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-700 outline-none focus:border-[#0038A8] focus:ring-4 focus:ring-[#0038A8]/10 focus:bg-white transition-all font-bold text-sm cursor-pointer appearance-none"
                         >
                           <option value="">Select Classification...</option>
-                          <option value="Student">Student</option>
-                          <option value="Alumni">Alumni</option>
-                          <option value="Parent/Guardian">
-                            Parent/Guardian
-                          </option>
-                          <option value="Supplier">Supplier</option>
-                          <option value="Applicant Student">
-                            Applicant Student
-                          </option>
-                          <option value="Applicant Employee">
-                            Applicant Employee
-                          </option>
-                          <option value="Guest">Guest</option>
-                          <option value="Merchant">Merchant</option>
+                          {/* 🔥 DYNAMIC RENDER FROM DATABASE */}
+                          {categoriesList.map((cat) => (
+                            <option key={cat._id} value={cat.name}>
+                              {cat.name}
+                            </option>
+                          ))}
                         </select>
                       </motion.div>
                     </div>

@@ -210,7 +210,7 @@ const ForgotPassword = () => {
                       Locate Credentials
                     </h2>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                      Enter institutional email
+                      Enter your Email
                     </p>
                   </div>
 
