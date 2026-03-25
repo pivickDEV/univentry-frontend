@@ -1,7 +1,7 @@
 /* eslint-disable */
 import * as faceapi from "face-api.js";
 import { useEffect, useRef } from "react";
-import { useCCTV } from "../context/CCTVContext";
+import { useCCTV } from "../pages/context/CCTVContext";
 
 const SurveillanceWorker = () => {
   const { faceMatcher, addLog } = useCCTV();
