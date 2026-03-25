@@ -1,6 +1,7 @@
 /* eslint-disable */
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Activity,
   AlertTriangle,
   BadgeCheck,
   CheckCircle2,
@@ -26,7 +27,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { Activity, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 // 1. Define Interface
