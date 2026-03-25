@@ -27,15 +27,6 @@ const api = axios.create({
   },
 });
 
-// 🔥 CRITICAL FIX: Automatically attach the login token so the backend knows you are an Admin!
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 type UserRole = "super-admin" | "admin" | "guard" | "office";
 
 interface User {
@@ -228,8 +219,7 @@ const UserManagement = () => {
         office: role === "office" ? assignedOffice : undefined,
       };
 
-      // 🚀 FIXED: Pointed to `/users` instead of `/auth/signup` to match your backend user controller
-      await api.post("/users", payload);
+      await api.post("/auth/signup", payload);
 
       setShowCreateModal(false);
       setName("");
@@ -244,7 +234,7 @@ const UserManagement = () => {
       setFormError(
         err.response?.data?.message ||
           err.response?.data?.error ||
-          "Registration failed. Please try again.",
+          "Registration failed. Check your API route.",
       );
     } finally {
       setActionLoading(null);
