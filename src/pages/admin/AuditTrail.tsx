@@ -21,6 +21,8 @@ import {
   FiX,
 } from "react-icons/fi";
 
+import { Briefcase, LogIn, LogOut } from "lucide-react";
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
   headers: {
@@ -538,6 +540,75 @@ const AuditTrail = () => {
                           : "---"
                       }
                     />
+                  </div>
+                </div>
+
+                {/* TIMESTAMPS (Static/Dummy Display) */}
+                <div className="bg-[#0038A8] text-white p-6 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
+                  {/* Background pattern */}
+                  <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+
+                  {/* Time In */}
+                  <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
+                    <div className="p-2 rounded-xl mb-1 bg-white/10 text-[#FFD700]">
+                      <LogIn className="w-5 h-5" />
+                    </div>
+                    <p className="text-[9px] font-black uppercase opacity-60 tracking-widest">
+                      Time In
+                    </p>
+                    <p className="text-xl font-mono font-bold">
+                      {selectedLog?.timeIn
+                        ? new Date(selectedLog.timeIn).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "08:00"}{" "}
+                      {/* Default/fake time */}
+                    </p>
+                  </div>
+
+                  <div className="h-px w-full md:w-px md:h-12 bg-white/20" />
+
+                  {/* Transaction */}
+                  <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
+                    <div className="p-2 bg-white/10 rounded-xl mb-1">
+                      <Briefcase className="w-5 h-5 text-[#FFD700]" />
+                    </div>
+                    <p className="text-[9px] font-black uppercase opacity-60 tracking-widest">
+                      Transaction
+                    </p>
+                    <p className="text-xl font-mono font-bold">
+                      {selectedLog?.transactionTime
+                        ? new Date(
+                            selectedLog.transactionTime,
+                          ).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "12:00"}{" "}
+                      {/* Default/fake time */}
+                    </p>
+                  </div>
+
+                  <div className="h-px w-full md:w-px md:h-12 bg-white/20" />
+
+                  {/* Time Out */}
+                  <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
+                    <div className="p-2 rounded-xl mb-1 bg-white/10 text-[#FFD700]">
+                      <LogOut className="w-5 h-5" />
+                    </div>
+                    <p className="text-[9px] font-black uppercase opacity-60 tracking-widest">
+                      Time Out
+                    </p>
+                    <p className="text-xl font-mono font-bold">
+                      {selectedLog?.timeOut
+                        ? new Date(selectedLog.timeOut).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "17:00"}{" "}
+                      {/* Default/fake time */}
+                    </p>
                   </div>
                 </div>
 
