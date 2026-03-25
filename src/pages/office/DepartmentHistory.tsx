@@ -243,9 +243,7 @@ const DepartmentHistory = () => {
                 className="w-full lg:w-48 pl-10 pr-4 py-3 bg-white border-2 border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-700 outline-none focus:border-[#0038A8] transition-all cursor-pointer appearance-none shadow-sm"
               >
                 {offices.map((o) => (
-                  <option key={o._id} value={o.name}>
-                    {o.name}
-                  </option>
+                  <option key={o._id} value={o.name}></option>
                 ))}
               </select>
             </div>
