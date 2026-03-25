@@ -104,17 +104,22 @@ const OfficeSidebar = () => {
     setIsUpdating(true);
 
     try {
-      // 1. Send data to Backend
+      // 1. Get the existing data to retrieve the token
+      const storedData = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const token = localStorage.getItem("token") || storedData.token;
+
+      // 2. Call the Backend
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/users/update-profile`,
         {
-          // Change URL to your backend API
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            // If your route is protected, you MUST send the token here
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            userId: user.id, // From the user state
+            userId: user.id,
             name: editForm.name,
             email: editForm.email,
           }),
@@ -123,15 +128,18 @@ const OfficeSidebar = () => {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Update failed");
-      }
+      if (!response.ok) throw new Error(data.message);
 
-      // 2. If backend update was successful, update LocalStorage
-      // We save the 'data.user' returned from the server to ensure consistency
-      localStorage.setItem("userInfo", JSON.stringify(data.user));
+      // ✅ THE FIX: Merge the new user data with the EXISTING token
+      // Do not just save 'data.user', or you will lose the 'token' field!
+      const updatedLocalStorage = {
+        ...storedData, // Keep everything (including token)
+        ...data.user, // Overwrite name and email with new data from DB
+      };
 
-      // 3. Refresh the sidebar UI state
+      localStorage.setItem("userInfo", JSON.stringify(updatedLocalStorage));
+
+      // 3. Update the sidebar UI state immediately
       loadUserData();
 
       setUpdateSuccess(true);
@@ -140,8 +148,7 @@ const OfficeSidebar = () => {
         setShowProfileModal(false);
       }, 2000);
     } catch (error: any) {
-      console.error("Update failed:", error.message);
-      alert(error.message); // Simple alert for errors (like "Email already in use")
+      alert(error.message);
     } finally {
       setIsUpdating(false);
     }
