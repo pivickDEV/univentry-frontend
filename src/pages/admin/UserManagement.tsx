@@ -34,7 +34,7 @@ interface User {
   name: string;
   email: string;
   role: UserRole;
-  office?: string; // Newly added to tie staff to specific offices
+  office?: string; // Ties staff to specific offices
 }
 
 interface OfficeDef {
@@ -50,7 +50,6 @@ const UserManagement = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // --- STATE: Current Logged In User ---
-  // To check hierarchy rules (Admin vs Super-Admin)
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // --- STATE: Modals ---
@@ -61,6 +60,10 @@ const UserManagement = () => {
   // --- STATE: Inline Editing (Email) ---
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editEmailValue, setEditEmailValue] = useState("");
+
+  // --- STATE: Inline Editing (Office) ---
+  const [editingOfficeId, setEditingOfficeId] = useState<string | null>(null);
+  const [editOfficeValue, setEditOfficeValue] = useState("");
 
   // --- STATE: Create Form ---
   const [name, setName] = useState("");
@@ -121,7 +124,6 @@ const UserManagement = () => {
   const saveEmailUpdate = async (userId: string) => {
     try {
       setActionLoading(userId);
-      // Ensure backend has a PATCH /users/:id/email route
       await api.patch(`/users/${userId}/email`, { email: editEmailValue });
       setUsers((prev) =>
         prev.map((user) =>
@@ -136,11 +138,30 @@ const UserManagement = () => {
     }
   };
 
+  // --- EDIT OFFICE ---
+  const saveOfficeUpdate = async (userId: string) => {
+    try {
+      setActionLoading(userId);
+      await api.patch(`/users/${userId}/office`, { office: editOfficeValue });
+      setUsers((prev) =>
+        prev.map((user) =>
+          user._id === userId ? { ...user, office: editOfficeValue } : user,
+        ),
+      );
+      setEditingOfficeId(null);
+    } catch (err: any) {
+      alert(
+        err.response?.data?.message || "Failed to update office assignment.",
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // --- DELETE LOGIC ---
   const confirmDeleteUser = async () => {
     if (!userToDelete || !currentUser) return;
 
-    // 🚀 HIERARCHY RULE: Admin cannot delete Super-Admin
     if (
       userToDelete.role === "super-admin" &&
       currentUser.role !== "super-admin"
@@ -172,7 +193,6 @@ const UserManagement = () => {
       return;
     }
 
-    // 🚀 HIERARCHY RULE: Admin cannot create Super-Admin
     if (role === "super-admin" && currentUser?.role !== "super-admin") {
       setFormError("Only a Super-Admin can create another Super-Admin.");
       return;
@@ -181,7 +201,6 @@ const UserManagement = () => {
     try {
       setActionLoading("create");
 
-      // Include office assignment if role is office staff
       const payload = {
         name,
         email,
@@ -231,7 +250,7 @@ const UserManagement = () => {
   return (
     <div className="h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
       {/* ================= HEADER (BRANDING) ================= */}
-      <div className="max-w-[1400px] mx-auto w-full mb-6 shrink-0">
+      <div className="max-w-350 mx-auto w-full mb-6 shrink-0">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
@@ -240,7 +259,7 @@ const UserManagement = () => {
             <div>
               <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
                 User{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
+                <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
                   Management
                 </span>
               </h1>
@@ -271,22 +290,22 @@ const UserManagement = () => {
       </div>
 
       {/* ================= MASSIVE WHITE CONTAINER ================= */}
-      <div className="max-w-[1400px] mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-hidden">
+      <div className="max-w-350 mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-4 lg:p-8 flex flex-col overflow-hidden">
         {/* TABLE WRAPPER */}
         <div className="flex-1 overflow-auto border border-slate-200 rounded-3xl bg-slate-50 custom-scrollbar relative">
-          <table className="w-full text-left border-collapse table-auto min-w-[800px]">
+          <table className="w-full text-left border-collapse table-auto min-w-200">
             <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-200">
               <tr>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/3">
+                <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/3">
                   Identity & Credentials
                 </th>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                  Department
+                <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  Office
                 </th>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                  Clearance Level
+                <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  ROLE
                 </th>
-                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">
+                <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">
                   Actions
                 </th>
               </tr>
@@ -295,16 +314,16 @@ const UserManagement = () => {
               {loading ? (
                 [...Array(6)].map((_, i) => (
                   <tr key={i} className="animate-pulse bg-white">
-                    <td className="px-8 py-6">
+                    <td className="px-4 lg:px-8 py-6">
                       <div className="h-10 w-48 bg-slate-100 rounded-xl" />
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 lg:px-8 py-6">
                       <div className="h-6 w-24 bg-slate-100 rounded-full" />
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 lg:px-8 py-6">
                       <div className="h-10 w-32 bg-slate-100 rounded-xl" />
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 lg:px-8 py-6">
                       <div className="h-10 w-10 bg-slate-100 rounded-xl ml-auto" />
                     </td>
                   </tr>
@@ -313,7 +332,7 @@ const UserManagement = () => {
                 <tr className="bg-white">
                   <td
                     colSpan={4}
-                    className="px-8 py-24 text-center text-slate-400 font-bold text-xs uppercase tracking-widest"
+                    className="px-4 lg:px-8 py-24 text-center text-slate-400 font-bold text-xs uppercase tracking-widest"
                   >
                     No Authorized Personnel Found
                   </td>
@@ -325,7 +344,7 @@ const UserManagement = () => {
                     className="group hover:bg-blue-50/50 bg-white transition-colors"
                   >
                     {/* IDENTITY (With Inline Email Edit) */}
-                    <td className="px-8 py-5">
+                    <td className="px-4 lg:px-8 py-4 lg:py-5">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-[#0038A8]">
                           {user.name.charAt(0).toUpperCase()}
@@ -379,18 +398,68 @@ const UserManagement = () => {
                       </div>
                     </td>
 
-                    {/* ASSIGNED OFFICE */}
-                    <td className="px-8 py-5 whitespace-nowrap">
-                      <span className="text-[10px] font-black uppercase text-slate-600">
-                        {user.role === "office"
-                          ? user.office || "Unassigned"
-                          : "System-Wide"}
-                      </span>
+                    {/* ASSIGNED OFFICE (With Inline Office Edit) */}
+                    <td className="px-4 lg:px-8 py-4 lg:py-5 whitespace-nowrap">
+                      {user.role === "office" ? (
+                        editingOfficeId === user._id ? (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={editOfficeValue}
+                              onChange={(e) =>
+                                setEditOfficeValue(e.target.value)
+                              }
+                              className="px-2 py-1 border border-blue-300 rounded text-[9px] font-black uppercase w-32 outline-none focus:ring-2 focus:ring-blue-100"
+                            >
+                              <option value="">Select Office</option>
+                              {offices.map((o) => (
+                                <option key={o._id} value={o.name}>
+                                  {o.name}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => saveOfficeUpdate(user._id)}
+                              className="p-1 bg-emerald-100 text-emerald-600 rounded hover:bg-emerald-200"
+                            >
+                              <FiSave size={12} />
+                            </button>
+                            <button
+                              onClick={() => setEditingOfficeId(null)}
+                              className="p-1 bg-slate-100 text-slate-500 rounded hover:bg-slate-200"
+                            >
+                              <FiX size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 group/office">
+                            <span
+                              className={`text-[10px] font-black uppercase ${user.office ? "text-slate-600" : "text-red-400"}`}
+                            >
+                              {user.office || "Unassigned"}
+                            </span>
+                            <button
+                              onClick={() => {
+                                setEditingOfficeId(user._id);
+                                setEditOfficeValue(
+                                  user.office || (offices[0]?.name ?? ""),
+                                );
+                              }}
+                              className="opacity-0 group-hover/office:opacity-100 p-1 text-slate-400 hover:text-[#0038A8] transition-opacity"
+                            >
+                              <FiEdit2 size={10} />
+                            </button>
+                          </div>
+                        )
+                      ) : (
+                        <span className="text-[10px] font-black uppercase text-slate-300 tracking-widest">
+                          --
+                        </span>
+                      )}
                     </td>
 
-                    {/* CLEARANCE LEVEL (Dropdown) */}
-                    <td className="px-8 py-5">
-                      <div className="relative w-full max-w-[180px]">
+                    {/* CLEARANCE LEVEL (ROLE) */}
+                    <td className="px-4 lg:px-8 py-4 lg:py-5">
+                      <div className="relative w-full min-w-32.5 max-w-45">
                         <select
                           value={user.role}
                           disabled={
@@ -425,7 +494,7 @@ const UserManagement = () => {
                     </td>
 
                     {/* ACTIONS (Delete) */}
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-4 lg:px-8 py-4 lg:py-5 text-right">
                       <button
                         onClick={() => {
                           if (
@@ -471,7 +540,7 @@ const UserManagement = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
+            className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -532,7 +601,7 @@ const UserManagement = () => {
       {/* ================= ADD USER MODAL ================= */}
       <AnimatePresence>
         {showCreateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -616,13 +685,14 @@ const UserManagement = () => {
                       className={`space-y-2 transition-all ${role !== "office" ? "opacity-30 pointer-events-none grayscale" : ""}`}
                     >
                       <label className="text-[9px] font-black uppercase text-slate-400 ml-1 tracking-widest">
-                        Department
+                        Office
                       </label>
                       <div className="relative">
                         <select
                           value={assignedOffice}
                           onChange={(e) => setAssignedOffice(e.target.value)}
-                          className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 uppercase focus:border-[#0038A8] focus:ring-4 focus:ring-[#0038A8]/10 outline-none transition-all appearance-none cursor-pointer"
+                          disabled={role !== "office"}
+                          className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-[10px] font-black uppercase text-slate-700 focus:border-[#0038A8] focus:ring-4 focus:ring-[#0038A8]/10 outline-none transition-all appearance-none cursor-pointer"
                         >
                           {offices.map((o) => (
                             <option key={o._id} value={o.name}>
@@ -683,7 +753,7 @@ const Input = ({ label, ...props }: any) => (
     <input
       {...props}
       required
-      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:border-[#0038A8] focus:ring-4 focus:ring-[#0038A8]/10 outline-none transition-all"
+      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:border-[#0038A8] focus:ring-4 focus:ring-blue-50 outline-none transition-all"
     />
   </div>
 );
