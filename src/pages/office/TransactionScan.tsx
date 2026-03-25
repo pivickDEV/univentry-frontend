@@ -83,7 +83,7 @@ const TransactionScan = () => {
     <div className="flex flex-col lg:flex-row h-screen w-full bg-slate-50 overflow-hidden font-sans">
       {/* LEFT PANEL: SCANNER */}
       <div className="relative w-full lg:w-1/2 h-1/2 lg:h-full bg-[#001233] border-b-4 lg:border-r-4 border-[#FFD700] flex flex-col items-center justify-center">
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#ffffff1a_1px,transparent_1px)] bg-[size:20px_20px]"></div>
+        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#ffffff1a_1px,transparent_1px)] bg-size-[20px_20px]"></div>
 
         <div className="absolute top-8 left-8 z-20 flex items-center gap-4">
           <div className="p-3 bg-[#FFD700] rounded-2xl text-slate-900 shadow-[0_0_20px_rgba(255,215,0,0.4)]">
@@ -182,7 +182,7 @@ const TransactionScan = () => {
       {/* 🔥 THE CREATIVE SUCCESS MODAL 🔥 */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-hidden">
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-4 overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -205,7 +205,7 @@ const TransactionScan = () => {
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.2, type: "spring" }}
-                    className="w-24 h-24 bg-emerald-500 rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-emerald-500/40 mb-6"
+                    className="w-24 h-24 bg-emerald-500 rounded-4xl flex items-center justify-center text-white shadow-2xl shadow-emerald-500/40 mb-6"
                   >
                     <CheckCircle size={48} strokeWidth={3} />
                   </motion.div>
@@ -218,7 +218,7 @@ const TransactionScan = () => {
                 </div>
 
                 {/* VISITOR DATA CARD */}
-                <div className="bg-slate-50 rounded-[2rem] p-8 border border-slate-100 space-y-6 relative overflow-hidden">
+                <div className="bg-slate-50 rounded-4xl p-8 border border-slate-100 space-y-6 relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 opacity-5">
                     <ShieldCheck size={120} />
                   </div>
@@ -313,7 +313,7 @@ const TransactionScan = () => {
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
-            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] bg-red-600 text-white px-8 py-4 rounded-[1.5rem] shadow-2xl flex items-center gap-4"
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-200 bg-red-600 text-white px-8 py-4 rounded-3xl shadow-2xl flex items-center gap-4"
           >
             <AlertCircle />
             <span className="text-xs font-black uppercase tracking-widest">
