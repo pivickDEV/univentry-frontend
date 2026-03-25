@@ -106,14 +106,15 @@ const UserManagement = () => {
   const handleUpdateRole = async (userId: string, newRole: UserRole) => {
     try {
       setActionLoading(userId);
+      // 🚀 FIXED: Pointed to the correct backend route (/users/:id/role)
       await api.patch(`/users/${userId}/role`, { role: newRole });
       setUsers((prev) =>
         prev.map((user) =>
           user._id === userId ? { ...user, role: newRole } : user,
         ),
       );
-    } catch {
-      alert("Failed to update role.");
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to update role.");
     } finally {
       setActionLoading(null);
     }
@@ -123,6 +124,7 @@ const UserManagement = () => {
   const saveEmailUpdate = async (userId: string) => {
     try {
       setActionLoading(userId);
+      // 🚀 FIXED: Pointed to the correct backend route (/users/:id/email)
       await api.patch(`/users/${userId}/email`, { email: editEmailValue });
       setUsers((prev) =>
         prev.map((user) =>
@@ -142,6 +144,7 @@ const UserManagement = () => {
     if (!editOfficeValue) return alert("Please select a valid office.");
     try {
       setActionLoading(userId);
+      // 🚀 FIXED: Pointed to the correct backend route (/users/:id/office)
       await api.patch(`/users/${userId}/office`, { office: editOfficeValue });
       setUsers((prev) =>
         prev.map((user) =>
@@ -219,7 +222,8 @@ const UserManagement = () => {
         office: role === "office" ? assignedOffice : undefined,
       };
 
-      await api.post("/auth/signup", payload);
+      // 🚀 FIXED: Ensure this points to the correct creation endpoint (/users)
+      await api.post("/users", payload);
 
       setShowCreateModal(false);
       setName("");
