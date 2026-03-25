@@ -140,7 +140,7 @@ const ForgotPassword = () => {
       <motion.div
         animate={{ backgroundPosition: ["0px 0px", "100px 100px"] }}
         transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
-        className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#0038A808_1px,transparent_1px),linear-gradient(to_bottom,#0038A808_1px,transparent_1px)] bg-[size:4rem_4rem]"
+        className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#0038A808_1px,transparent_1px),linear-gradient(to_bottom,#0038A808_1px,transparent_1px)] bg-size-[4rem_4rem]"
       />
       {/* Glow Orbs (Light Mode Opacities) */}
       <motion.div
@@ -162,7 +162,7 @@ const ForgotPassword = () => {
           </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-[#0038A8] uppercase leading-none">
             Access{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
+            <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
               Recovery
             </span>
           </h1>
@@ -170,7 +170,7 @@ const ForgotPassword = () => {
 
         {/* MAIN HUD CONTAINER (Glassmorphic Light Mode) */}
         <div className="w-full bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,56,168,0.1)] overflow-hidden flex flex-col relative text-slate-800 border border-white">
-          <div className="p-8 md:p-10 flex-1 flex flex-col justify-center min-h-[450px]">
+          <div className="p-8 md:p-10 flex-1 flex flex-col justify-center min-h-112.5">
             {/* ERROR HUD */}
             <AnimatePresence mode="wait">
               {error && (

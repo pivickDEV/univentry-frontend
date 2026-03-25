@@ -1,12 +1,17 @@
 /* eslint-disable */
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  AlertTriangle, // ✅ FIXED: Imported correctly
   BadgeCheck,
   Building2,
   CheckCircle2,
   ClipboardEdit,
+  Eye,
+  EyeOff,
+  Key,
   LayoutDashboard,
   Loader2,
+  Lock, // ✅ FIXED: Imported correctly
   LogOut,
   Mail,
   Menu,
@@ -39,8 +44,12 @@ const OfficeSidebar = () => {
 
   // Profile Update States
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [activeProfileTab, setActiveProfileTab] = useState<
+    "details" | "password"
+  >("details");
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   const [user, setUser] = useState<UserProfile>({
     name: "Loading...",
@@ -54,6 +63,18 @@ const OfficeSidebar = () => {
   const [editForm, setEditForm] = useState({
     name: "",
     email: "",
+  });
+
+  // Password Update States
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
   });
 
   // Load & Parse User Data
@@ -94,6 +115,20 @@ const OfficeSidebar = () => {
     setIsMobileOpen(false);
   }, [location.pathname]);
 
+  // Reset modal state when closed
+  useEffect(() => {
+    if (!showProfileModal) {
+      setActiveProfileTab("details");
+      setUpdateError(null);
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setShowPasswords({ current: false, new: false, confirm: false });
+    }
+  }, [showProfileModal]);
+
   const confirmLogout = () => {
     localStorage.clear();
     navigate("/login", { replace: true });
@@ -102,20 +137,18 @@ const OfficeSidebar = () => {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUpdating(true);
+    setUpdateError(null);
 
     try {
-      // 1. Get the existing data to retrieve the token
       const storedData = JSON.parse(localStorage.getItem("userInfo") || "{}");
       const token = localStorage.getItem("token") || storedData.token;
 
-      // 2. Call the Backend
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/users/update-profile`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            // If your route is protected, you MUST send the token here
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
@@ -130,16 +163,12 @@ const OfficeSidebar = () => {
 
       if (!response.ok) throw new Error(data.message);
 
-      // ✅ THE FIX: Merge the new user data with the EXISTING token
-      // Do not just save 'data.user', or you will lose the 'token' field!
       const updatedLocalStorage = {
-        ...storedData, // Keep everything (including token)
-        ...data.user, // Overwrite name and email with new data from DB
+        ...storedData,
+        ...data.user,
       };
 
       localStorage.setItem("userInfo", JSON.stringify(updatedLocalStorage));
-
-      // 3. Update the sidebar UI state immediately
       loadUserData();
 
       setUpdateSuccess(true);
@@ -148,7 +177,61 @@ const OfficeSidebar = () => {
         setShowProfileModal(false);
       }, 2000);
     } catch (error: any) {
-      alert(error.message);
+      setUpdateError(error.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    setUpdateError(null);
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setUpdateError("New passwords do not match.");
+      setIsUpdating(false);
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      setUpdateError("New password must be at least 8 characters.");
+      setIsUpdating(false);
+      return;
+    }
+
+    try {
+      const storedData = JSON.parse(localStorage.getItem("userInfo") || "{}");
+      const token = localStorage.getItem("token") || storedData.token;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/users/change-password`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            currentPassword: passwordForm.currentPassword,
+            newPassword: passwordForm.newPassword,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok)
+        throw new Error(data.message || "Failed to update password");
+
+      setUpdateSuccess(true);
+      setTimeout(() => {
+        setUpdateSuccess(false);
+        setShowProfileModal(false);
+      }, 2000);
+    } catch (error: any) {
+      setUpdateError(error.message);
     } finally {
       setIsUpdating(false);
     }
@@ -169,7 +252,7 @@ const OfficeSidebar = () => {
       {/* --------------------------- */}
       {/* MOBILE HEADER */}
       {/* --------------------------- */}
-      <div className="lg:hidden fixed top-0 left-0 w-full bg-[#0038A8] text-white border-b border-[#002b82] h-20 px-6 flex items-center justify-between z-60 shadow-2xl">
+      <div className="lg:hidden fixed top-0 left-0 w-full bg-[#0038A8] text-white border-b border-[#002b82] h-20 px-6 flex items-center justify-between z-[60] shadow-2xl">
         <div className="flex items-center gap-3">
           <ShieldCheck size={24} className="text-[#FFD700]" />
           <h1 className="font-black text-white uppercase tracking-[0.2em] text-xl">
@@ -191,7 +274,7 @@ const OfficeSidebar = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsMobileOpen(false)}
-            className="fixed inset-0 bg-[#001233]/70 backdrop-blur-md z-70 lg:hidden"
+            className="fixed inset-0 bg-[#001233]/70 backdrop-blur-md z-[70] lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -200,10 +283,10 @@ const OfficeSidebar = () => {
       {/* SIDEBAR CONTAINER */}
       {/* --------------------------- */}
       <aside
-        className={`fixed inset-y-0 left-0 z-80 lg:sticky lg:top-0 w-80 min-h-screen bg-[#0038A8] text-white flex flex-col border-r border-[#002b82] transition-transform duration-500 shadow-[20px_0_60px_rgba(0,18,51,0.3)] lg:shadow-none ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        className={`fixed inset-y-0 left-0 z-[80] lg:sticky lg:top-0 w-80 min-h-screen bg-[#0038A8] text-white flex flex-col border-r border-[#002b82] transition-transform duration-500 shadow-[20px_0_60px_rgba(0,18,51,0.3)] lg:shadow-none ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         {/* Tech Grid Background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-size-[2rem_2rem] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:2rem_2rem] pointer-events-none" />
 
         <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative z-10">
           {/* 1. BRANDING */}
@@ -223,16 +306,16 @@ const OfficeSidebar = () => {
             </div>
           </div>
 
-          {/* 2. USER PROFILE HUD (Enhanced with Office Display) */}
+          {/* 2. USER PROFILE HUD */}
           <div className="px-6 mb-8 mt-2">
-            <div className="relative bg-white/10 border border-white/20 backdrop-blur-lg rounded-4xl p-5 overflow-hidden group hover:bg-white/15 transition-all duration-500 shadow-xl">
+            <div className="relative bg-white/10 border border-white/20 backdrop-blur-lg rounded-[2rem] p-5 overflow-hidden group hover:bg-white/15 transition-all duration-500 shadow-xl">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1/2 w-1.5 bg-[#FFD700] rounded-r-full shadow-[0_0_15px_#FFD700]"></div>
 
               {/* Edit Trigger */}
               <button
                 onClick={() => setShowProfileModal(true)}
                 className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-[#FFD700] hover:text-[#0038A8] rounded-xl transition-all duration-300 opacity-0 group-hover:opacity-100 cursor-pointer z-20"
-                title="Edit Profile"
+                title="System Credentials"
               >
                 <Settings2 size={14} />
               </button>
@@ -259,7 +342,7 @@ const OfficeSidebar = () => {
                   </p>
                 </div>
 
-                {/* ✨ DYNAMIC OFFICE BADGE */}
+                {/* DYNAMIC OFFICE BADGE */}
                 {user.role === "office" && (
                   <div className="mb-4 flex items-center gap-2 bg-[#FFD700]/10 border border-[#FFD700]/20 rounded-xl px-3 py-2">
                     <Building2 size={14} className="text-[#FFD700]" />
@@ -323,10 +406,10 @@ const OfficeSidebar = () => {
         <div className="p-6 border-t border-[#002b82] bg-[#002b82]/50 relative z-10 backdrop-blur-md">
           <button
             onClick={() => setShowLogoutModal(true)}
-            className="group relative w-full flex items-center justify-between p-1.5 pr-5 rounded-4xl cursor-pointer bg-white/5 border border-white/10 text-blue-100 hover:bg-red-500 transition-all duration-500"
+            className="group relative w-full flex items-center justify-between p-1.5 pr-5 rounded-[2rem] cursor-pointer bg-white/5 border border-white/10 text-blue-100 hover:bg-red-500 transition-all duration-500"
           >
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-3xl bg-white/10 flex items-center justify-center text-blue-200 group-hover:bg-white group-hover:text-red-600 transition-all duration-500">
+              <div className="w-12 h-12 rounded-[1.5rem] bg-white/10 flex items-center justify-center text-blue-200 group-hover:bg-white group-hover:text-red-600 transition-all duration-500">
                 <LogOut size={18} className="translate-x-0.5 stroke-[2.5]" />
               </div>
               <div className="text-left">
@@ -343,7 +426,7 @@ const OfficeSidebar = () => {
       </aside>
 
       {/* ------------------------------------------- */}
-      {/* 🔥 PROFILE UPDATE MODAL 🔥 */}
+      {/* 🔥 PROFILE UPDATE MODAL (WITH PASSWORD TABS) 🔥 */}
       {/* ------------------------------------------- */}
       <AnimatePresence>
         {showProfileModal && (
@@ -352,113 +435,359 @@ const OfficeSidebar = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowProfileModal(false)}
-              className="fixed inset-0 bg-[#001233]/90 backdrop-blur-xl z-100"
+              onClick={() => !isUpdating && setShowProfileModal(false)}
+              className="fixed inset-0 bg-[#001233]/90 backdrop-blur-xl z-[100]"
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="fixed inset-0 z-110 flex items-center justify-center px-4"
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6"
             >
               <div
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-md bg-white rounded-[3rem] shadow-2xl p-10 relative overflow-hidden border-4 border-slate-50"
+                className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,56,168,0.3)] relative overflow-hidden border-4 border-slate-50 flex flex-col max-h-[90vh]"
               >
                 <div className="absolute top-0 left-0 w-full h-2 bg-[#FFD700]" />
 
-                <h2 className="text-3xl font-black text-[#0038A8] mb-1 tracking-tighter uppercase">
-                  Operator Profile
-                </h2>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">
-                  System Credentials & Access
-                </p>
-
-                <form onSubmit={handleUpdateProfile} className="space-y-6">
-                  {/* Read Only Office Field */}
-                  {user.role === "office" && (
-                    <div className="space-y-2 text-left opacity-60">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">
-                        Assigned Department
-                      </label>
-                      <div className="bg-slate-100 rounded-2xl py-4 px-6 flex items-center gap-3 border border-slate-200">
-                        <Building2 size={16} className="text-slate-400" />
-                        <span className="text-[11px] font-black uppercase text-slate-500">
-                          {user.office}
-                        </span>
-                      </div>
+                {/* Header */}
+                <div className="px-8 pt-10 pb-6 border-b border-slate-100 shrink-0">
+                  <div className="flex justify-between items-start mb-6">
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-black text-[#0038A8] mb-1 tracking-tighter uppercase">
+                        System Credentials
+                      </h2>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+                        Manage Operator Access
+                      </p>
                     </div>
-                  )}
-
-                  {/* Name Input */}
-                  <div className="space-y-2 text-left">
-                    <label className="text-[9px] font-black text-[#0038A8] uppercase tracking-widest ml-4">
-                      Full Name
-                    </label>
-                    <div className="relative">
-                      <UserIcon
-                        className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"
-                        size={18}
-                      />
-                      <input
-                        type="text"
-                        value={editForm.name}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, name: e.target.value })
-                        }
-                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-14 pr-6 font-bold text-[#0038A8] focus:border-[#FFD700] focus:outline-none transition-all"
-                      />
-                    </div>
+                    <button
+                      onClick={() => !isUpdating && setShowProfileModal(false)}
+                      className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl transition-colors cursor-pointer"
+                    >
+                      <X size={20} />
+                    </button>
                   </div>
 
-                  {/* Email Input */}
-                  <div className="space-y-2 text-left">
-                    <label className="text-[9px] font-black text-[#0038A8] uppercase tracking-widest ml-4">
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail
-                        className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"
-                        size={18}
-                      />
-                      <input
-                        type="email"
-                        value={editForm.email}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, email: e.target.value })
-                        }
-                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-14 pr-6 font-bold text-[#0038A8] focus:border-[#FFD700] focus:outline-none transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 pt-4">
+                  {/* Custom Tabs */}
+                  <div className="flex p-1.5 bg-slate-100 rounded-2xl">
                     <button
                       type="button"
-                      onClick={() => setShowProfileModal(false)}
-                      className="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-500 font-black text-[10px] uppercase tracking-widest cursor-pointer"
+                      onClick={() => {
+                        setUpdateError(null);
+                        setActiveProfileTab("details");
+                      }}
+                      className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer ${activeProfileTab === "details" ? "bg-white text-[#0038A8] shadow-sm" : "text-slate-500 hover:text-[#0038A8]"}`}
                     >
-                      Discard
+                      <UserIcon size={14} className="inline mr-2 -mt-0.5" />
+                      Details
                     </button>
                     <button
-                      type="submit"
-                      disabled={isUpdating}
-                      className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer ${updateSuccess ? "bg-emerald-500 text-white" : "bg-[#0038A8] text-white"}`}
+                      type="button"
+                      onClick={() => {
+                        setUpdateError(null);
+                        setActiveProfileTab("password");
+                      }}
+                      className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer ${activeProfileTab === "password" ? "bg-white text-[#0038A8] shadow-sm" : "text-slate-500 hover:text-[#0038A8]"}`}
                     >
-                      {isUpdating ? (
-                        <Loader2 className="animate-spin" size={16} />
-                      ) : updateSuccess ? (
-                        <>
-                          <CheckCircle2 size={16} /> Updated
-                        </>
-                      ) : (
-                        <>
-                          <Save size={16} /> Save
-                        </>
-                      )}
+                      <Key size={14} className="inline mr-2 -mt-0.5" />
+                      Security
                     </button>
                   </div>
-                </form>
+                </div>
+
+                {/* Scrollable Content Area */}
+                <div className="p-8 overflow-y-auto custom-scrollbar">
+                  <AnimatePresence mode="wait">
+                    {updateError && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        animate={{
+                          opacity: 1,
+                          height: "auto",
+                          marginBottom: 24,
+                        }}
+                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 text-red-600 text-xs font-bold"
+                      >
+                        <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                        {updateError}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* TAB 1: DETAILS */}
+                  {activeProfileTab === "details" && (
+                    <motion.form
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      onSubmit={handleUpdateProfile}
+                      className="space-y-6"
+                    >
+                      {/* Read Only Office Field */}
+                      {user.role === "office" && (
+                        <div className="space-y-2 text-left opacity-70">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4">
+                            Assigned Node
+                          </label>
+                          <div className="bg-slate-50 rounded-2xl py-4 px-6 flex items-center gap-3 border-2 border-slate-100">
+                            <Building2 size={16} className="text-slate-400" />
+                            <span className="text-[11px] font-black uppercase text-slate-500 tracking-wide">
+                              {user.office}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Name Input */}
+                      <div className="space-y-2 text-left group">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4 transition-colors group-focus-within:text-[#0038A8]">
+                          Full Name
+                        </label>
+                        <div className="relative">
+                          <UserIcon
+                            className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0038A8] transition-colors"
+                            size={18}
+                          />
+                          <input
+                            type="text"
+                            required
+                            value={editForm.name}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, name: e.target.value })
+                            }
+                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-14 pr-6 text-sm font-bold text-slate-800 focus:border-[#0038A8] focus:bg-white focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-slate-300"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Email Input */}
+                      <div className="space-y-2 text-left group">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4 transition-colors group-focus-within:text-[#0038A8]">
+                          Institutional Email
+                        </label>
+                        <div className="relative">
+                          <Mail
+                            className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0038A8] transition-colors"
+                            size={18}
+                          />
+                          <input
+                            type="email"
+                            required
+                            value={editForm.email}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                email: e.target.value,
+                              })
+                            }
+                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-14 pr-6 text-sm font-bold text-slate-800 focus:border-[#0038A8] focus:bg-white focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-slate-300"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-100">
+                        <button
+                          type="submit"
+                          disabled={isUpdating}
+                          className={`w-full py-4.5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg cursor-pointer ${
+                            updateSuccess
+                              ? "bg-emerald-500 text-white shadow-emerald-500/20"
+                              : "bg-[#0038A8] text-[#FFD700] hover:bg-[#002b82] shadow-[#0038A8]/20"
+                          } disabled:opacity-70 disabled:cursor-not-allowed`}
+                        >
+                          {isUpdating ? (
+                            <Loader2 className="animate-spin" size={18} />
+                          ) : updateSuccess ? (
+                            <>
+                              <CheckCircle2 size={18} /> Data Synced
+                            </>
+                          ) : (
+                            <>
+                              <Save size={18} /> Update Matrix
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </motion.form>
+                  )}
+
+                  {/* TAB 2: PASSWORD */}
+                  {activeProfileTab === "password" && (
+                    <motion.form
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      onSubmit={handleUpdatePassword}
+                      className="space-y-6"
+                    >
+                      {/* Current Password */}
+                      <div className="space-y-2 text-left group">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4 transition-colors group-focus-within:text-[#0038A8]">
+                          Current Passcode
+                        </label>
+                        <div className="relative">
+                          <Key
+                            className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0038A8] transition-colors"
+                            size={18}
+                          />
+                          <input
+                            type={showPasswords.current ? "text" : "password"}
+                            required
+                            value={passwordForm.currentPassword}
+                            onChange={(e) =>
+                              setPasswordForm({
+                                ...passwordForm,
+                                currentPassword: e.target.value,
+                              })
+                            }
+                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-14 pr-12 text-sm font-bold text-slate-800 focus:border-[#0038A8] focus:bg-white focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-slate-300"
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPasswords({
+                                ...showPasswords,
+                                current: !showPasswords.current,
+                              })
+                            }
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0038A8] p-2 transition-colors cursor-pointer"
+                          >
+                            {showPasswords.current ? (
+                              <EyeOff size={16} />
+                            ) : (
+                              <Eye size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* New Password */}
+                      <div className="space-y-2 text-left group">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4 transition-colors group-focus-within:text-[#0038A8]">
+                          New Security Key
+                        </label>
+                        <div className="relative">
+                          <ShieldCheck
+                            className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0038A8] transition-colors"
+                            size={18}
+                          />
+                          <input
+                            type={showPasswords.new ? "text" : "password"}
+                            required
+                            minLength={8}
+                            value={passwordForm.newPassword}
+                            onChange={(e) =>
+                              setPasswordForm({
+                                ...passwordForm,
+                                newPassword: e.target.value,
+                              })
+                            }
+                            className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-14 pr-12 text-sm font-bold text-slate-800 focus:border-[#0038A8] focus:bg-white focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-slate-300"
+                            placeholder="Min 8 characters"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPasswords({
+                                ...showPasswords,
+                                new: !showPasswords.new,
+                              })
+                            }
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0038A8] p-2 transition-colors cursor-pointer"
+                          >
+                            {showPasswords.new ? (
+                              <EyeOff size={16} />
+                            ) : (
+                              <Eye size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Confirm Password */}
+                      <div className="space-y-2 text-left group">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-4 transition-colors group-focus-within:text-[#0038A8]">
+                          Confirm Security Key
+                        </label>
+                        <div className="relative">
+                          <CheckCircle2
+                            className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0038A8] transition-colors"
+                            size={18}
+                          />
+                          <input
+                            type={showPasswords.confirm ? "text" : "password"}
+                            required
+                            minLength={8}
+                            value={passwordForm.confirmPassword}
+                            onChange={(e) =>
+                              setPasswordForm({
+                                ...passwordForm,
+                                confirmPassword: e.target.value,
+                              })
+                            }
+                            className={`w-full bg-slate-50 border-2 rounded-2xl py-4 pl-14 pr-12 text-sm font-bold text-slate-800 outline-none transition-all placeholder:text-slate-300 ${
+                              passwordForm.confirmPassword &&
+                              passwordForm.newPassword !==
+                                passwordForm.confirmPassword
+                                ? "border-red-300 focus:border-red-500 focus:ring-red-100 focus:bg-white"
+                                : "border-slate-100 focus:border-[#0038A8] focus:ring-blue-50 focus:bg-white focus:ring-4"
+                            }`}
+                            placeholder="Match new key"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPasswords({
+                                ...showPasswords,
+                                confirm: !showPasswords.confirm,
+                              })
+                            }
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0038A8] p-2 transition-colors cursor-pointer"
+                          >
+                            {showPasswords.confirm ? (
+                              <EyeOff size={16} />
+                            ) : (
+                              <Eye size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-slate-100">
+                        <button
+                          type="submit"
+                          disabled={
+                            isUpdating ||
+                            !passwordForm.currentPassword ||
+                            !passwordForm.newPassword ||
+                            passwordForm.newPassword !==
+                              passwordForm.confirmPassword
+                          }
+                          className={`w-full py-4.5 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 shadow-lg cursor-pointer ${
+                            updateSuccess
+                              ? "bg-emerald-500 text-white shadow-emerald-500/20"
+                              : "bg-red-600 text-white hover:bg-red-700 shadow-red-600/20"
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {isUpdating ? (
+                            <Loader2 className="animate-spin" size={18} />
+                          ) : updateSuccess ? (
+                            <>
+                              <CheckCircle2 size={18} /> Key Secured
+                            </>
+                          ) : (
+                            <>
+                              <Lock size={18} /> Override Key
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </motion.form>
+                  )}
+                </div>
               </div>
             </motion.div>
           </>
@@ -466,7 +795,7 @@ const OfficeSidebar = () => {
       </AnimatePresence>
 
       {/* ------------------------------------------- */}
-      {/* LOGOUT MODAL (Kept for completeness) */}
+      {/* LOGOUT MODAL */}
       {/* ------------------------------------------- */}
       <AnimatePresence>
         {showLogoutModal && (
@@ -476,36 +805,40 @@ const OfficeSidebar = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowLogoutModal(false)}
-              className="fixed inset-0 bg-[#001233]/80 backdrop-blur-xl z-100"
+              className="fixed inset-0 bg-[#001233]/80 backdrop-blur-xl z-[100]"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="fixed inset-0 z-110 flex items-center justify-center px-4"
+              className="fixed inset-0 z-[110] flex items-center justify-center px-4"
             >
-              <div className="w-full max-w-md bg-white rounded-[3rem] p-10 text-center border-4 border-slate-50">
-                <div className="mx-auto w-20 h-20 rounded-4xl bg-red-50 flex items-center justify-center mb-6">
+              <div className="w-full max-w-sm bg-white rounded-[2.5rem] p-8 text-center border-4 border-slate-50 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-2 bg-red-500" />
+
+                <div className="mx-auto w-20 h-20 rounded-3xl bg-red-50 flex items-center justify-center mb-6 border border-red-100 transform rotate-3">
                   <LogOut size={32} className="text-red-600 translate-x-1" />
                 </div>
+
                 <h2 className="text-3xl font-black text-[#0038A8] mb-2 tracking-tighter uppercase">
-                  System Logout
+                  Terminate
                 </h2>
-                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-10 leading-relaxed max-w-xs mx-auto">
-                  Terminate current administrative session?
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-10 leading-relaxed mx-auto">
+                  Close secure connection?
                 </p>
-                <div className="flex gap-4">
+
+                <div className="flex gap-3">
                   <button
                     onClick={() => setShowLogoutModal(false)}
-                    className="flex-1 py-4 rounded-2xl bg-slate-50 text-slate-500 font-black text-[10px] uppercase tracking-widest cursor-pointer"
+                    className="flex-1 py-4 rounded-2xl bg-slate-50 text-slate-500 hover:bg-slate-100 font-black text-[10px] uppercase tracking-widest cursor-pointer transition-colors border border-slate-200"
                   >
-                    Cancel
+                    Abort
                   </button>
                   <button
                     onClick={confirmLogout}
-                    className="flex-1 py-4 rounded-2xl bg-red-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg cursor-pointer"
+                    className="flex-1 py-4 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-600/20 cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-2"
                   >
-                    Confirm Logout
+                    <LogOut size={14} /> End Session
                   </button>
                 </div>
               </div>
