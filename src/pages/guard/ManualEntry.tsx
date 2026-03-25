@@ -89,6 +89,10 @@ const ManualEntry = () => {
     timeZone: "Asia/Manila",
   });
 
+  const [categoriesList, setCategoriesList] = useState<
+    { _id: string; name: string }[]
+  >([]);
+
   const [bookingDate, setBookingDate] = useState(today);
   const [slots, setSlots] = useState<{ current: number; max: number | null }>({
     current: 0,
@@ -152,6 +156,19 @@ const ManualEntry = () => {
     };
 
     init();
+  }, []);
+
+  // Add this inside an existing or new useEffect
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get("/categories");
+        setCategoriesList(res.data);
+      } catch (err) {
+        console.error("Category fetch failed");
+      }
+    };
+    fetchCategories();
   }, []);
 
   useEffect(() => {
@@ -765,23 +782,21 @@ const ManualEntry = () => {
             </div>
 
             <div className="col-span-1 space-y-1.5">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                Category
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] ml-1 transition-colors group-focus-within:text-[#0038A8]">
+                Visitor Category
               </label>
               <select
-                className={inputStyle}
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
+                className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-slate-700 outline-none focus:border-[#0038A8] focus:ring-4 focus:ring-[#0038A8]/10 focus:bg-white transition-all font-bold text-sm cursor-pointer appearance-none"
               >
-                <option value="">Select Category</option>
-                <option value="Student">Student</option>
-                <option value="Alumni">Alumni</option>
-                <option value="Parent/Guardian">Parent/Guardian</option>
-                <option value="Supplier">Supplier</option>
-                <option value="Applicant Student">Applicant Student</option>
-                <option value="Applicant Employee">Applicant Employee</option>
-                <option value="Guest">Guest</option>
-                <option value="Merchant">Merchant</option>
+                <option value="">Select Classification...</option>
+                {/* 🔥 DYNAMIC RENDER FROM DATABASE */}
+                {categoriesList.map((cat) => (
+                  <option key={cat._id} value={cat.name}>
+                    {cat.name}
+                  </option>
+                ))}
               </select>
             </div>
 
