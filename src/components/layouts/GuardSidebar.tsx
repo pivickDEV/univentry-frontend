@@ -499,7 +499,7 @@ const GuardSidebar = () => {
                   <div className="flex justify-between items-start mb-6">
                     <div>
                       <h2 className="text-2xl sm:text-3xl font-black text-[#0038A8] mb-1 tracking-tighter uppercase">
-                        System Credentials
+                        Profile Settings
                       </h2>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
                         Manage Security Access
