@@ -402,7 +402,7 @@ const AdminSidebar = () => {
         </div>
 
         {/* BOTTOM SECTION */}
-        <div className="p-6 border-t border-[#002b82] bg-[#002b82]/50 relative z-10 backdrop-blur-md">
+        <div className="p-6 border-t border-[#002b82] bg-[#002b82]/50 sticky bottom-0 z-10 backdrop-blur-md">
           <button
             onClick={() => setShowLogoutModal(true)}
             className="group relative w-full flex items-center justify-between p-1.5 pr-5 rounded-4xl cursor-pointer bg-white/5 border border-white/10 text-blue-100 hover:bg-red-500 transition-all duration-500"
@@ -797,7 +797,7 @@ const AdminSidebar = () => {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="fixed inset-0 z-110 flex items-center justify-center px-4"
             >
-              <div className="w-full max-w-md bg-white rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.4)] p-10 text-center  overflow-hidden fixed border-4 border-slate-50">
+              <div className="w-full max-w-md bg-white rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.4)] p-10 text-center relative overflow-hidden border-4 border-slate-50">
                 <div className="absolute top-0 left-0 w-full h-2 bg-red-500" />
 
                 <div className="mx-auto w-20 h-20 rounded-3xl bg-red-50 flex items-center justify-center mb-6 border border-red-100 transform rotate-3">
