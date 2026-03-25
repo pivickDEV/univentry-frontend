@@ -482,13 +482,13 @@ const GuardSidebar = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => !isUpdating && setShowProfileModal(false)}
-              className="fixed inset-0 bg-[#001233]/90 backdrop-blur-xl z-[100]"
+              className="fixed inset-0 bg-[#001233]/90 backdrop-blur-xl z-100"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6"
+              className="fixed inset-0 z-110 flex items-center justify-center p-4 sm:p-6"
             >
               <div
                 onClick={(e) => e.stopPropagation()}
@@ -838,7 +838,7 @@ const GuardSidebar = () => {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               onClick={() => setShowLogoutModal(false)}
-              className="fixed inset-0 bg-[#001233]/80 backdrop-blur-xl z-[100]"
+              className="fixed inset-0 bg-[#001233]/80 backdrop-blur-xl z-100"
             />
 
             {/* Modal */}
@@ -847,16 +847,16 @@ const GuardSidebar = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="fixed inset-0 z-[110] flex items-center justify-center px-4"
+              className="fixed inset-0 z-110 flex items-center justify-center px-4"
             >
               <div
                 onClick={(e) => e.stopPropagation()}
                 className="w-full max-w-md bg-white rounded-[3rem] shadow-[0_20px_80px_rgba(0,0,0,0.4)] p-10 text-center relative overflow-hidden border-4 border-slate-50"
               >
-                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-600 to-red-400" />
+                <div className="absolute top-0 left-0 w-full h-2 bg-linear-to-r from-red-600 to-red-400" />
 
                 {/* Icon */}
-                <div className="mx-auto w-20 h-20 rounded-[2rem] bg-red-50 border border-red-100 flex items-center justify-center mb-6 shadow-inner relative">
+                <div className="mx-auto w-20 h-20 rounded-4xl bg-red-50 border border-red-100 flex items-center justify-center mb-6 shadow-inner relative">
                   <div className="absolute inset-0 bg-red-500 opacity-10 blur-xl rounded-full" />
                   <LogOut
                     size={32}
