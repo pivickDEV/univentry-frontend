@@ -27,6 +27,15 @@ const api = axios.create({
   },
 });
 
+// 🔥 CRITICAL FIX: Automatically attach the login token so the backend knows you are an Admin!
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 type UserRole = "super-admin" | "admin" | "guard" | "office";
 
 interface User {
@@ -106,15 +115,14 @@ const UserManagement = () => {
   const handleUpdateRole = async (userId: string, newRole: UserRole) => {
     try {
       setActionLoading(userId);
-      // 🚀 FIXED: Pointed to the correct backend route (/users/:id/role)
       await api.patch(`/users/${userId}/role`, { role: newRole });
       setUsers((prev) =>
         prev.map((user) =>
           user._id === userId ? { ...user, role: newRole } : user,
         ),
       );
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to update role.");
+    } catch {
+      alert("Failed to update role.");
     } finally {
       setActionLoading(null);
     }
@@ -124,7 +132,6 @@ const UserManagement = () => {
   const saveEmailUpdate = async (userId: string) => {
     try {
       setActionLoading(userId);
-      // 🚀 FIXED: Pointed to the correct backend route (/users/:id/email)
       await api.patch(`/users/${userId}/email`, { email: editEmailValue });
       setUsers((prev) =>
         prev.map((user) =>
@@ -144,7 +151,6 @@ const UserManagement = () => {
     if (!editOfficeValue) return alert("Please select a valid office.");
     try {
       setActionLoading(userId);
-      // 🚀 FIXED: Pointed to the correct backend route (/users/:id/office)
       await api.patch(`/users/${userId}/office`, { office: editOfficeValue });
       setUsers((prev) =>
         prev.map((user) =>
@@ -222,7 +228,7 @@ const UserManagement = () => {
         office: role === "office" ? assignedOffice : undefined,
       };
 
-      // 🚀 FIXED: Ensure this points to the correct creation endpoint (/users)
+      // 🚀 FIXED: Pointed to `/users` instead of `/auth/signup` to match your backend user controller
       await api.post("/users", payload);
 
       setShowCreateModal(false);
@@ -238,7 +244,7 @@ const UserManagement = () => {
       setFormError(
         err.response?.data?.message ||
           err.response?.data?.error ||
-          "Registration failed. Check your API route.",
+          "Registration failed. Please try again.",
       );
     } finally {
       setActionLoading(null);
