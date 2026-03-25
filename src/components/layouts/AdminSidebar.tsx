@@ -18,6 +18,7 @@ import {
   Save, // For User Management
   Settings2,
   ShieldCheck,
+  Tag,
   User as UserIcon,
   Users,
   X,
@@ -241,6 +242,7 @@ const AdminSidebar = () => {
     { path: "/admin/audit-trail", label: "Audit Trail", icon: FileText },
     { path: "/admin/reports", label: "Reports & Analytics", icon: PieChart },
     { path: "/admin/offices", label: "Office Management", icon: Lock },
+    { path: "/admin/categories", label: "Category Management", icon: Tag },
     {
       path: "/admin/cctv-monitor",
       label: "CCTV Monitoring",
