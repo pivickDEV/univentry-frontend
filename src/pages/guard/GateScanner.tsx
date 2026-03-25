@@ -8,6 +8,7 @@ import {
   Briefcase,
   CheckCircle,
   CreditCard,
+  HelpCircle,
   LogIn,
   LogOut,
   MapPin,
@@ -56,11 +57,12 @@ const GateScanner = () => {
   const [scanStatus, setScanStatus] = useState<
     "idle" | "processing" | "success" | "exit" | "error"
   >("idle");
+  const [scanStep, setScanStep] = useState<"verify" | "complete">("verify"); // 🔥 NEW: Track step
+
   const [selectedLog, setSelectedLog] = useState<VisitorLog | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [guardName, setGuardName] = useState("Identifying...");
   const [currentTime, setCurrentTime] = useState(new Date());
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
@@ -77,8 +79,8 @@ const GateScanner = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // --- 1. SCAN HANDLER (PREVIEW ONLY) ---
   const handleScan = async (detectedCodes: any) => {
-    // 1. Prevent spam/double scans
     if (scanStatus === "processing" || isModalOpen || scanStatus === "error")
       return;
 
@@ -88,43 +90,57 @@ const GateScanner = () => {
     setScanStatus("processing");
 
     try {
-      // 2. 🔑 GET TOKEN (Required to identify the Guard)
-      const token = localStorage.getItem("token");
+      // 🔥 GET DETAILS FIRST (Does not update DB yet)
+      const { data } = await api.get(`/bookings/${rawValue}`);
 
+      setSelectedLog(data);
+      setScanStep("verify"); // Set to Verify Mode
+      setScanStatus("success");
+      setIsModalOpen(true);
+    } catch (error: any) {
+      console.error("Fetch Failed:", error);
+      setScanStatus("error");
+      setErrorMessage(
+        error.response?.status === 404
+          ? "Visitor ID Not Found"
+          : "Invalid QR or Connection Error",
+      );
+      setTimeout(() => setScanStatus("idle"), 3000);
+    }
+  };
+
+  // --- 2. CONFIRM HANDLER (ACTUAL DB UPDATE) ---
+  const handleConfirm = async () => {
+    if (!selectedLog) return;
+    setScanStatus("processing");
+
+    try {
+      const token = localStorage.getItem("token");
       if (!token) {
-        setErrorMessage("Authentication Error: You are not logged in.");
-        setScanStatus("error");
-        return;
+        alert("Authentication Error: You are not logged in.");
+        return handleCloseModal();
       }
 
-      // 3. 🚀 SEND REQUEST WITH TOKEN
       const config = {
-        headers: {
-          Authorization: `Bearer ${token}`, // This tells the backend WHO you are
-        },
+        headers: { Authorization: `Bearer ${token}` },
       };
 
+      // 🔥 POST ACTUAL ACTION
       const { data } = await api.post(
         "/bookings/scan",
         {
-          qrCode: rawValue,
-          scanType: scanMode, // 'in' or 'out' based on your button selection
+          qrCode: selectedLog._id,
+          scanType: scanMode,
         },
-        config, // <--- PASS THE CONFIG HERE
+        config,
       );
 
-      // 4. Success
-      setSelectedLog(data.data);
+      setSelectedLog(data.data); // Update with new timestamps
+      setScanStep("complete"); // Switch to Success Mode
       setScanStatus(scanMode === "in" ? "success" : "exit");
-      setIsModalOpen(true);
     } catch (error: any) {
-      console.error("Scan Failed:", error);
-      setScanStatus("error");
-      setErrorMessage(error.response?.data?.message || "Invalid QR Code");
-
-      setTimeout(() => {
-        setScanStatus("idle");
-      }, 3000);
+      alert(error.response?.data?.message || "Action Failed");
+      handleCloseModal();
     }
   };
 
@@ -132,6 +148,7 @@ const GateScanner = () => {
     setIsModalOpen(false);
     setSelectedLog(null);
     setScanStatus("idle");
+    setScanStep("verify"); // Reset to verify for next scan
   };
 
   const getThemeColor = () =>
@@ -140,7 +157,7 @@ const GateScanner = () => {
     scanMode === "in" ? "border-emerald-500" : "border-yellow-500";
 
   return (
-    <div className="flex flex-col lg:flex-row h-225 w-full bg-slate-50 overflow-hidden font-sans">
+    <div className="flex flex-col lg:flex-row h-screen w-full bg-slate-50 overflow-hidden font-sans">
       {/* LEFT PANEL: CAMERA */}
       <div
         className={`relative w-full lg:w-1/2 h-1/2 lg:h-full bg-black flex flex-col items-center justify-start border-b-4 lg:border-r-4 lg:border-b-0 transition-all duration-500 ${getBorderColor()}`}
@@ -149,16 +166,14 @@ const GateScanner = () => {
         <div className="absolute top-6 z-30 flex gap-4 bg-slate-900/80 p-2 rounded-2xl backdrop-blur-md border border-slate-700 shadow-2xl">
           <button
             onClick={() => setScanMode("in")}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all
-                ${scanMode === "in" ? "bg-emerald-600 text-white shadow-lg scale-105" : "bg-transparent text-slate-400 hover:text-white"}`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${scanMode === "in" ? "bg-emerald-600 text-white shadow-lg scale-105" : "bg-transparent text-slate-400 hover:text-white"}`}
           >
             <LogIn size={16} /> Time In
           </button>
           <div className="w-px bg-slate-700 h-8 self-center"></div>
           <button
             onClick={() => setScanMode("out")}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all
-                ${scanMode === "out" ? "bg-yellow-500 text-slate-900 shadow-lg scale-105" : "bg-transparent text-slate-400 hover:text-white"}`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${scanMode === "out" ? "bg-yellow-500 text-slate-900 shadow-lg scale-105" : "bg-transparent text-slate-400 hover:text-white"}`}
           >
             <LogOut size={16} /> Time Out
           </button>
@@ -195,7 +210,7 @@ const GateScanner = () => {
             />
           )}
           {isModalOpen && (
-            <div className="w-full h-full bg-slate-900/90 backdrop-blur-sm flex items-center justify-center text-white">
+            <div className="w-full h-full bg-slate-900/90 backdrop-blur-sm flex items-center justify-center text-white font-bold tracking-widest uppercase">
               Scanner Paused
             </div>
           )}
@@ -246,7 +261,7 @@ const GateScanner = () => {
               Command Gate
             </h1>
             <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">
-              UniVentry Security Protocol{" "}
+              UniVentry Security Protocol
             </p>
           </div>
           <div className="text-right hidden sm:block">
@@ -307,20 +322,31 @@ const GateScanner = () => {
             className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] shadow-2xl ring-1 ring-white/20 animate-in zoom-in-95 duration-200 no-scrollbar flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* DYNAMIC MODAL HEADER */}
             <div
               className={`sticky top-0 z-10 px-8 py-6 border-b flex items-center justify-between backdrop-blur-xl bg-white/90
-                ${scanStatus === "exit" ? "border-yellow-100 bg-yellow-50/90" : "border-emerald-100 bg-emerald-50/90"}`}
+                ${
+                  scanStep === "verify"
+                    ? "border-blue-100 bg-blue-50/90"
+                    : scanStatus === "exit"
+                      ? "border-yellow-100 bg-yellow-50/90"
+                      : "border-emerald-100 bg-emerald-50/90"
+                }`}
             >
               <div className="flex items-center gap-4">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-2
                     ${
-                      scanStatus === "exit"
-                        ? "bg-yellow-500 border-yellow-300 text-white"
-                        : "bg-emerald-600 border-emerald-500 text-white"
+                      scanStep === "verify"
+                        ? "bg-[#0038A8] border-blue-400 text-white"
+                        : scanStatus === "exit"
+                          ? "bg-yellow-500 border-yellow-300 text-white"
+                          : "bg-emerald-600 border-emerald-500 text-white"
                     }`}
                 >
-                  {scanStatus === "exit" ? (
+                  {scanStep === "verify" ? (
+                    <HelpCircle className="text-2xl" />
+                  ) : scanStatus === "exit" ? (
                     <LogOut className="text-2xl" />
                   ) : (
                     <LogIn className="text-2xl" />
@@ -328,11 +354,16 @@ const GateScanner = () => {
                 </div>
                 <div>
                   <h2
-                    className={`text-xl font-black uppercase tracking-tight ${scanStatus === "exit" ? "text-yellow-700" : "text-emerald-700"}`}
+                    className={`text-xl font-black uppercase tracking-tight 
+                        ${scanStep === "verify" ? "text-[#0038A8]" : scanStatus === "exit" ? "text-yellow-700" : "text-emerald-700"}`}
                   >
-                    {scanStatus === "exit"
-                      ? "Departure Confirmed"
-                      : "Entry Approved"}
+                    {scanStep === "verify"
+                      ? scanMode === "in"
+                        ? "Verify Entry?"
+                        : "Verify Exit?"
+                      : scanStatus === "exit"
+                        ? "Departure Confirmed"
+                        : "Entry Approved"}
                   </h2>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     ID: {selectedLog._id}
@@ -395,7 +426,7 @@ const GateScanner = () => {
                 <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
                 <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
                   <div
-                    className={`p-2 rounded-xl mb-1 ${scanStatus === "success" ? "bg-emerald-500 text-white shadow-lg scale-110" : "bg-white/10 text-[#FFD700]"}`}
+                    className={`p-2 rounded-xl mb-1 ${scanStep === "complete" && scanStatus === "success" ? "bg-emerald-500 text-white shadow-lg scale-110" : "bg-white/10 text-[#FFD700]"}`}
                   >
                     <LogIn className="w-5 h-5" />
                   </div>
@@ -403,12 +434,19 @@ const GateScanner = () => {
                     Time In
                   </p>
                   <p className="text-xl font-mono font-bold">
-                    {selectedLog.timeIn
-                      ? new Date(selectedLog.timeIn).toLocaleTimeString([], {
+                    {scanStep === "complete" &&
+                    scanMode === "in" &&
+                    !selectedLog.timeIn
+                      ? new Date().toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
                         })
-                      : "--:--"}
+                      : selectedLog.timeIn
+                        ? new Date(selectedLog.timeIn).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "--:--"}
                   </p>
                 </div>
                 <div className="h-px w-full md:w-px md:h-12 bg-white/20" />
@@ -433,7 +471,7 @@ const GateScanner = () => {
                 <div className="h-px w-full md:w-px md:h-12 bg-white/20" />
                 <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
                   <div
-                    className={`p-2 rounded-xl mb-1 ${scanStatus === "exit" ? "bg-yellow-500 text-white shadow-lg scale-110" : "bg-white/10 text-[#FFD700]"}`}
+                    className={`p-2 rounded-xl mb-1 ${scanStep === "complete" && scanStatus === "exit" ? "bg-yellow-500 text-white shadow-lg scale-110" : "bg-white/10 text-[#FFD700]"}`}
                   >
                     <LogOut className="w-5 h-5" />
                   </div>
@@ -441,12 +479,19 @@ const GateScanner = () => {
                     Time Out
                   </p>
                   <p className="text-xl font-mono font-bold">
-                    {selectedLog.timeOut
-                      ? new Date(selectedLog.timeOut).toLocaleTimeString([], {
+                    {scanStep === "complete" &&
+                    scanMode === "out" &&
+                    !selectedLog.timeOut
+                      ? new Date().toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
                         })
-                      : "--:--"}
+                      : selectedLog.timeOut
+                        ? new Date(selectedLog.timeOut).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "--:--"}
                   </p>
                 </div>
               </div>
@@ -486,17 +531,48 @@ const GateScanner = () => {
                 </div>
               </div>
 
-              {/* FOOTER */}
+              {/* DYNAMIC FOOTER ACTIONS */}
               <div className="sticky bottom-0 bg-white border-t border-slate-100 px-8 py-4 flex items-center justify-between z-20">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden md:block">
-                  Action Required
+                  {scanStep === "verify"
+                    ? "Confirm identity matches physical ID"
+                    : "Action Complete"}
                 </div>
-                <button
-                  onClick={handleCloseModal}
-                  className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-[#0038A8] hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
-                >
-                  <CheckCircle className="w-4 h-4" /> Done
-                </button>
+
+                {scanStep === "verify" ? (
+                  <div className="flex gap-3 w-full md:w-auto">
+                    <button
+                      onClick={handleCloseModal}
+                      className="px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleConfirm}
+                      disabled={scanStatus === "processing"}
+                      className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50
+                                ${scanMode === "in" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-yellow-500 hover:bg-yellow-600"}`}
+                    >
+                      {scanStatus === "processing" ? (
+                        <Activity className="animate-spin w-4 h-4" />
+                      ) : scanMode === "in" ? (
+                        <LogIn size={16} />
+                      ) : (
+                        <LogOut size={16} />
+                      )}
+                      {scanMode === "in"
+                        ? "Confirm & Time In"
+                        : "Confirm & Time Out"}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleCloseModal}
+                    className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-[#0038A8] hover:bg-blue-700 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                  >
+                    <CheckCircle className="w-4 h-4" /> Next Visitor
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -504,20 +580,25 @@ const GateScanner = () => {
       )}
 
       {/* FULLSCREEN */}
-      {fullscreenImage && (
-        <div
-          className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4"
-          onClick={() => setFullscreenImage(null)}
-        >
-          <img
-            src={fullscreenImage}
-            className="max-w-full max-h-full rounded-lg shadow-2xl"
-          />
-          <button className="absolute top-6 right-6 text-white bg-white/10 p-4 rounded-full">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-      )}
+      <AnimatePresence>
+        {fullscreenImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4"
+            onClick={() => setFullscreenImage(null)}
+          >
+            <img
+              src={fullscreenImage}
+              className="max-w-full max-h-full rounded-lg shadow-2xl"
+            />
+            <button className="absolute top-6 right-6 text-white bg-white/10 p-4 rounded-full">
+              <X className="w-6 h-6" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
