@@ -30,6 +30,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 
 // --- CONTEXT & BACKGROUND WORKERS ---
+import SuperAdminSidebar from "./components/layouts/SuperAdminSidebar";
 import SurveillanceWorker from "./components/SurveillanceWorker";
 import { CCTVProvider } from "./pages/context/CCTVContext";
 
@@ -103,6 +104,7 @@ const App = () => {
               (Pages strictly for developers/system engineers) 
           */}
           <Route element={<ProtectedRoute allowedRoles={["super-admin"]} />}>
+            <Route path="/super-admin" element={<SuperAdminSidebar />} />
             {/* Add any other pure Super Admin routes here later like /super-admin/network */}
           </Route>
         </Route>
