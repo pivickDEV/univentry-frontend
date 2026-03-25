@@ -43,7 +43,6 @@ const AuditTrail = () => {
   const [timeFilter, setTimeFilter] = useState("today");
   const [customDate, setCustomDate] = useState("");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
-  const [isArchiving, setIsArchiving] = useState(false);
 
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [isModalLoading, setIsModalLoading] = useState(false);
