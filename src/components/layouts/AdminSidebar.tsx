@@ -797,7 +797,7 @@ const AdminSidebar = () => {
                 </div>
 
                 <h2 className="text-3xl font-black text-[#0038A8] mb-2 tracking-tighter uppercase">
-                  Log out?
+                  Log out
                 </h2>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-10 leading-relaxed mx-auto">
                   Are you sure you want to Log out?
