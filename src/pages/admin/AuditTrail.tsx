@@ -462,7 +462,7 @@ const AuditTrail = () => {
                   <FiUser size={32} />
                 </div>
                 <h2 className="text-white font-black text-3xl uppercase tracking-tighter">
-                  Visitor Intelligence Dossier
+                  Visitor Details
                 </h2>
                 <p className="text-blue-200 text-[10px] font-black uppercase tracking-[0.4em] mt-1">
                   Registry Record: {selectedLog._id}
@@ -606,7 +606,7 @@ const AuditTrail = () => {
                             hour: "2-digit",
                             minute: "2-digit",
                           })
-                        : "17:00"}{" "}
+                        : "null"}{" "}
                       {/* Default/fake time */}
                     </p>
                   </div>
