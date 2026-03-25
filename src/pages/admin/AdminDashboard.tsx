@@ -376,7 +376,7 @@ const AdminDashboard = () => {
           <div className="flex-1 flex flex-col justify-center gap-4 relative">
             <FlowStep
               icon={<Calendar size={18} />}
-              label="Manifest Bookings"
+              label="Expected Visitor"
               count={stats.totalToday}
               total={stats.totalToday}
               colorBox="bg-slate-50 text-slate-500 border-slate-200"
@@ -448,7 +448,7 @@ const AdminDashboard = () => {
               <div className="flex items-center gap-2 mb-6">
                 <Calendar size={16} className="text-[#0038A8]" />
                 <h2 className="text-[10px] font-black text-[#0038A8] uppercase tracking-[0.2em]">
-                  Today's Manifest
+                  Today's Total Appointment
                 </h2>
               </div>
 
