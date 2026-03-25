@@ -104,26 +104,44 @@ const OfficeSidebar = () => {
     setIsUpdating(true);
 
     try {
-      // API CALL PLACEHOLDER:
-      // await axios.put(`${API_URL}/auth/update-profile`, { userId: user.id, ...editForm });
+      // 1. Send data to Backend
+      const response = await fetch(
+        "http://localhost:5000/api/auth/update-profile",
+        {
+          // Change URL to your backend API
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: user.id, // From the user state
+            name: editForm.name,
+            email: editForm.email,
+          }),
+        },
+      );
 
-      const currentInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
-      const updatedInfo = {
-        ...currentInfo,
-        name: editForm.name,
-        email: editForm.email,
-      };
+      const data = await response.json();
 
-      localStorage.setItem("userInfo", JSON.stringify(updatedInfo));
-      loadUserData(); // Re-sync Sidebar UI
+      if (!response.ok) {
+        throw new Error(data.message || "Update failed");
+      }
+
+      // 2. If backend update was successful, update LocalStorage
+      // We save the 'data.user' returned from the server to ensure consistency
+      localStorage.setItem("userInfo", JSON.stringify(data.user));
+
+      // 3. Refresh the sidebar UI state
+      loadUserData();
 
       setUpdateSuccess(true);
       setTimeout(() => {
         setUpdateSuccess(false);
         setShowProfileModal(false);
       }, 2000);
-    } catch (error) {
-      console.error("Update failed", error);
+    } catch (error: any) {
+      console.error("Update failed:", error.message);
+      alert(error.message); // Simple alert for errors (like "Email already in use")
     } finally {
       setIsUpdating(false);
     }
