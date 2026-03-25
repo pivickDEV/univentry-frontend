@@ -297,7 +297,8 @@ const AdminSidebar = () => {
         {/* Tech Grid Background */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-size-[2rem_2rem] pointer-events-none" />
 
-        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative z-10">
+        {/* 🔥 FIX: Changed from 'overflow-y-auto custom-scrollbar' to 'min-h-0' so only the nav scrolls */}
+        <div className="flex-1 flex flex-col min-h-0 relative z-10">
           {/* 1. BRANDING */}
           <div className="p-8 pb-6">
             <div className="flex items-center gap-4 group">
@@ -316,7 +317,7 @@ const AdminSidebar = () => {
           </div>
 
           {/* 2. USER PROFILE HUD */}
-          <div className="px-6 mb-8 mt-2">
+          <div className="px-6 mb-8 mt-2 shrink-0">
             <div className="relative bg-white/10 border border-white/20 backdrop-blur-lg rounded-4xl p-5 overflow-hidden group hover:bg-white/15 transition-all duration-500 shadow-xl">
               <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1/2 w-1.5 bg-[#FFD700] rounded-r-full shadow-[0_0_15px_#FFD700]"></div>
 
@@ -366,8 +367,8 @@ const AdminSidebar = () => {
             </div>
           </div>
 
-          {/* 3. NAVIGATION MENU */}
-          <nav className="px-4 space-y-2 pb-6 flex-1 h-full overflow-y-auto custom-scrollbar">
+          {/* 3. NAVIGATION MENU (🔥 FIX: Scroll is isolated to this area only) */}
+          <nav className="px-4 space-y-2 pb-6 flex-1 overflow-y-auto custom-scrollbar">
             <p className="px-6 text-[8px] font-black text-blue-300/50 uppercase tracking-[0.4em] mb-4">
               System Modules
             </p>
