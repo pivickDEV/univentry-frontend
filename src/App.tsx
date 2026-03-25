@@ -20,6 +20,7 @@ import ManualEntry from "./pages/guard/ManualEntry";
 
 // --- PUBLIC & OFFICE PAGES ---
 import SurveillanceWorker from "./components/SurveillanceWorker";
+import ForgotPassword from "./ForgotPassword";
 import { CCTVProvider } from "./pages/context/CCTVContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -46,6 +47,7 @@ const App = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/book-appointment" element={<BookAppointment />} />
           <Route path="/" element={<Home />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
         </Route>
 
         {/* ================= PROTECTED ROUTES ================= */}

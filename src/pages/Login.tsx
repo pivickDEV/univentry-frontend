@@ -281,6 +281,18 @@ const Login = () => {
                 </div>
               </div>
 
+              {/* 👇 MODIFIED LABEL AREA FOR FORGOT PASSWORD 👇 */}
+              <div className="flex items-center justify-between ml-1 mr-2">
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em]"></label>
+                <a
+                  href="/forgot-password"
+                  className="text-[9px] font-black uppercase tracking-widest text-[#0038A8] hover:text-[#FFD700] transition-colors duration-300"
+                >
+                  Forgot Password?
+                </a>
+              </div>
+              {/* 👆 END OF MODIFIED LABEL AREA 👆 */}
+
               {/* SUBMIT BUTTON */}
               <motion.button
                 variants={itemVars}
