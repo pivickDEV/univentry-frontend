@@ -10,6 +10,7 @@ import {
   Clock,
   Filter,
   GraduationCap,
+  Lock,
   RefreshCw,
   ShieldCheck,
   UserCheck,
@@ -54,6 +55,7 @@ const OfficeDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedOffice, setSelectedOffice] = useState("All");
+  const [user, setUser] = useState<any>(null); // Added User State
 
   // --- STATS STATE ---
   const [stats, setStats] = useState({
@@ -80,6 +82,8 @@ const OfficeDashboard = () => {
 
       setBookings(safeBookings);
       setOffices(safeOffices);
+
+      // Calculate based on the currently selected office (which might be locked by useEffect)
       calculateStats(safeBookings, selectedOffice);
     } catch (err) {
       console.error("Sync Error:", err);
@@ -89,7 +93,7 @@ const OfficeDashboard = () => {
     }
   };
 
-  // --- CALCULATE STATS (STRICTLY TODAY ONLY) ---
+  // --- CALCULATE STATS ---
   const calculateStats = (data: Booking[], filter: string) => {
     if (!data) return;
 
@@ -97,20 +101,16 @@ const OfficeDashboard = () => {
       timeZone: "Asia/Manila",
     });
 
-    // 1. Strict filter: ONLY TODAY & ONLY SELECTED OFFICE
     const todaysData = data.filter((b) => b.bookingDate === todayStr);
     const relevantData =
       filter === "All"
         ? todaysData
         : todaysData.filter((b) => b.office === filter);
 
-    // 2. Segment the traffic
-    // Incoming: Inside the campus, but hasn't transacted at the office yet.
     const incomingTraffic = relevantData.filter(
       (b) => b.status === "On Campus" && !b.transactionTime,
     );
 
-    // Served: Has a transaction time recorded.
     const servedTraffic = relevantData
       .filter((b) => !!b.transactionTime)
       .sort(
@@ -119,7 +119,6 @@ const OfficeDashboard = () => {
           new Date(a.transactionTime!).getTime(),
       );
 
-    // 3. Demographics for Incoming
     const incomingCats = incomingTraffic.reduce((acc: any, curr) => {
       const c = curr.category || "Guest";
       acc[c] = (acc[c] || 0) + 1;
@@ -135,21 +134,33 @@ const OfficeDashboard = () => {
     });
   };
 
-  // --- EFFECTS ---
+  // --- INITIALIZATION ---
   useEffect(() => {
+    // 1. Get Logged-in User and Sync Filter
+    const userStr = localStorage.getItem("userInfo");
+    if (userStr) {
+      const parsedUser = JSON.parse(userStr);
+      setUser(parsedUser);
+
+      // If user is restricted to an office, force the selection immediately
+      if (parsedUser.role === "office" && parsedUser.office) {
+        setSelectedOffice(parsedUser.office);
+      }
+    }
+
     fetchData();
     const interval = setInterval(() => {
       fetchData();
       setCurrentTime(new Date());
-    }, 10000); // 10s Refresh Rate
+    }, 10000);
     return () => clearInterval(interval);
   }, []);
 
+  // Recalculate whenever selection or bookings change
   useEffect(() => {
     calculateStats(bookings, selectedOffice);
   }, [selectedOffice, bookings]);
 
-  // --- ICONS HELPER ---
   const getIcon = (cat: string) => {
     const safeCat = cat || "";
     if (safeCat.includes("Student")) return <GraduationCap size={14} />;
@@ -158,7 +169,7 @@ const OfficeDashboard = () => {
   };
 
   return (
-    <div className="min-h-220 bg-slate-50 p-4 md:p-8 font-sans text-slate-800 flex flex-col">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-800 flex flex-col">
       {/* --------------------------- */}
       {/* TOP BAR: HEADER & CLOCK */}
       {/* --------------------------- */}
@@ -181,21 +192,43 @@ const OfficeDashboard = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-          {/* OFFICE FILTER */}
-          <div className="relative group w-full sm:w-auto">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-[#0038A8] w-4 h-4" />
-            <select
-              value={selectedOffice}
-              onChange={(e) => setSelectedOffice(e.target.value)}
-              className="w-full sm:w-64 p-3 pl-10 bg-white border-2 border-slate-200 rounded-2xl text-xs font-black text-slate-700 outline-none focus:border-[#0038A8] transition-all cursor-pointer appearance-none uppercase tracking-wide shadow-sm"
-            >
-              <option value="All">All Departments</option>
-              {offices.map((o) => (
-                <option key={o._id} value={o.name}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+          {/* 🔥 DYNAMIC OFFICE HUB (Conditional RBAC) */}
+          <div className="relative w-full sm:w-auto">
+            {user?.role === "office" ? (
+              /* 🔒 LOCKED VIEW: For Office Staff */
+              <div className="flex items-center gap-3 px-5 py-3 bg-white border-2 border-slate-200 rounded-2xl shadow-sm group">
+                <div className="relative">
+                  <Building className="text-[#0038A8] w-4 h-4" />
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[7px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-0.5">
+                    Assigned Hub
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#0038A8] whitespace-nowrap">
+                    {user?.office}
+                  </span>
+                </div>
+                <Lock size={12} className="ml-2 text-slate-300" />
+              </div>
+            ) : (
+              /* 🔓 SELECT VIEW: For Admins */
+              <div className="relative group">
+                <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-[#0038A8] w-4 h-4" />
+                <select
+                  value={selectedOffice}
+                  onChange={(e) => setSelectedOffice(e.target.value)}
+                  className="w-full sm:w-64 p-3 pl-10 bg-white border-2 border-slate-200 rounded-2xl text-xs font-black text-slate-700 outline-none focus:border-[#0038A8] transition-all cursor-pointer appearance-none uppercase tracking-wide shadow-sm"
+                >
+                  <option value="All">All Departments</option>
+                  {offices.map((o) => (
+                    <option key={o._id} value={o.name}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* SYNC & CLOCK */}
@@ -232,19 +265,18 @@ const OfficeDashboard = () => {
       </div>
 
       {/* --------------------------- */}
-      {/* 2-COLUMN GRID LAYOUT */}
+      {/* 2-COLUMN GRID LAYOUT (Unchanged Design) */}
       {/* --------------------------- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-        {/* ========================================= */}
-        {/* COL 1: INCOMING TRAFFIC (Blue Card)       */}
-        {/* ========================================= */}
+        {/* ... (Your Incoming and Served Grid Columns stay exactly the same) ... */}
+
+        {/* COL 1: INCOMING */}
         <div className="flex flex-col gap-6 h-full">
           <div className="bg-[#0038A8] rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-blue-900/20 shrink-0 min-h-75 flex flex-col justify-between group">
             <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
             <div className="absolute top-[-20%] right-[-20%] opacity-20 transition-transform duration-1000 group-hover:rotate-12">
               <Activity size={300} />
             </div>
-
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-6">
                 <span className="relative flex h-3 w-3">
@@ -259,7 +291,6 @@ const OfficeDashboard = () => {
                   Action Required
                 </h2>
               </div>
-
               <div className="flex items-baseline gap-2">
                 <h1 className="text-[8rem] leading-none font-black tracking-tighter text-[#FFD700] drop-shadow-lg">
                   {stats.incoming}
@@ -315,9 +346,6 @@ const OfficeDashboard = () => {
                       </div>
                     </div>
                     <p className="text-[10px] font-bold text-slate-500 bg-white p-3 rounded-xl border border-slate-100 mt-2 shadow-sm">
-                      <span className="text-slate-400 uppercase mr-1 block text-[8px] mb-0.5 tracking-widest">
-                        Purpose:
-                      </span>{" "}
                       {log.purpose}
                     </p>
                   </div>
@@ -327,15 +355,12 @@ const OfficeDashboard = () => {
           </div>
         </div>
 
-        {/* ========================================= */}
-        {/* COL 2: SERVED / COMPLETED (Emerald Card)  */}
-        {/* ========================================= */}
+        {/* COL 2: SERVED */}
         <div className="flex flex-col gap-6 h-full">
           <div className="bg-emerald-50 rounded-[2.5rem] p-8 border border-emerald-100 shadow-xl relative overflow-hidden shrink-0 min-h-75 flex flex-col justify-between group">
             <div className="absolute top-[-20%] right-[-20%] text-emerald-100 opacity-60 transition-transform duration-1000 group-hover:-rotate-12">
               <CheckCircle size={300} />
             </div>
-
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-4">
                 <UserCheck size={16} className="text-emerald-600" />
@@ -343,7 +368,6 @@ const OfficeDashboard = () => {
                   Success Metrics
                 </h2>
               </div>
-
               <div className="flex items-baseline gap-2">
                 <h1 className="text-[8rem] leading-none font-black tracking-tighter text-emerald-600">
                   {stats.served}
@@ -364,7 +388,6 @@ const OfficeDashboard = () => {
                 Transactions
               </h3>
             </div>
-
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
               {stats.servedList.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full opacity-30 py-10">
