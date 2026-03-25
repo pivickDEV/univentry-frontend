@@ -65,12 +65,12 @@ const UserManagement = () => {
   const [editingOfficeId, setEditingOfficeId] = useState<string | null>(null);
   const [editOfficeValue, setEditOfficeValue] = useState("");
 
-  // --- STATE: Create Form ---
+  // --- STATE: Create Form (🔥 FIXED: Default to empty string to force selection) ---
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("office");
+  const [role, setRole] = useState<UserRole | "">("");
   const [assignedOffice, setAssignedOffice] = useState<string>("");
 
   // --- INITIAL FETCH ---
@@ -82,7 +82,7 @@ const UserManagement = () => {
       try {
         const res = await api.get("/offices");
         setOffices(res.data);
-        if (res.data.length > 0) setAssignedOffice(res.data[0].name);
+        // We removed the auto-select here so the user is forced to pick one manually
       } catch (err) {
         console.error("Failed to fetch offices");
       }
@@ -140,6 +140,7 @@ const UserManagement = () => {
 
   // --- EDIT OFFICE ---
   const saveOfficeUpdate = async (userId: string) => {
+    if (!editOfficeValue) return alert("Please select a valid office.");
     try {
       setActionLoading(userId);
       await api.patch(`/users/${userId}/office`, { office: editOfficeValue });
@@ -188,6 +189,17 @@ const UserManagement = () => {
     e.preventDefault();
     setFormError(null);
 
+    // 🔥 FIX: Strict Validation checks before sending
+    if (!role) {
+      setFormError("Please select an Access Level.");
+      return;
+    }
+
+    if (role === "office" && !assignedOffice) {
+      setFormError("Please select a Department for this Office Staff.");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setFormError("Passwords do not match.");
       return;
@@ -217,7 +229,8 @@ const UserManagement = () => {
       setEmail("");
       setPassword("");
       setConfirmPassword("");
-      setRole("office");
+      setRole(""); // Reset to empty
+      setAssignedOffice(""); // Reset to empty
       fetchUsers();
     } catch (err: any) {
       console.error("Registration Error:", err.response || err);
@@ -232,8 +245,8 @@ const UserManagement = () => {
   };
 
   // --- HELPER ---
-  const getRoleBadge = (role: UserRole) => {
-    switch (role) {
+  const getRoleBadge = (r: string) => {
+    switch (r) {
       case "super-admin":
         return "bg-purple-100 text-purple-700 border border-purple-200";
       case "admin":
@@ -403,6 +416,7 @@ const UserManagement = () => {
                       {user.role === "office" ? (
                         editingOfficeId === user._id ? (
                           <div className="flex items-center gap-2">
+                            {/* 🔥 Inline Dropdown forced select */}
                             <select
                               value={editOfficeValue}
                               onChange={(e) =>
@@ -410,7 +424,9 @@ const UserManagement = () => {
                               }
                               className="px-2 py-1 border border-blue-300 rounded text-[9px] font-black uppercase w-32 outline-none focus:ring-2 focus:ring-blue-100"
                             >
-                              <option value="">Select Office</option>
+                              <option value="" disabled>
+                                Select Office...
+                              </option>
                               {offices.map((o) => (
                                 <option key={o._id} value={o.name}>
                                   {o.name}
@@ -440,9 +456,7 @@ const UserManagement = () => {
                             <button
                               onClick={() => {
                                 setEditingOfficeId(user._id);
-                                setEditOfficeValue(
-                                  user.office || (offices[0]?.name ?? ""),
-                                );
+                                setEditOfficeValue(user.office || "");
                               }}
                               className="opacity-0 group-hover/office:opacity-100 p-1 text-slate-400 hover:text-[#0038A8] transition-opacity"
                             >
@@ -540,7 +554,7 @@ const UserManagement = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -601,7 +615,7 @@ const UserManagement = () => {
       {/* ================= ADD USER MODAL ================= */}
       <AnimatePresence>
         {showCreateModal && (
-          <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -664,11 +678,17 @@ const UserManagement = () => {
                         Access Level
                       </label>
                       <div className="relative">
+                        {/* 🔥 FIX: Forced 'Select Role' option */}
                         <select
                           value={role}
-                          onChange={(e) => setRole(e.target.value as UserRole)}
+                          onChange={(e) =>
+                            setRole(e.target.value as UserRole | "")
+                          }
                           className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 uppercase focus:border-[#0038A8] focus:ring-4 focus:ring-[#0038A8]/10 outline-none transition-all appearance-none cursor-pointer"
                         >
+                          <option value="" disabled>
+                            Select Role...
+                          </option>
                           <option value="office">Office Staff</option>
                           <option value="guard">Security Guard</option>
                           <option value="admin">Administrator</option>
@@ -685,15 +705,19 @@ const UserManagement = () => {
                       className={`space-y-2 transition-all ${role !== "office" ? "opacity-30 pointer-events-none grayscale" : ""}`}
                     >
                       <label className="text-[9px] font-black uppercase text-slate-400 ml-1 tracking-widest">
-                        Office
+                        Department
                       </label>
                       <div className="relative">
+                        {/* 🔥 FIX: Forced 'Select Office' option */}
                         <select
                           value={assignedOffice}
                           onChange={(e) => setAssignedOffice(e.target.value)}
                           disabled={role !== "office"}
                           className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-[10px] font-black uppercase text-slate-700 focus:border-[#0038A8] focus:ring-4 focus:ring-[#0038A8]/10 outline-none transition-all appearance-none cursor-pointer"
                         >
+                          <option value="" disabled>
+                            Select Office...
+                          </option>
                           {offices.map((o) => (
                             <option key={o._id} value={o.name}>
                               {o.name}
