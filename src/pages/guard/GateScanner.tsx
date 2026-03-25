@@ -182,7 +182,7 @@ const GateScanner = () => {
         {/* Reticle */}
         <div className="absolute inset-0 z-10 pointer-events-none p-12 lg:p-24 flex items-center justify-center mt-12">
           <div
-            className={`w-full h-full border-[2px] rounded-3xl relative opacity-50 ${scanStatus === "error" ? "border-red-500" : scanMode === "in" ? "border-emerald-400" : "border-yellow-400"}`}
+            className={`w-full h-full border-2 rounded-3xl relative opacity-50 ${scanStatus === "error" ? "border-red-500" : scanMode === "in" ? "border-emerald-400" : "border-yellow-400"}`}
           >
             <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white -mt-1 -ml-1"></div>
             <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white -mt-1 -mr-1"></div>
@@ -586,7 +586,7 @@ const GateScanner = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4"
+            className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4"
             onClick={() => setFullscreenImage(null)}
           >
             <img

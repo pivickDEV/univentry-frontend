@@ -5,28 +5,28 @@ import {
   BadgeCheck,
   CheckCircle2,
   ChevronRight,
+  ClipboardEdit,
   Cpu,
-  Database,
   Eye,
   EyeOff,
-  Globe,
+  FileText,
   Key,
   Loader2,
   Lock,
   LogOut,
   Mail,
   Menu,
+  PieChart,
   Save,
   Settings2,
-  ShieldAlert,
   ShieldCheck,
-  TerminalSquare,
+  Tag,
   User as UserIcon,
-  Video,
+  Users,
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Activity, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 // 1. Define Interface
@@ -240,20 +240,17 @@ const SuperAdminSidebar = () => {
 
   // SUPER ADMIN MENU ITEMS
   const menuItems = [
-    { path: "/super-admin", label: "System Telemetry", icon: Cpu },
-    { path: "/super-admin/network", label: "Gateway Config", icon: Globe },
-    { path: "/super-admin/database", label: "Database Tools", icon: Database },
-    { path: "/super-admin/cameras", label: "CCTV Node Setup", icon: Video },
+    { path: "/admin/users", label: "User Management", icon: Users },
+    { path: "/admin/offices", label: "Office Management", icon: Lock },
+    { path: "/admin/categories", label: "Category Management", icon: Tag },
     {
-      path: "/super-admin/logs",
-      label: "Backend Error Logs",
-      icon: TerminalSquare,
+      path: "/office/department-history",
+      label: "Department History Logs",
+      icon: ClipboardEdit,
     },
-    {
-      path: "/super-admin/admins",
-      label: "Privilege Control",
-      icon: ShieldAlert,
-    },
+    { path: "/guard/active-log", label: "Live Watchlist", icon: Activity },
+    { path: "/admin/audit-trail", label: "Audit Trail", icon: FileText },
+    { path: "/admin/reports", label: "Reports & Analytics", icon: PieChart },
   ];
 
   return (
@@ -411,7 +408,11 @@ const SuperAdminSidebar = () => {
                   <div
                     className={`relative z-10 p-2.5 rounded-xl transition-all duration-300 ${isActive ? "bg-[#0038A8]/10 text-[#0038A8]" : "bg-white/5 border border-white/10 group-hover:bg-white/20 group-hover:scale-110 text-blue-200 group-hover:text-[#FFD700]"}`}
                   >
-                    <Icon size={18} className="stroke-[2.5]" />
+                    <Icon
+                      size={18}
+                      className="stroke-[2.5]"
+                      children={undefined}
+                    />
                   </div>
                   <span
                     className={`relative z-10 text-[11px] tracking-widest uppercase ${isActive ? "font-black text-[#0038A8]" : "font-bold"}`}

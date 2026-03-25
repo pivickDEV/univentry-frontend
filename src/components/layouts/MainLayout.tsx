@@ -4,8 +4,9 @@ import { Outlet, useLocation } from "react-router-dom";
 import AdminSidebar from "./AdminSidebar";
 import GuardSidebar from "./GuardSidebar";
 import OfficeSidebar from "./OfficeSidebar";
+import SuperAdminSidebar from "./SuperAdminSidebar";
 
-type Role = "admin" | "office" | "guard";
+type Role = "admin" | "office" | "guard" | "super-admin";
 
 type User = {
   role: Role;
@@ -32,6 +33,7 @@ const SIDEBAR_COMPONENTS: Record<Role, React.ElementType> = {
   admin: AdminSidebar,
   office: OfficeSidebar,
   guard: GuardSidebar,
+  "super-admin": SuperAdminSidebar,
 };
 
 const MainLayout = () => {
