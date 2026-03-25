@@ -8,7 +8,7 @@ import {
   FiCalendar,
   FiCamera,
   FiClock,
-  FiFilter,
+  FiLayers,
   FiLoader,
   FiSearch,
   FiShield,
@@ -20,7 +20,6 @@ import {
 import { useCCTV } from "../context/CCTVContext";
 
 const CCTVMonitor = () => {
-  // Pulling global state from Context
   const { logs, deleteLog, modelsLoaded, systemStatus } = useCCTV();
 
   const [cameras] = useState([
@@ -34,18 +33,39 @@ const CCTVMonitor = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [filterDate, setFilterDate] = useState("");
+  const [timeRange, setTimeRange] = useState<"today" | "yesterday" | "all">(
+    "all",
+  );
   const [sortOrder, setSortOrder] = useState<"recent" | "old">("recent");
 
-  // 🔥 Robust Filter Logic: Ensures date strings match ISO timestamps
+  // 🔥 ADVANCED FILTER & SORT LOGIC
   const filteredLogs = logs
     .filter((l: any) =>
       l.visitorName.toLowerCase().includes(searchQuery.toLowerCase()),
     )
     .filter((l: any) => {
-      if (!filterDate) return true;
-      // Normalizes both to YYYY-MM-DD for comparison
-      const logDate = new Date(l.timestamp).toISOString().split("T")[0];
-      return logDate === filterDate;
+      // 1. If a specific date is picked via calendar, it takes priority
+      if (filterDate) {
+        return new Date(l.timestamp).toISOString().split("T")[0] === filterDate;
+      }
+
+      // 2. Otherwise, check Today/Yesterday/All buttons
+      if (timeRange === "all") return true;
+
+      const logDate = new Date(l.timestamp);
+      const now = new Date();
+
+      if (timeRange === "today") {
+        return logDate.toDateString() === now.toDateString();
+      }
+
+      if (timeRange === "yesterday") {
+        const yesterday = new Date();
+        yesterday.setDate(now.getDate() - 1);
+        return logDate.toDateString() === yesterday.toDateString();
+      }
+
+      return true;
     })
     .sort((a: any, b: any) => {
       const timeA = new Date(a.timestamp).getTime();
@@ -55,7 +75,7 @@ const CCTVMonitor = () => {
 
   return (
     <div className="min-h-screen lg:h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-y-auto lg:overflow-hidden relative">
-      {/* --- TACTICAL IMAGE ZOOM OVERLAY --- */}
+      {/* ZOOM OVERLAY */}
       <AnimatePresence>
         {zoomedImage && (
           <motion.div
@@ -82,7 +102,7 @@ const CCTVMonitor = () => {
         )}
       </AnimatePresence>
 
-      {/* --- COMMAND HEADER --- */}
+      {/* HEADER */}
       <div className="max-w-400 mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
         <div className="flex items-center gap-5">
           <div className="p-4 bg-[#0038A8] text-[#FFD700] rounded-[1.8rem] shadow-2xl shadow-blue-900/30 ring-4 ring-white/50">
@@ -90,13 +110,10 @@ const CCTVMonitor = () => {
           </div>
           <div>
             <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter italic leading-none">
-              Tactical{" "}
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
-                Surveillance
-              </span>
+              Intelligence Monitor
             </h1>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">
-              RTU Biometric Monitoring Matrix
+              Biometric Surveillance Matrix
             </p>
           </div>
         </div>
@@ -106,7 +123,7 @@ const CCTVMonitor = () => {
             className={`flex items-center gap-3 px-6 py-3 rounded-2xl border-2 transition-all duration-500 ${modelsLoaded ? "bg-emerald-50 border-emerald-100 text-emerald-600" : "bg-amber-50 border-amber-100 text-amber-600"}`}
           >
             {modelsLoaded ? (
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
             ) : (
               <FiLoader className="animate-spin" />
             )}
@@ -114,33 +131,26 @@ const CCTVMonitor = () => {
               {systemStatus}
             </span>
           </div>
-          <div className="bg-[#0038A8] text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-2">
-            <FiCamera size={14} /> 1 NODE ACTIVE
-          </div>
         </div>
       </div>
 
-      {/* --- MAIN CONTENT GRID --- */}
       <div className="max-w-400 mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 lg:overflow-hidden">
-        {/* LEFT PANEL: LIVE TACTICAL FEED */}
+        {/* LEFT: LIVE FEED */}
         <div className="flex-[2.5] bg-white rounded-[2.5rem] border-2 border-slate-100 p-6 lg:p-8 flex flex-col overflow-hidden shadow-xl min-h-[450px]">
-          <div className="flex items-center justify-between mb-6 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-blue-50 text-[#0038A8] rounded-xl border border-blue-100">
-                <FiCamera size={20} />
-              </div>
-              <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest">
-                Live Node: {cameras[0].name}
-              </h3>
+          <div className="flex items-center gap-3 mb-6 shrink-0">
+            <div className="p-2.5 bg-blue-50 text-[#0038A8] rounded-xl border border-blue-100">
+              <FiCamera size={20} />
             </div>
+            <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest">
+              Tactical Node: {cameras[0].name}
+            </h3>
           </div>
-
           <div className="flex-1 bg-slate-950 rounded-[2.2rem] overflow-hidden relative border-[6px] border-slate-50 shadow-inner group">
             <CameraNode wsUrl={cameras[0].wsUrl} name={cameras[0].name} />
           </div>
         </div>
 
-        {/* RIGHT PANEL: DETECTION REGISTRY */}
+        {/* RIGHT: DETECTION REGISTRY */}
         <div className="flex-1 bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-2xl p-6 lg:p-8 flex flex-col xl:max-w-md min-h-[500px] lg:min-h-0">
           <div className="shrink-0 mb-6 border-b border-slate-100 pb-6">
             <div className="flex items-center justify-between mb-6">
@@ -152,26 +162,44 @@ const CCTVMonitor = () => {
                   Identification Logs
                 </h3>
               </div>
-              <span className="text-[9px] font-black text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-lg tracking-widest flex items-center gap-1.5 animate-pulse shadow-sm">
+              <span className="text-[9px] font-black text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-lg tracking-widest animate-pulse">
                 SYNCED
               </span>
             </div>
 
             <div className="space-y-4">
+              {/* Search */}
               <div className="relative group">
                 <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0038A8] transition-colors" />
                 <input
                   type="text"
-                  placeholder="SEARCH RECENT MATCHES..."
+                  placeholder="SEARCH IDENTITIES..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-4 py-4 text-xs font-bold focus:border-[#0038A8] outline-none transition-all placeholder:text-slate-300"
                 />
               </div>
 
+              {/* 🔥 TACTICAL QUICK FILTERS (Today/Yesterday/All) */}
+              <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
+                {["today", "yesterday", "all"].map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => {
+                      setTimeRange(t as any);
+                      setFilterDate("");
+                    }}
+                    className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${timeRange === t && !filterDate ? "bg-white text-[#0038A8] shadow-md" : "text-slate-400 hover:text-slate-600"}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              {/* Date & Sort Picker Row */}
               <div className="flex gap-2">
-                <div className="flex-1 bg-slate-50 rounded-xl px-4 py-3 flex items-center gap-2 border border-slate-100">
-                  <FiCalendar className="text-slate-400" size={12} />
+                <div className="flex-1 bg-slate-50 rounded-xl px-4 py-3 flex items-center gap-2 border border-slate-100 overflow-hidden">
+                  <FiCalendar className="text-slate-400 shrink-0" size={12} />
                   <input
                     type="date"
                     value={filterDate}
@@ -180,7 +208,7 @@ const CCTVMonitor = () => {
                   />
                 </div>
                 <div className="flex-1 bg-slate-50 rounded-xl px-4 py-3 flex items-center gap-2 border border-slate-100">
-                  <FiFilter className="text-slate-400" size={12} />
+                  <FiLayers className="text-slate-400 shrink-0" size={12} />
                   <select
                     value={sortOrder}
                     onChange={(e) => setSortOrder(e.target.value as any)}
@@ -199,11 +227,9 @@ const CCTVMonitor = () => {
             <AnimatePresence mode="popLayout">
               {filteredLogs.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center opacity-30 mt-10 space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
-                    <FiAlertCircle size={32} />
-                  </div>
-                  <p className="font-black text-slate-400 uppercase text-[10px] tracking-[0.3em] text-center px-6">
-                    No Registry Matches Detected
+                  <FiAlertCircle size={32} />
+                  <p className="font-black text-slate-400 uppercase text-[10px] tracking-[0.3em] text-center">
+                    No Active Matches
                   </p>
                 </div>
               ) : (
@@ -211,18 +237,18 @@ const CCTVMonitor = () => {
                   <motion.div
                     key={log._id}
                     layout
-                    initial={{ opacity: 0, scale: 0.9, x: 20 }}
-                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     className="relative group bg-[#F8FAFC] border-2 border-slate-100 p-4 rounded-[2rem] flex gap-4 items-center hover:bg-white hover:shadow-2xl hover:border-blue-100 transition-all cursor-pointer overflow-hidden"
                   >
-                    {/* 🔥 DELETE BUTTON */}
+                    {/* DELETE BUTTON */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteLog(log._id);
                       }}
-                      className="absolute -top-1 -right-1 p-3 bg-red-600 text-white rounded-bl-[1.5rem] opacity-0 group-hover:opacity-100 transition-all shadow-lg z-30 hover:bg-red-700 active:scale-90"
+                      className="absolute -top-1 -right-1 p-3 bg-red-600 text-white rounded-bl-[1.5rem] opacity-0 group-hover:opacity-100 transition-all shadow-lg z-30 active:scale-90"
                     >
                       <FiTrash2 size={14} />
                     </button>
@@ -234,7 +260,6 @@ const CCTVMonitor = () => {
                       <img
                         src={log.screenshotBase64}
                         className="w-full h-full object-cover"
-                        alt="Hit"
                       />
                     </div>
 
@@ -246,7 +271,6 @@ const CCTVMonitor = () => {
                         <FiCamera size={10} className="text-blue-300" />{" "}
                         {log.cameraName}
                       </p>
-
                       <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg">
                           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
@@ -277,7 +301,7 @@ const CCTVMonitor = () => {
 const CameraNode = ({ wsUrl, name }: { wsUrl: string; name: string }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerRef = useRef<any>(null);
-  const [status, setStatus] = useState("ESTABLISHING LINK...");
+  const [status, setStatus] = useState("LINKING...");
 
   useEffect(() => {
     if (!canvasRef.current || !(window as any).JSMpeg) return;
