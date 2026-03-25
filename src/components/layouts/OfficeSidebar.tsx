@@ -106,7 +106,7 @@ const OfficeSidebar = () => {
     try {
       // 1. Send data to Backend
       const response = await fetch(
-        "http://localhost:5000/api/auth/update-profile",
+        `${import.meta.env.VITE_API_URL}/users/update-profile`,
         {
           // Change URL to your backend API
           method: "PUT",
