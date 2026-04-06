@@ -410,7 +410,6 @@ const UserManagement = () => {
                         </div>
                       </div>
                     </td>
-
                     {/* ASSIGNED OFFICE (With Inline Office Edit) */}
                     <td className="px-4 lg:px-8 py-4 lg:py-5 whitespace-nowrap">
                       {user.role === "office" ? (
@@ -470,7 +469,6 @@ const UserManagement = () => {
                         </span>
                       )}
                     </td>
-
                     {/* CLEARANCE LEVEL (ROLE) */}
                     <td className="px-4 lg:px-8 py-4 lg:py-5">
                       <div className="relative w-full min-w-32.5 max-w-45">
@@ -505,8 +503,7 @@ const UserManagement = () => {
                           size={14}
                         />
                       </div>
-                    </td>
-
+                    </td>{" "}
                     {/* ACTIONS (Delete) */}
                     <td className="px-4 lg:px-8 py-4 lg:py-5 text-right">
                       <button
