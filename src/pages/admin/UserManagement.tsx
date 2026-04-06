@@ -163,7 +163,6 @@ const UserManagement = () => {
     }
   };
 
-  // --- DELETE LOGIC (WITH PASSWORD VERIFICATION) ---
   const confirmDeleteUser = async () => {
     if (!userToDelete || !currentUser) return;
 
@@ -185,14 +184,19 @@ const UserManagement = () => {
     try {
       setActionLoading(userToDelete._id);
 
-      // 🔥 FIX: Passing the password securely in the data payload of the DELETE request
+      // 🔥 Pass JWT in Authorization header
+      const token = localStorage.getItem("token"); // or however you store JWT
+
       await api.delete(`/users/${userToDelete._id}`, {
-        data: { password: deletePassword },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: { password: deletePassword }, // Axios DELETE needs `data` for request body
       });
 
       setUsers((prev) => prev.filter((u) => u._id !== userToDelete._id));
       setUserToDelete(null);
-      setDeletePassword(""); // Reset password field
+      setDeletePassword("");
     } catch (err: any) {
       alert(
         err.response?.data?.message ||
@@ -677,7 +681,7 @@ const UserManagement = () => {
                     {actionLoading === userToDelete._id ? (
                       <FiLoader className="animate-spin" />
                     ) : (
-                      "Erase User"
+                      "Delete Account"
                     )}
                   </button>
                 </div>
