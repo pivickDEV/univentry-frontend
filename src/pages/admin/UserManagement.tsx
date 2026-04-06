@@ -10,6 +10,7 @@ import {
   FiChevronDown,
   FiEdit2,
   FiLoader,
+  FiLock,
   FiRefreshCcw,
   FiSave,
   FiShield,
@@ -34,7 +35,8 @@ interface User {
   name: string;
   email: string;
   role: UserRole;
-  office?: string; // Ties staff to specific offices
+  office?: string;
+  createdAt?: string; // 🔥 NEW: Added Date Created
 }
 
 interface OfficeDef {
@@ -57,6 +59,9 @@ const UserManagement = () => {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // 🔥 NEW: Password Verification for Deletion
+  const [deletePassword, setDeletePassword] = useState("");
+
   // --- STATE: Inline Editing (Email) ---
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editEmailValue, setEditEmailValue] = useState("");
@@ -65,7 +70,7 @@ const UserManagement = () => {
   const [editingOfficeId, setEditingOfficeId] = useState<string | null>(null);
   const [editOfficeValue, setEditOfficeValue] = useState("");
 
-  // --- STATE: Create Form (🔥 FIXED: Default to empty string to force selection) ---
+  // --- STATE: Create Form ---
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -82,7 +87,6 @@ const UserManagement = () => {
       try {
         const res = await api.get("/offices");
         setOffices(res.data);
-        // We removed the auto-select here so the user is forced to pick one manually
       } catch (err) {
         console.error("Failed to fetch offices");
       }
@@ -159,7 +163,7 @@ const UserManagement = () => {
     }
   };
 
-  // --- DELETE LOGIC ---
+  // --- DELETE LOGIC (WITH PASSWORD VERIFICATION) ---
   const confirmDeleteUser = async () => {
     if (!userToDelete || !currentUser) return;
 
@@ -169,16 +173,31 @@ const UserManagement = () => {
     ) {
       alert("Action Denied: You cannot delete a Super-Admin account.");
       setUserToDelete(null);
+      setDeletePassword("");
+      return;
+    }
+
+    if (!deletePassword.trim()) {
+      alert("Please enter your admin password to verify this deletion.");
       return;
     }
 
     try {
       setActionLoading(userToDelete._id);
-      await api.delete(`/users/${userToDelete._id}`);
+
+      // 🔥 FIX: Passing the password securely in the data payload of the DELETE request
+      await api.delete(`/users/${userToDelete._id}`, {
+        data: { password: deletePassword },
+      });
+
       setUsers((prev) => prev.filter((u) => u._id !== userToDelete._id));
       setUserToDelete(null);
-    } catch (err) {
-      alert("System could not remove user. Check permissions.");
+      setDeletePassword(""); // Reset password field
+    } catch (err: any) {
+      alert(
+        err.response?.data?.message ||
+          "System could not remove user. Please verify your password and permissions.",
+      );
     } finally {
       setActionLoading(null);
     }
@@ -189,7 +208,6 @@ const UserManagement = () => {
     e.preventDefault();
     setFormError(null);
 
-    // 🔥 FIX: Strict Validation checks before sending
     if (!role) {
       setFormError("Please select an Access Level.");
       return;
@@ -224,13 +242,12 @@ const UserManagement = () => {
       await api.post("/auth/signup", payload);
 
       setShowCreateModal(false);
-      // Reset Form
       setName("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
-      setRole(""); // Reset to empty
-      setAssignedOffice(""); // Reset to empty
+      setRole("");
+      setAssignedOffice("");
       fetchUsers();
     } catch (err: any) {
       console.error("Registration Error:", err.response || err);
@@ -309,14 +326,18 @@ const UserManagement = () => {
           <table className="w-full text-left border-collapse table-auto min-w-200">
             <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-200">
               <tr>
-                <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/3">
+                <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/4">
                   Identity & Credentials
                 </th>
                 <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
                   Office
                 </th>
                 <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                  ROLE
+                  Role
+                </th>
+                {/* 🔥 NEW: Date Created Header */}
+                <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  Date Created
                 </th>
                 <th className="px-4 lg:px-8 py-4 lg:py-5 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">
                   Actions
@@ -337,6 +358,9 @@ const UserManagement = () => {
                       <div className="h-10 w-32 bg-slate-100 rounded-xl" />
                     </td>
                     <td className="px-4 lg:px-8 py-6">
+                      <div className="h-6 w-24 bg-slate-100 rounded-full" />
+                    </td>
+                    <td className="px-4 lg:px-8 py-6">
                       <div className="h-10 w-10 bg-slate-100 rounded-xl ml-auto" />
                     </td>
                   </tr>
@@ -344,7 +368,7 @@ const UserManagement = () => {
               ) : users.length === 0 ? (
                 <tr className="bg-white">
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-4 lg:px-8 py-24 text-center text-slate-400 font-bold text-xs uppercase tracking-widest"
                   >
                     No Authorized Personnel Found
@@ -359,7 +383,7 @@ const UserManagement = () => {
                     {/* IDENTITY (With Inline Email Edit) */}
                     <td className="px-4 lg:px-8 py-4 lg:py-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-[#0038A8]">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-[#0038A8] shrink-0">
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -410,12 +434,12 @@ const UserManagement = () => {
                         </div>
                       </div>
                     </td>
+
                     {/* ASSIGNED OFFICE (With Inline Office Edit) */}
                     <td className="px-4 lg:px-8 py-4 lg:py-5 whitespace-nowrap">
                       {user.role === "office" ? (
                         editingOfficeId === user._id ? (
                           <div className="flex items-center gap-2">
-                            {/* 🔥 Inline Dropdown forced select */}
                             <select
                               value={editOfficeValue}
                               onChange={(e) =>
@@ -469,6 +493,7 @@ const UserManagement = () => {
                         </span>
                       )}
                     </td>
+
                     {/* CLEARANCE LEVEL (ROLE) */}
                     <td className="px-4 lg:px-8 py-4 lg:py-5">
                       <div className="relative w-full min-w-32.5 max-w-45">
@@ -487,7 +512,6 @@ const UserManagement = () => {
                           }
                           className={`appearance-none w-full text-[9px] font-black uppercase tracking-widest pl-8 pr-8 py-2.5 outline-none focus:ring-2 focus:ring-[#0038A8]/20 transition-all cursor-pointer rounded-lg ${getRoleBadge(user.role)} disabled:opacity-60`}
                         >
-                          {/* 🔥 ADD THIS LINE */}
                           {user.role === "super-admin" &&
                             currentUser?.role !== "super-admin" && (
                               <option value="super-admin" hidden>
@@ -512,7 +536,25 @@ const UserManagement = () => {
                           size={14}
                         />
                       </div>
-                    </td>{" "}
+                    </td>
+
+                    {/* 🔥 NEW: DATE CREATED */}
+                    <td className="px-4 lg:px-8 py-4 lg:py-5 whitespace-nowrap">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                        {user.createdAt
+                          ? new Date(user.createdAt).toLocaleDateString(
+                              "en-PH",
+                              {
+                                timeZone: "Asia/Manila",
+                                month: "short",
+                                day: "2-digit",
+                                year: "numeric",
+                              },
+                            )
+                          : "--"}
+                      </span>
+                    </td>
+
                     {/* ACTIONS (Delete) */}
                     <td className="px-4 lg:px-8 py-4 lg:py-5 text-right">
                       <button
@@ -526,6 +568,7 @@ const UserManagement = () => {
                             );
                           }
                           setUserToDelete(user);
+                          setDeletePassword(""); // Reset password input when opening
                         }}
                         disabled={
                           actionLoading === user._id ||
@@ -585,16 +628,39 @@ const UserManagement = () => {
                   Role: {userToDelete.role}
                 </p>
 
-                <div className="bg-red-50 border border-red-100 p-4 rounded-2xl mb-8">
+                <div className="bg-red-50 border border-red-100 p-4 rounded-2xl mb-6">
                   <p className="text-xs text-red-800 font-bold uppercase tracking-wide leading-relaxed">
                     Warning: This action is permanent. They will immediately
                     lose all access to the UniVentry system.
                   </p>
                 </div>
 
+                {/* 🔥 NEW: Admin Password Verification Input */}
+                <div className="mb-8 text-left relative">
+                  <label className="text-[9px] font-black uppercase text-slate-400 ml-1 tracking-widest">
+                    Admin Password Verification
+                  </label>
+                  <div className="relative mt-2">
+                    <FiLock
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      size={16}
+                    />
+                    <input
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      placeholder="Enter your password to confirm..."
+                      className="w-full pl-11 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 placeholder:text-slate-300 focus:border-red-500 focus:ring-4 focus:ring-red-50 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex gap-4">
                   <button
-                    onClick={() => setUserToDelete(null)}
+                    onClick={() => {
+                      setUserToDelete(null);
+                      setDeletePassword(""); // Reset password on cancel
+                    }}
                     disabled={actionLoading === userToDelete._id}
                     className="flex-1 py-4 bg-slate-100 hover:bg-slate-200 text-slate-500 font-black rounded-2xl uppercase text-xs tracking-widest transition-colors"
                   >
@@ -602,8 +668,11 @@ const UserManagement = () => {
                   </button>
                   <button
                     onClick={confirmDeleteUser}
-                    disabled={actionLoading === userToDelete._id}
-                    className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl uppercase text-xs tracking-widest transition-all shadow-lg shadow-red-900/20 active:scale-95 flex justify-center items-center gap-2"
+                    disabled={
+                      actionLoading === userToDelete._id ||
+                      !deletePassword.trim()
+                    }
+                    className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white font-black rounded-2xl uppercase text-xs tracking-widest transition-all shadow-lg shadow-red-900/20 active:scale-95 flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {actionLoading === userToDelete._id ? (
                       <FiLoader className="animate-spin" />
@@ -641,7 +710,7 @@ const UserManagement = () => {
                   <FiUserPlus size={32} />
                 </div>
                 <h2 className="text-white font-black text-2xl uppercase tracking-wide relative z-10">
-                  Personnel Auth
+                  Personnel Authentication
                 </h2>
                 <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mt-1">
                   Initialize New Account
@@ -684,7 +753,6 @@ const UserManagement = () => {
                         Access Level
                       </label>
                       <div className="relative">
-                        {/* 🔥 FIX: Forced 'Select Role' option */}
                         <select
                           value={role}
                           onChange={(e) =>
@@ -706,7 +774,6 @@ const UserManagement = () => {
                       </div>
                     </div>
 
-                    {/* 🔥 DYNAMIC OFFICE ASSIGNMENT (Only shows if role === 'office') */}
                     <div
                       className={`space-y-2 transition-all ${role !== "office" ? "opacity-30 pointer-events-none grayscale" : ""}`}
                     >
@@ -714,7 +781,6 @@ const UserManagement = () => {
                         Department
                       </label>
                       <div className="relative">
-                        {/* 🔥 FIX: Forced 'Select Office' option */}
                         <select
                           value={assignedOffice}
                           onChange={(e) => setAssignedOffice(e.target.value)}
