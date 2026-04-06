@@ -487,9 +487,18 @@ const UserManagement = () => {
                           }
                           className={`appearance-none w-full text-[9px] font-black uppercase tracking-widest pl-8 pr-8 py-2.5 outline-none focus:ring-2 focus:ring-[#0038A8]/20 transition-all cursor-pointer rounded-lg ${getRoleBadge(user.role)} disabled:opacity-60`}
                         >
+                          {/* 🔥 ADD THIS LINE */}
+                          {user.role === "super-admin" &&
+                            currentUser?.role !== "super-admin" && (
+                              <option value="super-admin" hidden>
+                                Super Admin
+                              </option>
+                            )}
+
                           <option value="office">Office Staff</option>
                           <option value="guard">Security Guard</option>
                           <option value="admin">Administrator</option>
+
                           {currentUser?.role === "super-admin" && (
                             <option value="super-admin">Super Admin</option>
                           )}
