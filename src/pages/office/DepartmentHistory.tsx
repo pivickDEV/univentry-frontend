@@ -45,8 +45,7 @@ interface Office {
   name: string;
 }
 
-// Added 'custom' to the filter types
-type DateFilterType = "today" | "week" | "month" | "all" | "custom";
+type DateFilterType = "today" | "week" | "month" | "all";
 
 const DepartmentHistory = () => {
   // --- STATE ---
@@ -60,7 +59,8 @@ const DepartmentHistory = () => {
 
   // Date Filtering States
   const [dateFilter, setDateFilter] = useState<DateFilterType>("today");
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // --- INITIAL FETCH ---
   useEffect(() => {
@@ -122,9 +122,25 @@ const DepartmentHistory = () => {
           log.purpose.toLowerCase().includes(searchTerm.toLowerCase());
 
         // 3. Date Filter Logic
-        let dateMatch = true;
         if (!log.transactionTime) return false;
 
+        // Convert log time to local YYYY-MM-DD string for comparison
+        const txDateLocal = new Date(log.transactionTime).toLocaleDateString(
+          "en-CA",
+          {
+            timeZone: "Asia/Manila",
+          },
+        );
+
+        // 3A. Range Filter (Overrides Quick Filters)
+        if (dateFrom || dateTo) {
+          if (dateFrom && txDateLocal < dateFrom) return false;
+          if (dateTo && txDateLocal > dateTo) return false;
+          return searchMatch;
+        }
+
+        // 3B. Quick Filters
+        let dateMatch = true;
         const txDate = new Date(log.transactionTime);
         const today = new Date();
 
@@ -137,12 +153,6 @@ const DepartmentHistory = () => {
           dateMatch =
             txDate.getMonth() === today.getMonth() &&
             txDate.getFullYear() === today.getFullYear();
-        } else if (dateFilter === "custom" && selectedDate) {
-          // Compare specific selected date
-          const txDateLocal = txDate.toLocaleDateString("en-CA", {
-            timeZone: "Asia/Manila",
-          });
-          dateMatch = txDateLocal === selectedDate;
         }
 
         return searchMatch && dateMatch;
@@ -152,7 +162,7 @@ const DepartmentHistory = () => {
           new Date(b.transactionTime!).getTime() -
           new Date(a.transactionTime!).getTime(),
       );
-  }, [logs, searchTerm, dateFilter, selectedDate, selectedOffice]);
+  }, [logs, searchTerm, dateFilter, dateFrom, dateTo, selectedOffice]);
 
   // --- EXPORT TO CSV ---
   const handleExport = () => {
@@ -185,7 +195,7 @@ const DepartmentHistory = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `Office_Report_${selectedOffice.replace(/\s+/g, "_")}_${dateFilter === "custom" ? selectedDate : dateFilter}.csv`;
+    link.download = `Office_Report_${selectedOffice.replace(/\s+/g, "_")}_${dateFrom || dateTo ? `${dateFrom}_to_${dateTo}` : dateFilter}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -194,17 +204,18 @@ const DepartmentHistory = () => {
   // --- EVENT HANDLERS ---
   const handleQuickFilter = (filter: DateFilterType) => {
     setDateFilter(filter);
-    setSelectedDate(""); // Clear custom date when using quick filters
+    setDateFrom("");
+    setDateTo("");
   };
 
-  const handleCustomDate = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.value) {
-      setDateFilter("custom");
-      setSelectedDate(e.target.value);
-    } else {
-      setDateFilter("today"); // Fallback if they clear the date input
-      setSelectedDate("");
-    }
+  const handleDateFromChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDateFrom(e.target.value);
+    setDateFilter("all"); // Switch quick filter to 'all' visually
+  };
+
+  const handleDateToChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDateTo(e.target.value);
+    setDateFilter("all"); // Switch quick filter to 'all' visually
   };
 
   // --- QUICK STATS ---
@@ -236,7 +247,6 @@ const DepartmentHistory = () => {
           <div className="flex flex-col lg:flex-row items-center gap-3 w-full xl:w-auto">
             {/* OFFICE DROPDOWN */}
             <div className="relative w-full lg:w-auto shrink-0">
-              {/* Check if user is office staff */}
               {JSON.parse(localStorage.getItem("userInfo") || "{}").role ===
               "office" ? (
                 /* 🔒 LOCKED VIEW: For Office Staff (Non-clickable) */
@@ -256,7 +266,6 @@ const DepartmentHistory = () => {
                       }
                     </span>
                   </div>
-                  {/* Lucide Shield or Lock to show it's locked */}
                   <Shield
                     size={12}
                     className="ml-2 text-slate-300 group-hover:text-[#0038A8] transition-colors"
@@ -278,7 +287,6 @@ const DepartmentHistory = () => {
                       </option>
                     ))}
                   </select>
-                  {/* Add a chevron so they know it's a dropdown */}
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-[#0038A8]">
                     <RefreshCw size={12} className="rotate-90" />
                   </div>
@@ -286,7 +294,7 @@ const DepartmentHistory = () => {
               )}
             </div>
 
-            {/* 🔥 COMBINED DATE FILTERS (Quick Buttons + Custom Picker Beside it) */}
+            {/* 🔥 COMBINED DATE FILTERS (Quick Buttons + Date Range) */}
             <div className="flex bg-slate-100 p-1.5 rounded-2xl w-full lg:w-auto overflow-x-auto no-scrollbar items-center">
               {/* Quick Buttons */}
               {(["today", "week", "month", "all"] as const).map((f) => (
@@ -294,7 +302,7 @@ const DepartmentHistory = () => {
                   key={f}
                   onClick={() => handleQuickFilter(f)}
                   className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                    dateFilter === f
+                    dateFilter === f && !dateFrom && !dateTo
                       ? "bg-white text-[#0038A8] shadow-sm border border-slate-200"
                       : "text-slate-400 hover:text-slate-600 hover:bg-slate-200/50"
                   }`}
@@ -312,18 +320,36 @@ const DepartmentHistory = () => {
               {/* Divider */}
               <div className="w-px h-6 bg-slate-300 mx-2 shrink-0"></div>
 
-              {/* Custom Date Picker Beside it */}
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={handleCustomDate}
-                className={`px-3 py-1.5 bg-transparent rounded-xl text-[10px] font-black text-slate-600 uppercase tracking-widest outline-none cursor-pointer transition-all ${
-                  dateFilter === "custom"
-                    ? "bg-white text-[#0038A8] shadow-sm border border-slate-200"
-                    : "hover:bg-slate-200/50 text-slate-400"
-                }`}
-                title="Pick a specific date"
-              />
+              {/* Date From & To Pickers */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                    From
+                  </span>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={handleDateFromChange}
+                    className={`py-1.5 bg-transparent rounded-xl text-[10px] font-black text-slate-600 uppercase tracking-widest outline-none cursor-pointer transition-all ${
+                      dateFrom ? "text-[#0038A8]" : "text-slate-400"
+                    }`}
+                  />
+                </div>
+                <div className="w-px h-4 bg-slate-300 shrink-0" />
+                <div className="flex items-center gap-1.5 px-2">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                    To
+                  </span>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={handleDateToChange}
+                    className={`py-1.5 bg-transparent rounded-xl text-[10px] font-black text-slate-600 uppercase tracking-widest outline-none cursor-pointer transition-all ${
+                      dateTo ? "text-[#0038A8]" : "text-slate-400"
+                    }`}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* REFRESH & EXPORT */}

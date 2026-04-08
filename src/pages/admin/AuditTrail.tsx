@@ -288,7 +288,7 @@ const AuditTrail = () => {
           </div>
           <div>
             <h1 className="text-3xl lg:text-4xl font-black text-[#0038A8] uppercase tracking-tighter ">
-              Audit <span className="text-[#FFD700]">Trail</span>
+              Audit <span className="from-[#0038A8] to-blue-400">Trail</span>
             </h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
               Registry Command Hub

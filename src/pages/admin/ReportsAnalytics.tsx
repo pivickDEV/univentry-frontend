@@ -466,7 +466,7 @@ const ReportsAnalytics = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-[1600px] mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-6 lg:p-8 flex flex-col overflow-y-auto custom-scrollbar"
+        className="max-w-400 mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-6 lg:p-8 flex flex-col overflow-y-auto custom-scrollbar"
       >
         {/* === TOP METRICS GRID === */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -500,7 +500,7 @@ const ReportsAnalytics = () => {
 
           <motion.div
             variants={itemVariants}
-            className={`p-6 rounded-[2rem] border-2 flex flex-col relative overflow-hidden transition-all duration-300 ${stats.overstays > 0 ? "bg-red-50 border-red-200 shadow-[0_0_20px_rgba(239,68,68,0.15)]" : "bg-slate-50 border-slate-100"}`}
+            className={`p-6 rounded-4xl border-2 flex flex-col relative overflow-hidden transition-all duration-300 ${stats.overstays > 0 ? "bg-red-50 border-red-200 shadow-[0_0_20px_rgba(239,68,68,0.15)]" : "bg-slate-50 border-slate-100"}`}
           >
             <div className="relative z-10 flex items-center justify-between mb-4">
               <div
@@ -536,7 +536,7 @@ const ReportsAnalytics = () => {
             variants={itemVariants}
             className="lg:col-span-2 bg-slate-50 rounded-[2.5rem] border-2 border-slate-100 p-6 lg:p-8 flex flex-col relative overflow-hidden"
           >
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:2rem_2rem] opacity-30" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-size-[2rem_2rem] opacity-30" />
 
             <div className="flex items-center justify-between mb-8 relative z-10">
               <h3 className="text-xs font-black text-[#0038A8] flex items-center gap-2 uppercase tracking-widest bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200">
@@ -548,7 +548,7 @@ const ReportsAnalytics = () => {
               </span>
             </div>
 
-            <div className="flex-1 min-h-[250px] relative flex items-end justify-between gap-1 sm:gap-2 px-1 sm:px-2 pt-10 pb-6 border-b-2 border-slate-200 z-10">
+            <div className="flex-1 min-h-62.5 relative flex items-end justify-between gap-1 sm:gap-2 px-1 sm:px-2 pt-10 pb-6 border-b-2 border-slate-200 z-10">
               {/* Horizontal Grid Lines */}
               <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20 pb-6 pt-10">
                 <div className="w-full h-px bg-slate-500" />
@@ -580,7 +580,7 @@ const ReportsAnalytics = () => {
                       {count} VISITS
                     </div>
                     <div
-                      className="w-full max-w-[40px] bg-white border border-slate-200 rounded-t-xl relative flex items-end justify-center overflow-hidden shadow-inner"
+                      className="w-full max-w-10 bg-white border border-slate-200 rounded-t-xl relative flex items-end justify-center overflow-hidden shadow-inner"
                       style={{ height: "100%" }}
                     >
                       <motion.div
@@ -591,7 +591,7 @@ const ReportsAnalytics = () => {
                           type: "spring",
                           bounce: 0.4,
                         }}
-                        className={`w-full rounded-t-xl transition-colors ${isPeak ? "bg-gradient-to-t from-[#0038A8] to-blue-400 shadow-[0_0_15px_rgba(0,56,168,0.5)]" : "bg-slate-200 group-hover:bg-[#FFD700]"}`}
+                        className={`w-full rounded-t-xl transition-colors ${isPeak ? "bg-linear-to-t from-[#0038A8] to-blue-400 shadow-[0_0_15px_rgba(0,56,168,0.5)]" : "bg-slate-200 group-hover:bg-[#FFD700]"}`}
                       />
                     </div>
                     <span
@@ -688,7 +688,7 @@ const ReportsAnalytics = () => {
         {/* Intelligence Footer */}
         <motion.div
           variants={itemVariants}
-          className="mt-8 p-6 bg-slate-50 rounded-[2rem] border-2 border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-sm"
+          className="mt-8 p-6 bg-slate-50 rounded-4xl border-2 border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-sm"
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-white rounded-2xl border border-slate-200 flex items-center justify-center shadow-sm shrink-0">
@@ -714,7 +714,7 @@ const ReportsAnalytics = () => {
 
 // --- HELPER COMPONENT ---
 const MetricCard = ({ icon, label, value, color, bg }: any) => (
-  <div className="bg-white p-6 rounded-[2rem] border border-slate-200 flex flex-col shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+  <div className="bg-white p-6 rounded-4xl border border-slate-200 flex flex-col shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
     <div className={`p-3 rounded-2xl w-max mb-4 border ${bg} ${color}`}>
       {icon}
     </div>
