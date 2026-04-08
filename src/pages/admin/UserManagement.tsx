@@ -281,6 +281,24 @@ const UserManagement = () => {
     }
   };
 
+  // 🔥 NEW: Password Strength Calculator
+  const getPasswordStrength = (pwd: string) => {
+    if (!pwd) return { width: "0%", color: "bg-transparent", label: "" };
+    if (pwd.length < 8)
+      return { width: "33%", color: "bg-red-500", label: "WEAK - MIN 8 CHARS" };
+
+    let score = 0;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+    if (score < 2)
+      return { width: "66%", color: "bg-amber-500", label: "MODERATE" };
+    return { width: "100%", color: "bg-emerald-500", label: "STRONG" };
+  };
+
+  const strength = getPasswordStrength(password);
+
   return (
     <div className="h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
       {/* ================= HEADER (BRANDING) ================= */}
@@ -806,13 +824,38 @@ const UserManagement = () => {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <Input
-                      label="Password"
-                      type="password"
-                      value={password}
-                      onChange={(e: any) => setPassword(e.target.value)}
-                      placeholder="••••••"
-                    />
+                    {/* 🔥 ENHANCED PASSWORD FIELD WITH INDICATOR */}
+                    <div className="flex flex-col">
+                      <Input
+                        label="Password"
+                        type="password"
+                        value={password}
+                        onChange={(e: any) => setPassword(e.target.value)}
+                        placeholder="••••••"
+                      />
+                      {password && (
+                        <div className="pt-2 px-1">
+                          <div className="flex justify-between items-center mb-1.5">
+                            <span className="text-[7px] font-black uppercase tracking-widest text-slate-400">
+                              Strength
+                            </span>
+                            <span
+                              className={`text-[7px] font-black uppercase tracking-widest ${strength.label === "STRONG" ? "text-emerald-500" : strength.label === "MODERATE" ? "text-amber-500" : "text-red-500"}`}
+                            >
+                              {strength.label}
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: strength.width }}
+                              className={`h-full ${strength.color} transition-all duration-300`}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <Input
                       label="Confirm Pass"
                       type="password"
@@ -823,7 +866,10 @@ const UserManagement = () => {
                   </div>
 
                   <button
-                    disabled={actionLoading === "create"}
+                    disabled={
+                      actionLoading === "create" ||
+                      (password.length > 0 && password.length < 8)
+                    }
                     className="w-full py-5 bg-[#0038A8] text-[#FFD700] font-black uppercase tracking-[0.2em] text-[11px] rounded-2xl shadow-xl shadow-blue-900/20 hover:bg-[#002b82] transition-all flex justify-center items-center gap-2 mt-6 disabled:opacity-70 disabled:cursor-not-allowed active:scale-95"
                   >
                     {actionLoading === "create" ? (
