@@ -11,6 +11,7 @@ import {
   FiCreditCard,
   FiCrosshair,
   FiDatabase,
+  FiLoader,
   FiMapPin,
   FiRefreshCw,
   FiSearch,
@@ -42,6 +43,11 @@ const AuditTrail = () => {
   const [timeFilter, setTimeFilter] = useState("today");
   const [customDate, setCustomDate] = useState("");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+
+  // --- NEW ARCHIVE STATES ---
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [archiveFrom, setArchiveFrom] = useState("");
+  const [archiveTo, setArchiveTo] = useState("");
   const [isArchiving, setIsArchiving] = useState(false);
 
   const [selectedLog, setSelectedLog] = useState<any>(null);
@@ -97,40 +103,49 @@ const AuditTrail = () => {
     }
   };
 
-  const handleArchive = async () => {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const oldRecords = logs.filter(
-      (l) => new Date(l.bookingDate) < thirtyDaysAgo,
+  // --- 🔥 NEW ARCHIVE HANDLER ---
+  const executeArchive = async () => {
+    if (!archiveFrom || !archiveTo) {
+      return alert("Please select both Date From and Date To parameters.");
+    }
+
+    if (archiveFrom > archiveTo) {
+      return alert("'Date From' cannot be later than 'Date To'.");
+    }
+
+    // Filter records safely using ISO date strings
+    const recordsToArchive = logs.filter(
+      (l) => l.bookingDate >= archiveFrom && l.bookingDate <= archiveTo,
     );
 
-    if (oldRecords.length === 0)
+    if (recordsToArchive.length === 0) {
       return alert(
-        "System Intelligence: No records found for 30-day archiving.",
+        "System Intelligence: No records found in this specific date range.",
       );
-    if (
-      !confirm(`Archive and permanently delete ${oldRecords.length} records?`)
-    )
-      return;
+    }
 
     setIsArchiving(true);
     try {
-      const dataStr = JSON.stringify(oldRecords, null, 2);
+      const dataStr = JSON.stringify(recordsToArchive, null, 2);
       const blob = new Blob([dataStr], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `UniVentry_Archive_${new Date().toISOString().split("T")[0]}.json`;
+      link.download = `UniVentry_Archive_${archiveFrom}_to_${archiveTo}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
       await Promise.all(
-        oldRecords.map((l) => api.delete(`/bookings/${l._id}`)),
+        recordsToArchive.map((l) => api.delete(`/bookings/${l._id}`)),
       );
+
       fetchAuditLogs();
+      setShowArchiveModal(false);
+      setArchiveFrom("");
+      setArchiveTo("");
     } catch (e) {
-      alert("Archiving failed.");
+      alert("Archiving failed due to a server error.");
     } finally {
       setIsArchiving(false);
     }
@@ -308,13 +323,12 @@ const AuditTrail = () => {
               <FiTrash2 /> Purge Stale (30d)
             </button>
           ) : (
+            // 🔥 OPEN NEW ARCHIVE MODAL INSTEAD OF DIRECT PURGE
             <button
-              onClick={handleArchive}
-              disabled={isArchiving}
-              className="px-6 py-2.5 bg-slate-800 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95"
+              onClick={() => setShowArchiveModal(true)}
+              className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95"
             >
-              <FiDatabase className={isArchiving ? "animate-pulse" : ""} />{" "}
-              {isArchiving ? "Archiving..." : "Archive Logs"}
+              <FiDatabase /> Archive Logs
             </button>
           )}
         </div>
@@ -404,29 +418,33 @@ const AuditTrail = () => {
                     <td className="px-8 py-5 whitespace-nowrap text-[10px] font-bold text-slate-600">
                       {log.bookingDate}
                     </td>
+                    {/* 🔥 FIXED hh:mm:ss FORMATTING */}
                     <td className="px-8 py-5 text-center whitespace-nowrap font-mono text-[11px] font-black text-emerald-600">
                       {log.timeIn
                         ? new Date(log.timeIn).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
+                            second: "2-digit",
                           })
-                        : "--:--"}
+                        : "--:--:--"}
                     </td>
                     <td className="px-8 py-5 text-center whitespace-nowrap font-mono text-[11px] font-bold text-[#0038A8]">
                       {log.transactionTime
                         ? new Date(log.transactionTime).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
+                            second: "2-digit",
                           })
-                        : "--:--"}
+                        : "--:--:--"}
                     </td>
                     <td className="px-8 py-5 text-center whitespace-nowrap font-mono text-[11px] font-black text-red-500">
                       {log.timeOut
                         ? new Date(log.timeOut).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
+                            second: "2-digit",
                           })
-                        : "--:--"}
+                        : "--:--:--"}
                     </td>
                     <td className="px-8 py-5 text-right whitespace-nowrap font-black text-[9px] text-slate-500 uppercase">
                       {log.actionBy || "SYSTEM"}
@@ -438,6 +456,78 @@ const AuditTrail = () => {
           </table>
         </div>
       </div>
+
+      {/* --- 🔥 NEW ARCHIVE MODAL --- */}
+      <AnimatePresence>
+        {showArchiveModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl relative overflow-hidden border border-white/20 p-10 text-center"
+            >
+              <div className="absolute top-0 left-0 w-full h-2 bg-[#0038A8]" />
+              <div className="mx-auto w-20 h-20 bg-blue-50 text-[#0038A8] rounded-full flex items-center justify-center mb-6 shadow-inner border border-blue-100">
+                <FiDatabase size={32} />
+              </div>
+              <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800 mb-2">
+                Archive Database
+              </h2>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold leading-relaxed mb-8">
+                Export and purge historical data to maintain system efficiency.
+                Select a date range below.
+              </p>
+
+              <div className="flex gap-4 mb-8 text-left">
+                <div className="flex-1 space-y-2">
+                  <label className="text-[9px] font-black uppercase text-[#0038A8] tracking-widest ml-1">
+                    Date From
+                  </label>
+                  <input
+                    type="date"
+                    value={archiveFrom}
+                    onChange={(e) => setArchiveFrom(e.target.value)}
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3.5 text-xs font-bold text-slate-700 outline-none focus:border-[#0038A8] focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer uppercase"
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <label className="text-[9px] font-black uppercase text-[#0038A8] tracking-widest ml-1">
+                    Date To
+                  </label>
+                  <input
+                    type="date"
+                    value={archiveTo}
+                    onChange={(e) => setArchiveTo(e.target.value)}
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3.5 text-xs font-bold text-slate-700 outline-none focus:border-[#0038A8] focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer uppercase"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowArchiveModal(false)}
+                  disabled={isArchiving}
+                  className="flex-1 py-4 bg-slate-100 text-slate-500 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={executeArchive}
+                  disabled={isArchiving || !archiveFrom || !archiveTo}
+                  className="flex-1 py-4 bg-[#0038A8] text-[#FFD700] hover:bg-[#002b82] font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-900/20 active:scale-95 transition-all flex justify-center items-center gap-2 disabled:opacity-50"
+                >
+                  {isArchiving ? (
+                    <FiLoader className="animate-spin" />
+                  ) : (
+                    "Execute Archive"
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* MODAL (ORIGINAL DESIGN WITH FIXED WRAPPING & HANDLERS) */}
       <AnimatePresence>
@@ -545,9 +635,9 @@ const AuditTrail = () => {
 
                 {/* TIMESTAMPS (Static/Dummy Display) */}
                 <div className="bg-[#0038A8] text-white p-6 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
-                  {/* Background pattern */}
                   <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
 
+                  {/* 🔥 FIXED hh:mm:ss FORMATTING */}
                   {/* Time In */}
                   <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
                     <div className="p-2 rounded-xl mb-1 bg-white/10 text-[#FFD700]">
@@ -561,9 +651,9 @@ const AuditTrail = () => {
                         ? new Date(selectedLog.timeIn).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
+                            second: "2-digit",
                           })
-                        : "08:00"}{" "}
-                      {/* Default/fake time */}
+                        : "--:--:--"}
                     </p>
                   </div>
 
@@ -584,9 +674,9 @@ const AuditTrail = () => {
                           ).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
+                            second: "2-digit",
                           })
-                        : "12:00"}{" "}
-                      {/* Default/fake time */}
+                        : "--:--:--"}
                     </p>
                   </div>
 
@@ -605,9 +695,9 @@ const AuditTrail = () => {
                         ? new Date(selectedLog.timeOut).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
+                            second: "2-digit",
                           })
-                        : "null"}{" "}
-                      {/* Default/fake time */}
+                        : "--:--:--"}
                     </p>
                   </div>
                 </div>
