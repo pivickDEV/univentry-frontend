@@ -8,7 +8,6 @@ import {
   Briefcase,
   CheckCircle,
   CreditCard,
-  HelpCircle,
   LogIn,
   LogOut,
   MapPin,
@@ -57,7 +56,7 @@ const GateScanner = () => {
   const [scanStatus, setScanStatus] = useState<
     "idle" | "processing" | "success" | "exit" | "error"
   >("idle");
-  const [scanStep, setScanStep] = useState<"verify" | "complete">("verify"); // 🔥 NEW: Track step
+  const [scanStep, setScanStep] = useState<"verify" | "complete">("verify");
 
   const [selectedLog, setSelectedLog] = useState<VisitorLog | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -90,11 +89,10 @@ const GateScanner = () => {
     setScanStatus("processing");
 
     try {
-      // 🔥 GET DETAILS FIRST (Does not update DB yet)
       const { data } = await api.get(`/bookings/${rawValue}`);
 
       setSelectedLog(data);
-      setScanStep("verify"); // Set to Verify Mode
+      setScanStep("verify");
       setScanStatus("success");
       setIsModalOpen(true);
     } catch (error: any) {
@@ -125,7 +123,6 @@ const GateScanner = () => {
         headers: { Authorization: `Bearer ${token}` },
       };
 
-      // 🔥 POST ACTUAL ACTION
       const { data } = await api.post(
         "/bookings/scan",
         {
@@ -135,8 +132,8 @@ const GateScanner = () => {
         config,
       );
 
-      setSelectedLog(data.data); // Update with new timestamps
-      setScanStep("complete"); // Switch to Success Mode
+      setSelectedLog(data.data);
+      setScanStep("complete");
       setScanStatus(scanMode === "in" ? "success" : "exit");
     } catch (error: any) {
       alert(error.response?.data?.message || "Action Failed");
@@ -148,7 +145,7 @@ const GateScanner = () => {
     setIsModalOpen(false);
     setSelectedLog(null);
     setScanStatus("idle");
-    setScanStep("verify"); // Reset to verify for next scan
+    setScanStep("verify");
   };
 
   const getThemeColor = () =>
@@ -162,7 +159,6 @@ const GateScanner = () => {
       <div
         className={`relative w-full lg:w-1/2 h-1/2 lg:h-full bg-black flex flex-col items-center justify-start border-b-4 lg:border-r-4 lg:border-b-0 transition-all duration-500 ${getBorderColor()}`}
       >
-        {/* MODE SWITCHER */}
         <div className="absolute top-6 z-30 flex gap-4 bg-slate-900/80 p-2 rounded-2xl backdrop-blur-md border border-slate-700 shadow-2xl">
           <button
             onClick={() => setScanMode("in")}
@@ -216,7 +212,6 @@ const GateScanner = () => {
           )}
         </div>
 
-        {/* Status Pill */}
         <div className="absolute bottom-6 z-20 bg-slate-900/90 backdrop-blur-md px-6 py-2 rounded-full border border-slate-700 text-white flex items-center gap-3 shadow-xl">
           {scanStatus === "processing" ? (
             <Activity className="w-4 h-4 animate-spin text-[#FFD700]" />
@@ -232,7 +227,6 @@ const GateScanner = () => {
           </span>
         </div>
 
-        {/* Error Toast */}
         <AnimatePresence>
           {scanStatus === "error" && (
             <motion.div
@@ -315,115 +309,119 @@ const GateScanner = () => {
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* ======================================================== */}
+      {/* 🔥 THE EXACT AUDIT TRAIL MODAL DESIGN 🔥 */}
+      {/* ======================================================== */}
       {isModalOpen && selectedLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
           <div
-            className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] shadow-2xl ring-1 ring-white/20 animate-in zoom-in-95 duration-200 no-scrollbar flex flex-col"
+            className="bg-white w-full max-w-6xl max-h-[95vh] overflow-y-auto rounded-[2.5rem] shadow-2xl flex flex-col no-scrollbar relative border border-white/20"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* DYNAMIC MODAL HEADER */}
-            <div
-              className={`sticky top-0 z-10 px-8 py-6 border-b flex items-center justify-between backdrop-blur-xl bg-white/90
-                ${
-                  scanStep === "verify"
-                    ? "border-blue-100 bg-blue-50/90"
-                    : scanStatus === "exit"
-                      ? "border-yellow-100 bg-yellow-50/90"
-                      : "border-emerald-100 bg-emerald-50/90"
-                }`}
-            >
-              <div className="flex items-center gap-4">
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-2
-                    ${
-                      scanStep === "verify"
-                        ? "bg-[#0038A8] border-blue-400 text-white"
-                        : scanStatus === "exit"
-                          ? "bg-yellow-500 border-yellow-300 text-white"
-                          : "bg-emerald-600 border-emerald-500 text-white"
-                    }`}
-                >
-                  {scanStep === "verify" ? (
-                    <HelpCircle className="text-2xl" />
-                  ) : scanStatus === "exit" ? (
-                    <LogOut className="text-2xl" />
-                  ) : (
-                    <LogIn className="text-2xl" />
-                  )}
-                </div>
-                <div>
-                  <h2
-                    className={`text-xl font-black uppercase tracking-tight 
-                        ${scanStep === "verify" ? "text-[#0038A8]" : scanStatus === "exit" ? "text-yellow-700" : "text-emerald-700"}`}
-                  >
-                    {scanStep === "verify"
-                      ? scanMode === "in"
-                        ? "Verify Entry?"
-                        : "Verify Exit?"
-                      : scanStatus === "exit"
-                        ? "Departure Confirmed"
-                        : "Entry Approved"}
-                  </h2>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    ID: {selectedLog._id}
-                  </p>
-                </div>
+            {/* --- MODAL HEADER (Blue Header matching Audit Trail) --- */}
+            <div className="bg-[#0038A8] p-8 pb-12 text-center relative shrink-0 shadow-lg">
+              <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/20 shadow-lg text-white">
+                <User size={32} />
               </div>
+              <h2 className="text-white font-black text-3xl uppercase tracking-tighter">
+                Visitor Details
+              </h2>
+              <p className="text-blue-200 text-[10px] font-black uppercase tracking-[0.4em] mt-1">
+                Registry Record: {selectedLog._id}
+              </p>
               <button
                 onClick={handleCloseModal}
-                className="p-3 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"
+                className="absolute top-6 right-6 p-2.5 bg-white/10 text-white hover:bg-red-500 rounded-full transition-all z-20"
               >
-                <X className="w-6 h-6 text-slate-600" />
+                <X size={20} />
               </button>
             </div>
 
-            <div className="p-6 lg:p-8 space-y-8">
-              <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
-                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
-                  <h3 className="text-[#0038A8] font-black uppercase text-xs tracking-widest mb-4 flex items-center gap-2">
-                    <User className="w-4 h-4" /> Personal Details
+            {/* --- 3 COLUMN INFO GRID --- */}
+            <div className="p-10 -mt-8 bg-white rounded-t-[2.5rem] relative z-20 overflow-y-auto custom-scrollbar flex-1 space-y-10">
+              <div className="grid lg:grid-cols-3 gap-8">
+                {/* Panel 1 */}
+                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm">
+                  <h3 className="text-[#0038A8] font-black uppercase text-xs flex items-center gap-2 tracking-widest">
+                    <User size={16} /> Subject Identity
                   </h3>
-                  <div className="space-y-3">
-                    <DetailRow
-                      label="Full Name"
-                      value={`${selectedLog.lastName}, ${selectedLog.firstName}`}
-                      highlight
-                    />
-                    <DetailRow label="Category" value={selectedLog.category} />
-                    <DetailRow label="Email" value={selectedLog.email} />
-                    <DetailRow label="Phone" value={selectedLog.phoneNumber} />
-                  </div>
+                  <DetailRow
+                    label="Full Name"
+                    value={`${selectedLog.lastName}, ${selectedLog.firstName}`}
+                    highlight
+                  />
+                  <DetailRow label="Category" value={selectedLog.category} />
+                  <DetailRow label="Email" value={selectedLog.email} />
+                  <DetailRow label="Contact" value={selectedLog.phoneNumber} />
                 </div>
-                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
-                  <h3 className="text-[#0038A8] font-black uppercase text-xs tracking-widest mb-4 flex items-center gap-2">
-                    <MapPin className="w-4 h-4" /> Logistics
+
+                {/* Panel 2 */}
+                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm">
+                  <h3 className="text-[#0038A8] font-black uppercase text-xs flex items-center gap-2 tracking-widest">
+                    <MapPin size={16} /> Logistics
                   </h3>
-                  <div className="space-y-3">
-                    <DetailRow
-                      label="Destination"
-                      value={selectedLog.office}
-                      highlight
-                    />
-                    <DetailRow label="Date" value={selectedLog.bookingDate} />
-                    <DetailRow label="Purpose" value={selectedLog.purpose} />
-                    <DetailRow
-                      label="Status"
-                      value={selectedLog.status}
-                      customColor={
-                        selectedLog.status === "Approved" ||
-                        selectedLog.status === "On Campus"
-                          ? "text-emerald-600"
-                          : "text-slate-700"
-                      }
-                    />
-                  </div>
+                  <DetailRow
+                    label="Destination"
+                    value={selectedLog.office}
+                    highlight
+                  />
+                  <DetailRow
+                    label="Booking Date"
+                    value={selectedLog.bookingDate}
+                  />
+                  <DetailRow
+                    label="Declared Purpose"
+                    value={selectedLog.purpose}
+                  />
+                  <DetailRow
+                    label="Registry Status"
+                    value={selectedLog.status}
+                    customColor={
+                      selectedLog.status === "Approved" ||
+                      selectedLog.status === "On Campus"
+                        ? "text-emerald-600"
+                        : "text-[#0038A8]"
+                    }
+                  />
+                </div>
+
+                {/* Panel 3 */}
+                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm">
+                  <h3 className="text-[#0038A8] font-black uppercase text-xs flex items-center gap-2 tracking-widest">
+                    <ShieldCheck size={16} /> Authorized Handlers
+                  </h3>
+                  <DetailRow
+                    label="Entry Guard"
+                    value={selectedLog.timeIn}
+                    highlight
+                  />
+                  <DetailRow
+                    label="Office Staff"
+                    value={
+                      selectedLog.transactionTime ? "OFFICE STAFF" : undefined
+                    }
+                    highlight
+                  />
+                  <DetailRow
+                    label="Exit Guard"
+                    value={selectedLog.timeOut}
+                    highlight
+                  />
+                  <DetailRow
+                    label="Stay Duration"
+                    value={
+                      selectedLog.hours
+                        ? `${selectedLog.hours.toFixed(2)} Hours`
+                        : "---"
+                    }
+                  />
                 </div>
               </div>
 
-              {/* TIMESTAMPS */}
+              {/* --- TIMESTAMPS (Dark Blue Bar) --- */}
               <div className="bg-[#0038A8] text-white p-6 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+
                 <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
                   <div
                     className={`p-2 rounded-xl mb-1 ${scanStep === "complete" && scanStatus === "success" ? "bg-emerald-500 text-white shadow-lg scale-110" : "bg-white/10 text-[#FFD700]"}`}
@@ -440,16 +438,20 @@ const GateScanner = () => {
                       ? new Date().toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
+                          second: "2-digit",
                         })
                       : selectedLog.timeIn
                         ? new Date(selectedLog.timeIn).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
+                            second: "2-digit",
                           })
-                        : "--:--"}
+                        : "--:--:--"}
                   </p>
                 </div>
+
                 <div className="h-px w-full md:w-px md:h-12 bg-white/20" />
+
                 <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
                   <div className="p-2 bg-white/10 rounded-xl mb-1">
                     <Briefcase className="w-5 h-5 text-[#FFD700]" />
@@ -464,14 +466,17 @@ const GateScanner = () => {
                         ).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
+                          second: "2-digit",
                         })
-                      : "--:--"}
+                      : "--:--:--"}
                   </p>
                 </div>
+
                 <div className="h-px w-full md:w-px md:h-12 bg-white/20" />
+
                 <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
                   <div
-                    className={`p-2 rounded-xl mb-1 ${scanStep === "complete" && scanStatus === "exit" ? "bg-yellow-500 text-white shadow-lg scale-110" : "bg-white/10 text-[#FFD700]"}`}
+                    className={`p-2 rounded-xl mb-1 ${scanStep === "complete" && scanStatus === "exit" ? "bg-yellow-500 text-slate-900 shadow-lg scale-110" : "bg-white/10 text-[#FFD700]"}`}
                   >
                     <LogOut className="w-5 h-5" />
                   </div>
@@ -485,117 +490,97 @@ const GateScanner = () => {
                       ? new Date().toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
+                          second: "2-digit",
                         })
                       : selectedLog.timeOut
                         ? new Date(selectedLog.timeOut).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
+                            second: "2-digit",
                           })
-                        : "--:--"}
+                        : "--:--:--"}
                   </p>
                 </div>
               </div>
 
-              {/* IMAGES */}
+              {/* --- IMAGES SECTION --- */}
               <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <h3 className="text-[#0038A8] font-black uppercase text-xs tracking-widest flex items-center gap-2">
-                    <CreditCard className="w-4 h-4" /> ID Verification (Front)
-                  </h3>
-                  <div
-                    className="relative h-48 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 group cursor-pointer shadow-sm hover:shadow-md transition-all"
-                    onClick={() => setFullscreenImage(selectedLog.idFront)}
-                  >
-                    <img
-                      src={selectedLog.idFront}
-                      alt="ID Front"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
-                </div>
+                <DocumentCard
+                  title="ID Credential (Front)"
+                  image={selectedLog.idFront}
+                  text={selectedLog.ocrFront}
+                  onClick={() => setFullscreenImage(selectedLog.idFront)}
+                />
+                <DocumentCard
+                  title="ID Credential (Back)"
+                  image={selectedLog.idBack}
+                  text={selectedLog.ocrBack}
+                  onClick={() => setFullscreenImage(selectedLog.idBack)}
+                />
+              </div>
+            </div>
 
-                <div className="space-y-4">
-                  <h3 className="text-[#0038A8] font-black uppercase text-xs tracking-widest flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4" /> ID Verification (Back)
-                  </h3>
-                  <div
-                    className="relative h-48 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 group cursor-pointer shadow-sm hover:shadow-md transition-all"
-                    onClick={() => setFullscreenImage(selectedLog.idBack)}
-                  >
-                    <img
-                      src={selectedLog.idBack}
-                      alt="ID Back"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
-                </div>
+            {/* --- ACTION FOOTER --- */}
+            <div className="sticky bottom-0 bg-white border-t border-slate-100 px-8 py-6 flex items-center justify-between z-30 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden md:block">
+                {scanStep === "verify"
+                  ? "Confirm identity matches physical ID"
+                  : "Action Complete"}
               </div>
 
-              {/* DYNAMIC FOOTER ACTIONS */}
-              <div className="sticky bottom-0 bg-white border-t border-slate-100 px-8 py-4 flex items-center justify-between z-20">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden md:block">
-                  {scanStep === "verify"
-                    ? "Confirm identity matches physical ID"
-                    : "Action Complete"}
-                </div>
-
-                {scanStep === "verify" ? (
-                  <div className="flex gap-3 w-full md:w-auto">
-                    <button
-                      onClick={handleCloseModal}
-                      className="px-6 py-4 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleConfirm}
-                      disabled={scanStatus === "processing"}
-                      className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50
-                                ${scanMode === "in" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-yellow-500 hover:bg-yellow-600"}`}
-                    >
-                      {scanStatus === "processing" ? (
-                        <Activity className="animate-spin w-4 h-4" />
-                      ) : scanMode === "in" ? (
-                        <LogIn size={16} />
-                      ) : (
-                        <LogOut size={16} />
-                      )}
-                      {scanMode === "in"
-                        ? "Confirm & Time In"
-                        : "Confirm & Time Out"}
-                    </button>
-                  </div>
-                ) : (
+              {scanStep === "verify" ? (
+                <div className="flex gap-3 w-full md:w-auto">
                   <button
                     onClick={handleCloseModal}
-                    className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-[#0038A8] hover:bg-blue-700 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                    className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
                   >
-                    <CheckCircle className="w-4 h-4" /> Next Visitor
+                    Cancel
                   </button>
-                )}
-              </div>
+                  <button
+                    onClick={handleConfirm}
+                    disabled={scanStatus === "processing"}
+                    className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-10 py-4 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50 ${scanMode === "in" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-yellow-500 hover:bg-yellow-600 text-slate-900"}`}
+                  >
+                    {scanStatus === "processing" ? (
+                      <Activity className="animate-spin w-5 h-5" />
+                    ) : scanMode === "in" ? (
+                      <LogIn size={18} />
+                    ) : (
+                      <LogOut size={18} />
+                    )}
+                    {scanMode === "in"
+                      ? "Confirm & Time In"
+                      : "Confirm & Time Out"}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleCloseModal}
+                  className="w-full md:w-auto flex items-center justify-center gap-2 px-10 py-4 bg-[#0038A8] hover:bg-blue-700 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
+                >
+                  <CheckCircle className="w-5 h-5" /> Next Visitor
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* FULLSCREEN */}
+      {/* FULLSCREEN PREVIEW */}
       <AnimatePresence>
         {fullscreenImage && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-60 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4"
+            className="fixed inset-0 z-100 bg-black/95 flex items-center justify-center p-4 cursor-pointer backdrop-blur-sm"
             onClick={() => setFullscreenImage(null)}
           >
             <img
               src={fullscreenImage}
-              className="max-w-full max-h-full rounded-lg shadow-2xl"
+              className="max-w-full max-h-full rounded-2xl shadow-2xl border-2 border-white/10"
             />
-            <button className="absolute top-6 right-6 text-white bg-white/10 p-4 rounded-full">
-              <X className="w-6 h-6" />
-            </button>
+            <X className="absolute top-8 right-8 text-white text-3xl opacity-50 hover:opacity-100 transition-opacity" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -603,16 +588,43 @@ const GateScanner = () => {
   );
 };
 
+// --- HELPER COMPONENTS (Required for Audit Trail Design) ---
 const DetailRow = ({ label, value, highlight = false, customColor }: any) => (
-  <div className="flex justify-start items-center gap-4 border-b border-slate-100 pb-2 last:border-0 last:pb-0">
-    <span className="w-24 shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+  <div className="flex flex-col py-2.5 border-b border-slate-100 last:border-0">
+    <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">
       {label}
     </span>
     <span
-      className={`text-xs font-bold truncate ${customColor ? customColor : highlight ? "text-[#0038A8]" : "text-slate-700"}`}
+      className={`text-[11px] font-black uppercase tracking-wide leading-relaxed wrap-break-word ${customColor ? customColor : highlight ? "text-[#0038A8]" : "text-slate-700"}`}
     >
-      {value || "N/A"}
+      {value || "N/A / PENDING"}
     </span>
+  </div>
+);
+
+const DocumentCard = ({ title, image, text, onClick }: any) => (
+  <div className="space-y-4">
+    <h3 className="text-[#0038A8] font-black uppercase text-[10px] flex items-center gap-2 tracking-[0.4em]">
+      <CreditCard size={14} /> {title}
+    </h3>
+    <div
+      className="relative h-56 bg-slate-100 rounded-4xl overflow-hidden border-2 border-slate-200 group cursor-pointer flex items-center justify-center shadow-sm"
+      onClick={image ? onClick : undefined}
+    >
+      {image ? (
+        <img
+          src={image}
+          className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500"
+        />
+      ) : (
+        <div className="text-slate-300 flex flex-col items-center">
+          <ShieldCheck size={32} />
+        </div>
+      )}
+    </div>
+    <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-[9px] font-mono text-slate-500 overflow-y-auto max-h-24 custom-scrollbar leading-relaxed uppercase shadow-inner italic">
+      {text || "AI Processing Data not found."}
+    </div>
   </div>
 );
 
