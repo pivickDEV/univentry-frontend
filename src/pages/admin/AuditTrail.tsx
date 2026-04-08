@@ -11,7 +11,6 @@ import {
   FiCreditCard,
   FiCrosshair,
   FiDatabase,
-  FiLoader,
   FiMapPin,
   FiRefreshCw,
   FiSearch,
@@ -40,16 +39,17 @@ const AuditTrail = () => {
     "registry",
   );
 
-  const [timeFilter, setTimeFilter] = useState("today");
-  const [customDate, setCustomDate] = useState("");
+  // --- FILTER & SORT STATES ---
+  const [timeFilter, setTimeFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
-  // --- NEW ARCHIVE STATES ---
-  const [showArchiveModal, setShowArchiveModal] = useState(false);
-  const [archiveFrom, setArchiveFrom] = useState("");
-  const [archiveTo, setArchiveTo] = useState("");
-  const [isArchiving, setIsArchiving] = useState(false);
+  // --- UI SOFT DELETE MEMORY ---
+  const [softDeletedIds, setSoftDeletedIds] = useState<string[]>([]);
 
+  // --- ACTIONS ---
+  const [isArchiving, setIsArchiving] = useState(false);
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [isModalLoading, setIsModalLoading] = useState(false);
   const [cctvLogs, setCctvLogs] = useState<any[]>([]);
@@ -57,6 +57,15 @@ const AuditTrail = () => {
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [logToDelete, setLogToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Initialize Data & Soft Deletes
+  useEffect(() => {
+    const hiddenLogs = JSON.parse(
+      localStorage.getItem("univentry_soft_deleted") || "[]",
+    );
+    setSoftDeletedIds(hiddenLogs);
+    fetchAuditLogs();
+  }, []);
 
   const fetchAuditLogs = async () => {
     try {
@@ -70,82 +79,86 @@ const AuditTrail = () => {
     }
   };
 
-  useEffect(() => {
-    fetchAuditLogs();
-  }, []);
-
-  const handlePurgeStale = async () => {
-    const thirtyDaysAgo = new Date();
+  // =========================================================
+  // 🚀 SOFT DELETE PROTOCOL (Pre-Arrivals, 30 days old, UI ONLY)
+  // =========================================================
+  const handleSoftDelete = () => {
+    const manilaNow = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }),
+    );
+    const thirtyDaysAgo = new Date(manilaNow);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoStr = thirtyDaysAgo.toLocaleDateString("en-CA"); // YYYY-MM-DD
 
-    const stale = logs.filter((l) => {
-      const logDate = new Date(l.bookingDate);
-      return !l.timeIn && logDate < thirtyDaysAgo;
-    });
+    const stale = filteredLogs.filter(
+      (l) => !l.timeIn && l.bookingDate <= thirtyDaysAgoStr,
+    );
 
-    if (stale.length === 0)
+    if (stale.length === 0) {
       return alert(
-        "System Intelligence: No bookings older than 30 days require purging.",
+        "System Intelligence: No pre-arrivals in the current view are 30 days old or older.",
       );
+    }
+
     if (
       !confirm(
-        `CRITICAL ACTION: Purge ${stale.length} unscanned bookings older than 30 days?`,
+        `Hide ${stale.length} expired pre-arrivals from the UI? (Data will remain safe in the database)`,
       )
     )
       return;
 
-    try {
-      await Promise.all(stale.map((l) => api.delete(`/bookings/${l._id}`)));
-      alert("Database purged of stale records.");
-      fetchAuditLogs();
-    } catch (err) {
-      alert("Purge failed.");
-    }
+    const newHidden = [...softDeletedIds, ...stale.map((l) => l._id)];
+    setSoftDeletedIds(newHidden);
+    localStorage.setItem("univentry_soft_deleted", JSON.stringify(newHidden));
+
+    alert("Records successfully hidden from view.");
   };
 
-  // --- 🔥 NEW ARCHIVE HANDLER ---
-  const executeArchive = async () => {
-    if (!archiveFrom || !archiveTo) {
-      return alert("Please select both Date From and Date To parameters.");
-    }
+  // =========================================================
+  // 📦 ARCHIVE PROTOCOL (Takes filtered logs, enforces 30 days)
+  // =========================================================
+  const handleArchive = async () => {
+    const manilaNow = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }),
+    );
+    const thirtyDaysAgo = new Date(manilaNow);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoStr = thirtyDaysAgo.toLocaleDateString("en-CA");
 
-    if (archiveFrom > archiveTo) {
-      return alert("'Date From' cannot be later than 'Date To'.");
-    }
-
-    // Filter records safely using ISO date strings
-    const recordsToArchive = logs.filter(
-      (l) => l.bookingDate >= archiveFrom && l.bookingDate <= archiveTo,
+    // Strictly enforce 30 days old from the currently filtered list
+    const toArchive = filteredLogs.filter(
+      (l) => l.bookingDate <= thirtyDaysAgoStr,
     );
 
-    if (recordsToArchive.length === 0) {
+    if (toArchive.length === 0) {
       return alert(
-        "System Intelligence: No records found in this specific date range.",
+        "System Intelligence: No records in your current filter are 30 days old or older. Cannot archive.",
       );
     }
 
+    if (
+      !confirm(
+        `Archive and permanently purge ${toArchive.length} records (30+ days old)?`,
+      )
+    )
+      return;
+
     setIsArchiving(true);
     try {
-      const dataStr = JSON.stringify(recordsToArchive, null, 2);
+      const dataStr = JSON.stringify(toArchive, null, 2);
       const blob = new Blob([dataStr], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `UniVentry_Archive_${archiveFrom}_to_${archiveTo}.json`;
+      link.download = `UniVentry_Archive_${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      await Promise.all(
-        recordsToArchive.map((l) => api.delete(`/bookings/${l._id}`)),
-      );
-
+      await Promise.all(toArchive.map((l) => api.delete(`/bookings/${l._id}`)));
       fetchAuditLogs();
-      setShowArchiveModal(false);
-      setArchiveFrom("");
-      setArchiveTo("");
     } catch (e) {
-      alert("Archiving failed due to a server error.");
+      alert("Archiving failed.");
     } finally {
       setIsArchiving(false);
     }
@@ -195,6 +208,7 @@ const AuditTrail = () => {
     }
   }, [selectedLog?._id]);
 
+  // --- MASTER FILTER LOGIC ---
   const filteredLogs = useMemo(() => {
     const manilaNow = new Date(
       new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }),
@@ -205,19 +219,31 @@ const AuditTrail = () => {
     const yesterdayStr = yesterday.toLocaleDateString("en-CA");
 
     const filtered = logs.filter((log) => {
+      // 1. Check Soft Deletes (Hide from UI)
+      if (softDeletedIds.includes(log._id)) return false;
+
+      // 2. Search Term
       const fullName = `${log.firstName} ${log.lastName}`.toLowerCase();
       const matchesSearch =
         fullName.includes(searchTerm.toLowerCase()) ||
         (log.office || "").toLowerCase().includes(searchTerm.toLowerCase());
       if (!matchesSearch) return false;
 
+      // 3. Tab State
       const isScanned = !!log.timeIn;
       if (activeTab === "registry" && !isScanned) return false;
       if (activeTab === "pre-arrivals" && isScanned) return false;
 
-      if (customDate) return log.bookingDate === customDate;
-      if (timeFilter === "today") return log.bookingDate === todayStr;
-      if (timeFilter === "yesterday") return log.bookingDate === yesterdayStr;
+      // 4. Date From & To Logic
+      if (dateFrom && log.bookingDate < dateFrom) return false;
+      if (dateTo && log.bookingDate > dateTo) return false;
+
+      // 5. Quick Time Filters (Only apply if Date From/To are empty)
+      if (!dateFrom && !dateTo) {
+        if (timeFilter === "today") return log.bookingDate === todayStr;
+        if (timeFilter === "yesterday") return log.bookingDate === yesterdayStr;
+      }
+
       return true;
     });
 
@@ -226,7 +252,16 @@ const AuditTrail = () => {
       const timeB = new Date(b.bookingDate).getTime();
       return sortOrder === "desc" ? timeB - timeA : timeA - timeB;
     });
-  }, [logs, searchTerm, timeFilter, customDate, sortOrder, activeTab]);
+  }, [
+    logs,
+    searchTerm,
+    timeFilter,
+    dateFrom,
+    dateTo,
+    sortOrder,
+    activeTab,
+    softDeletedIds,
+  ]);
 
   const confirmDelete = async () => {
     if (!logToDelete) return;
@@ -262,6 +297,7 @@ const AuditTrail = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* TABS */}
           <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
             <button
               onClick={() => setActiveTab("registry")}
@@ -276,27 +312,59 @@ const AuditTrail = () => {
               <FiClock /> Pre-Arrivals
             </button>
           </div>
+
+          {/* QUICK TIME PILLS */}
           <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
             {["today", "yesterday", "all"].map((f) => (
               <button
                 key={f}
                 onClick={() => {
                   setTimeFilter(f);
-                  setCustomDate("");
+                  setDateFrom("");
+                  setDateTo("");
                 }}
-                className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${timeFilter === f && !customDate ? "bg-[#0038A8] text-white" : "text-slate-400"}`}
+                className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${timeFilter === f && !dateFrom && !dateTo ? "bg-[#0038A8] text-white" : "text-slate-400 hover:text-slate-600"}`}
               >
                 {f}
               </button>
             ))}
           </div>
+
+          {/* DATE FROM & TO */}
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-2 py-1 shadow-sm">
+            <div className="flex items-center gap-1.5 pl-2">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                From
+              </span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setTimeFilter("all");
+                }}
+                className="text-[10px] font-bold uppercase text-[#0038A8] outline-none cursor-pointer bg-transparent"
+              />
+            </div>
+            <div className="w-px h-4 bg-slate-200" />
+            <div className="flex items-center gap-1.5 pr-2">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                To
+              </span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setTimeFilter("all");
+                }}
+                className="text-[10px] font-bold uppercase text-[#0038A8] outline-none cursor-pointer bg-transparent"
+              />
+            </div>
+          </div>
+
+          {/* CONTROLS */}
           <div className="flex gap-2">
-            <input
-              type="date"
-              value={customDate}
-              onChange={(e) => setCustomDate(e.target.value)}
-              className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-[10px] font-bold uppercase shadow-sm outline-none cursor-pointer"
-            />
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as any)}
@@ -315,20 +383,23 @@ const AuditTrail = () => {
               />
             </button>
           </div>
+
+          {/* ARCHIVE / DELETE BUTTONS */}
           {activeTab === "pre-arrivals" ? (
             <button
-              onClick={handlePurgeStale}
-              className="px-6 py-2.5 bg-red-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95"
+              onClick={handleSoftDelete}
+              className="px-6 py-2.5 bg-red-600 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95 hover:bg-red-700"
             >
-              <FiTrash2 /> Purge Stale (30d)
+              <FiTrash2 /> Delete (30d)
             </button>
           ) : (
-            // 🔥 OPEN NEW ARCHIVE MODAL INSTEAD OF DIRECT PURGE
             <button
-              onClick={() => setShowArchiveModal(true)}
-              className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95"
+              onClick={handleArchive}
+              disabled={isArchiving}
+              className="px-6 py-2.5 bg-slate-800 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95 hover:bg-slate-700"
             >
-              <FiDatabase /> Archive Logs
+              <FiDatabase className={isArchiving ? "animate-pulse" : ""} />{" "}
+              {isArchiving ? "Archiving..." : "Archive Logs"}
             </button>
           )}
         </div>
@@ -418,7 +489,6 @@ const AuditTrail = () => {
                     <td className="px-8 py-5 whitespace-nowrap text-[10px] font-bold text-slate-600">
                       {log.bookingDate}
                     </td>
-                    {/* 🔥 FIXED hh:mm:ss FORMATTING */}
                     <td className="px-8 py-5 text-center whitespace-nowrap font-mono text-[11px] font-black text-emerald-600">
                       {log.timeIn
                         ? new Date(log.timeIn).toLocaleTimeString([], {
@@ -457,79 +527,7 @@ const AuditTrail = () => {
         </div>
       </div>
 
-      {/* --- 🔥 NEW ARCHIVE MODAL --- */}
-      <AnimatePresence>
-        {showArchiveModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl relative overflow-hidden border border-white/20 p-10 text-center"
-            >
-              <div className="absolute top-0 left-0 w-full h-2 bg-[#0038A8]" />
-              <div className="mx-auto w-20 h-20 bg-blue-50 text-[#0038A8] rounded-full flex items-center justify-center mb-6 shadow-inner border border-blue-100">
-                <FiDatabase size={32} />
-              </div>
-              <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-800 mb-2">
-                Archive Database
-              </h2>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold leading-relaxed mb-8">
-                Export and purge historical data to maintain system efficiency.
-                Select a date range below.
-              </p>
-
-              <div className="flex gap-4 mb-8 text-left">
-                <div className="flex-1 space-y-2">
-                  <label className="text-[9px] font-black uppercase text-[#0038A8] tracking-widest ml-1">
-                    Date From
-                  </label>
-                  <input
-                    type="date"
-                    value={archiveFrom}
-                    onChange={(e) => setArchiveFrom(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3.5 text-xs font-bold text-slate-700 outline-none focus:border-[#0038A8] focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer uppercase"
-                  />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <label className="text-[9px] font-black uppercase text-[#0038A8] tracking-widest ml-1">
-                    Date To
-                  </label>
-                  <input
-                    type="date"
-                    value={archiveTo}
-                    onChange={(e) => setArchiveTo(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3.5 text-xs font-bold text-slate-700 outline-none focus:border-[#0038A8] focus:ring-4 focus:ring-blue-50 transition-all cursor-pointer uppercase"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setShowArchiveModal(false)}
-                  disabled={isArchiving}
-                  className="flex-1 py-4 bg-slate-100 text-slate-500 font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={executeArchive}
-                  disabled={isArchiving || !archiveFrom || !archiveTo}
-                  className="flex-1 py-4 bg-[#0038A8] text-[#FFD700] hover:bg-[#002b82] font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg shadow-blue-900/20 active:scale-95 transition-all flex justify-center items-center gap-2 disabled:opacity-50"
-                >
-                  {isArchiving ? (
-                    <FiLoader className="animate-spin" />
-                  ) : (
-                    "Execute Archive"
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* MODAL (ORIGINAL DESIGN WITH FIXED WRAPPING & HANDLERS) */}
+      {/* MODAL */}
       <AnimatePresence>
         {selectedLog && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -602,7 +600,6 @@ const AuditTrail = () => {
                       customColor="text-emerald-600"
                     />
                   </div>
-                  {/* 🔥 FIXED BY HANDLERS */}
                   <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm">
                     <h3 className="text-[#0038A8] font-black uppercase text-xs flex items-center gap-2 tracking-widest">
                       <FiShield /> Authorized Handlers
@@ -633,12 +630,10 @@ const AuditTrail = () => {
                   </div>
                 </div>
 
-                {/* TIMESTAMPS (Static/Dummy Display) */}
+                {/* TIMESTAMPS */}
                 <div className="bg-[#0038A8] text-white p-6 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
                   <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
 
-                  {/* 🔥 FIXED hh:mm:ss FORMATTING */}
-                  {/* Time In */}
                   <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
                     <div className="p-2 rounded-xl mb-1 bg-white/10 text-[#FFD700]">
                       <LogIn className="w-5 h-5" />
@@ -659,7 +654,6 @@ const AuditTrail = () => {
 
                   <div className="h-px w-full md:w-px md:h-12 bg-white/20" />
 
-                  {/* Transaction */}
                   <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
                     <div className="p-2 bg-white/10 rounded-xl mb-1">
                       <Briefcase className="w-5 h-5 text-[#FFD700]" />
@@ -682,7 +676,6 @@ const AuditTrail = () => {
 
                   <div className="h-px w-full md:w-px md:h-12 bg-white/20" />
 
-                  {/* Time Out */}
                   <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center relative z-10">
                     <div className="p-2 rounded-xl mb-1 bg-white/10 text-[#FFD700]">
                       <LogOut className="w-5 h-5" />
@@ -825,7 +818,7 @@ const AuditTrail = () => {
   );
 };
 
-// 🔥 SMART DETAIL ROW (Flow logic, No truncation)
+// 🔥 SMART DETAIL ROW
 const DetailRow = ({ label, value, highlight, customColor }: any) => (
   <div className="flex flex-col py-2.5 border-b border-slate-100 last:border-0">
     <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">
