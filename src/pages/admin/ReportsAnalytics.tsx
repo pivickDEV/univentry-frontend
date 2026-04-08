@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   BarChart3,
   Briefcase,
-  Calendar,
   Clock,
   DatabaseBackup,
   Download,
@@ -55,7 +54,11 @@ const ReportsAnalytics = () => {
   const [timeFilter, setTimeFilter] = useState<
     "today" | "week" | "month" | "all"
   >("today");
-  const [customDate, setCustomDate] = useState("");
+
+  // 🔥 NEW: Date Range States
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   // --- 1. FETCH DATA ---
@@ -86,12 +89,19 @@ const ReportsAnalytics = () => {
     const weekAgo = manilaNow.getTime() - 7 * 86400000;
     const monthAgo = manilaNow.getTime() - 30 * 86400000;
 
-    // Filter by Date (Custom Date overrides TimeFilter)
+    // Filter by Date
     const filtered = bookings.filter((b) => {
       if (!b.bookingDate) return false;
-      const bTime = new Date(b.bookingDate).getTime();
 
-      if (customDate) return b.bookingDate === customDate;
+      // 🔥 NEW: Date Range Logic overrides Quick Filters
+      if (dateFrom || dateTo) {
+        if (dateFrom && b.bookingDate < dateFrom) return false;
+        if (dateTo && b.bookingDate > dateTo) return false;
+        return true;
+      }
+
+      // Quick Filters
+      const bTime = new Date(b.bookingDate).getTime();
       if (timeFilter === "today") return b.bookingDate === todayStr;
       if (timeFilter === "week") return bTime >= weekAgo;
       if (timeFilter === "month") return bTime >= monthAgo;
@@ -169,7 +179,7 @@ const ReportsAnalytics = () => {
         maxTrafficValue: maxTraffic || 1, // Prevent division by zero in chart
       },
     };
-  }, [bookings, timeFilter, customDate, sortOrder]);
+  }, [bookings, timeFilter, dateFrom, dateTo, sortOrder]);
 
   // --- 3. DATA ARCHIVER (Download + DB Clean) ---
   const handleArchiveOldData = async () => {
@@ -238,9 +248,13 @@ const ReportsAnalytics = () => {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    const periodLabel = customDate
-      ? `Date: ${customDate}`
-      : `Period: ${timeFilter.toUpperCase()}`;
+
+    // 🔥 NEW: PDF Label logic
+    let periodLabel = `Period: ${timeFilter.toUpperCase()}`;
+    if (dateFrom && dateTo) periodLabel = `Date: ${dateFrom} to ${dateTo}`;
+    else if (dateFrom) periodLabel = `Date: From ${dateFrom}`;
+    else if (dateTo) periodLabel = `Date: Until ${dateTo}`;
+
     doc.text(`Official Intelligence Report - ${periodLabel}`, 15, 30);
 
     // 2. High-Level Metrics
@@ -329,8 +343,8 @@ const ReportsAnalytics = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
-      {/* ================= HEADER ================= */}
-      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+      {/* ================= HEADER (FULLY RESPONSIVE) ================= */}
+      <div className="max-w-400 mx-auto w-full mb-6 shrink-0 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
         {/* Branding Title */}
         <div className="flex items-center gap-4">
           <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
@@ -339,7 +353,7 @@ const ReportsAnalytics = () => {
           <div>
             <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
               Reports &{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
+              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
                 Analytics
               </span>
             </h1>
@@ -349,7 +363,7 @@ const ReportsAnalytics = () => {
           </div>
         </div>
 
-        {/* --- DYNAMIC ACTION BAR --- */}
+        {/* --- DYNAMIC ACTION BAR (Wraps on Mobile) --- */}
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           {/* Quick Filters */}
           <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar w-full sm:w-auto">
@@ -358,9 +372,10 @@ const ReportsAnalytics = () => {
                 key={f}
                 onClick={() => {
                   setTimeFilter(f as any);
-                  setCustomDate("");
+                  setDateFrom("");
+                  setDateTo("");
                 }}
-                className={`px-5 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex-1 sm:flex-none text-center ${timeFilter === f && !customDate ? "bg-[#0038A8] text-white shadow-md" : "text-slate-400 hover:text-[#0038A8] hover:bg-blue-50"}`}
+                className={`px-4 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex-1 sm:flex-none text-center ${timeFilter === f && !dateFrom && !dateTo ? "bg-[#0038A8] text-white shadow-md" : "text-slate-400 hover:text-slate-700"}`}
               >
                 {f}
               </button>
@@ -369,16 +384,40 @@ const ReportsAnalytics = () => {
 
           {/* Date Picker & Sorting */}
           <div className="flex gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-40">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="date"
-                value={customDate}
-                onChange={(e) => setCustomDate(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-2 py-2.5 text-[10px] font-black text-slate-600 focus:outline-none focus:border-[#0038A8] focus:ring-2 focus:ring-blue-50 shadow-sm uppercase cursor-pointer transition-all"
-              />
+            {/* 🔥 NEW: Custom Date Range Component */}
+            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1 shadow-sm transition-all focus-within:ring-2 focus-within:ring-blue-50 focus-within:border-[#0038A8]">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                  From
+                </span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => {
+                    setDateFrom(e.target.value);
+                    setTimeFilter("all");
+                  }}
+                  className="text-[10px] font-black uppercase text-[#0038A8] outline-none cursor-pointer bg-transparent py-1.5"
+                />
+              </div>
+              <div className="w-px h-4 bg-slate-200" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                  To
+                </span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => {
+                    setDateTo(e.target.value);
+                    setTimeFilter("all");
+                  }}
+                  className="text-[10px] font-black uppercase text-[#0038A8] outline-none cursor-pointer bg-transparent py-1.5"
+                />
+              </div>
             </div>
-            <div className="relative flex-1 sm:w-40">
+
+            <div className="relative flex-1 sm:w-36">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <select
                 value={sortOrder}
@@ -392,7 +431,7 @@ const ReportsAnalytics = () => {
             <button
               onClick={fetchBookings}
               disabled={loading}
-              className="p-2.5 bg-white text-[#0038A8] border border-slate-200 rounded-xl shadow-sm hover:bg-blue-50 hover:border-blue-200 active:scale-95 disabled:opacity-50 shrink-0 transition-all cursor-pointer"
+              className="p-2.5 bg-white text-[#0038A8] border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 disabled:opacity-50 shrink-0"
             >
               <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
             </button>
@@ -403,7 +442,7 @@ const ReportsAnalytics = () => {
             <button
               onClick={handleArchiveOldData}
               disabled={isArchiving}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-800 text-white border border-slate-700 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-700 transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 text-white border border-slate-700 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
             >
               <DatabaseBackup
                 size={14}
@@ -414,7 +453,7 @@ const ReportsAnalytics = () => {
 
             <button
               onClick={generatePDF}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-[#0038A8] text-[#FFD700] rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#002b82] transition-all shadow-lg shadow-blue-900/20 active:scale-95 cursor-pointer"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-[#FFD700] text-[#0038A8] rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#e6c200] transition-all shadow-md active:scale-95"
             >
               <Download size={14} strokeWidth={2.5} /> Export PDF
             </button>
