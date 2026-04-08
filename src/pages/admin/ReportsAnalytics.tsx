@@ -2,7 +2,7 @@
 "use client";
 
 import axios from "axios";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -203,7 +203,7 @@ const ReportsAnalytics = () => {
       link.click();
       document.body.removeChild(link);
 
-      // Step 2: Delete old records from DB (Fallback loop if batch delete isn't available)
+      // Step 2: Delete old records from DB
       await Promise.all(
         oldRecords.map((b) => api.delete(`/bookings/${b._id}`)),
       );
@@ -312,10 +312,25 @@ const ReportsAnalytics = () => {
     doc.save(`UniVentry_Report_${timeFilter}_${dateStr}.pdf`);
   };
 
+  // --- ANIMATION VARIANTS ---
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" },
+    },
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-hidden">
-      {/* ================= HEADER (FULLY RESPONSIVE) ================= */}
-      <div className="max-w-400 mx-auto w-full mb-6 shrink-0 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+      {/* ================= HEADER ================= */}
+      <div className="max-w-[1600px] mx-auto w-full mb-6 shrink-0 flex flex-col xl:flex-row xl:items-end justify-between gap-6">
         {/* Branding Title */}
         <div className="flex items-center gap-4">
           <div className="p-3 lg:p-4 bg-[#0038A8] text-[#FFD700] rounded-2xl shadow-lg shadow-blue-900/20">
@@ -324,7 +339,7 @@ const ReportsAnalytics = () => {
           <div>
             <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none">
               Reports &{" "}
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-[#0038A8] to-blue-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0038A8] to-blue-400">
                 Analytics
               </span>
             </h1>
@@ -334,7 +349,7 @@ const ReportsAnalytics = () => {
           </div>
         </div>
 
-        {/* --- DYNAMIC ACTION BAR (Wraps on Mobile) --- */}
+        {/* --- DYNAMIC ACTION BAR --- */}
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           {/* Quick Filters */}
           <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar w-full sm:w-auto">
@@ -345,7 +360,7 @@ const ReportsAnalytics = () => {
                   setTimeFilter(f as any);
                   setCustomDate("");
                 }}
-                className={`px-4 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex-1 sm:flex-none text-center ${timeFilter === f && !customDate ? "bg-[#0038A8] text-white shadow-md" : "text-slate-400 hover:text-slate-700"}`}
+                className={`px-5 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex-1 sm:flex-none text-center ${timeFilter === f && !customDate ? "bg-[#0038A8] text-white shadow-md" : "text-slate-400 hover:text-[#0038A8] hover:bg-blue-50"}`}
               >
                 {f}
               </button>
@@ -354,21 +369,21 @@ const ReportsAnalytics = () => {
 
           {/* Date Picker & Sorting */}
           <div className="flex gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-36">
+            <div className="relative flex-1 sm:w-40">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="date"
                 value={customDate}
                 onChange={(e) => setCustomDate(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-2 py-2.5 text-[10px] font-bold text-slate-600 focus:outline-none focus:border-[#0038A8] shadow-sm uppercase cursor-pointer"
+                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-2 py-2.5 text-[10px] font-black text-slate-600 focus:outline-none focus:border-[#0038A8] focus:ring-2 focus:ring-blue-50 shadow-sm uppercase cursor-pointer transition-all"
               />
             </div>
-            <div className="relative flex-1 sm:w-36">
+            <div className="relative flex-1 sm:w-40">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <select
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value as any)}
-                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-2 py-2.5 text-[10px] font-bold text-slate-600 focus:outline-none focus:border-[#0038A8] shadow-sm uppercase cursor-pointer appearance-none"
+                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-2 py-2.5 text-[10px] font-black text-slate-600 focus:outline-none focus:border-[#0038A8] focus:ring-2 focus:ring-blue-50 shadow-sm uppercase cursor-pointer appearance-none transition-all"
               >
                 <option value="desc">Newest First</option>
                 <option value="asc">Oldest First</option>
@@ -377,7 +392,7 @@ const ReportsAnalytics = () => {
             <button
               onClick={fetchBookings}
               disabled={loading}
-              className="p-2.5 bg-white text-[#0038A8] border border-slate-200 rounded-xl shadow-sm hover:bg-slate-50 active:scale-95 disabled:opacity-50 shrink-0"
+              className="p-2.5 bg-white text-[#0038A8] border border-slate-200 rounded-xl shadow-sm hover:bg-blue-50 hover:border-blue-200 active:scale-95 disabled:opacity-50 shrink-0 transition-all cursor-pointer"
             >
               <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
             </button>
@@ -388,7 +403,7 @@ const ReportsAnalytics = () => {
             <button
               onClick={handleArchiveOldData}
               disabled={isArchiving}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 text-white border border-slate-700 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-800 text-white border border-slate-700 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-700 transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               <DatabaseBackup
                 size={14}
@@ -399,7 +414,7 @@ const ReportsAnalytics = () => {
 
             <button
               onClick={generatePDF}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-[#FFD700] text-[#0038A8] rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#e6c200] transition-all shadow-md active:scale-95"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-[#0038A8] text-[#FFD700] rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#002b82] transition-all shadow-lg shadow-blue-900/20 active:scale-95 cursor-pointer"
             >
               <Download size={14} strokeWidth={2.5} /> Export PDF
             </button>
@@ -408,47 +423,60 @@ const ReportsAnalytics = () => {
       </div>
 
       {/* ================= MASSIVE WHITE CONTAINER ================= */}
-      <div className="max-w-400 mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-6 lg:p-8 flex flex-col overflow-y-auto custom-scrollbar">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-[1600px] mx-auto w-full flex-1 bg-white rounded-[2.5rem] shadow-xl border border-slate-200 p-6 lg:p-8 flex flex-col overflow-y-auto custom-scrollbar"
+      >
         {/* === TOP METRICS GRID === */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <MetricCard
-            icon={<Users />}
-            label="Total Visitors"
-            value={stats.total}
-            color="text-[#0038A8]"
-            bg="bg-blue-50"
-          />
-          <MetricCard
-            icon={<Clock />}
-            label="Avg Stay (Hours)"
-            value={stats.avgStay}
-            color="text-emerald-600"
-            bg="bg-emerald-50"
-          />
-          <MetricCard
-            icon={<TrendingUp />}
-            label="Peak Arrival Time"
-            value={stats.peakHour}
-            color="text-[#FFD700]"
-            bg="bg-amber-50"
-          />
-          <div
-            className={`p-6 rounded-3xl border flex flex-col relative overflow-hidden ${stats.overstays > 0 ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-200"}`}
+          <motion.div variants={itemVariants}>
+            <MetricCard
+              icon={<Users />}
+              label="Total Visitors"
+              value={stats.total}
+              color="text-[#0038A8]"
+              bg="bg-blue-50 border-blue-100"
+            />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <MetricCard
+              icon={<Clock />}
+              label="Avg Stay (Hours)"
+              value={stats.avgStay}
+              color="text-emerald-600"
+              bg="bg-emerald-50 border-emerald-100"
+            />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <MetricCard
+              icon={<TrendingUp />}
+              label="Peak Arrival Time"
+              value={stats.peakHour}
+              color="text-[#FFD700]"
+              bg="bg-amber-50 border-amber-100"
+            />
+          </motion.div>
+
+          <motion.div
+            variants={itemVariants}
+            className={`p-6 rounded-[2rem] border-2 flex flex-col relative overflow-hidden transition-all duration-300 ${stats.overstays > 0 ? "bg-red-50 border-red-200 shadow-[0_0_20px_rgba(239,68,68,0.15)]" : "bg-slate-50 border-slate-100"}`}
           >
             <div className="relative z-10 flex items-center justify-between mb-4">
               <div
-                className={`p-3 rounded-xl ${stats.overstays > 0 ? "bg-red-100 text-red-600" : "bg-slate-200 text-slate-500"}`}
+                className={`p-3 rounded-2xl ${stats.overstays > 0 ? "bg-red-100 text-red-600" : "bg-white border border-slate-200 text-slate-400"}`}
               >
                 <AlertTriangle size={20} />
               </div>
               {stats.overstays > 0 && (
-                <span className="flex items-center gap-1 text-[9px] font-black uppercase text-red-500 bg-red-100 px-2 py-1 rounded-md">
+                <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-red-600 bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 shadow-sm">
                   <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />{" "}
                   Anomaly
                 </span>
               )}
             </div>
-            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest relative z-10">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest relative z-10">
               Overstay Violations
             </h3>
             <p
@@ -457,31 +485,36 @@ const ReportsAnalytics = () => {
               {stats.overstays}
             </p>
             {stats.overstays > 0 && (
-              <div className="absolute -right-6 -top-6 w-32 h-32 bg-red-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute -right-10 -top-10 w-40 h-40 bg-red-500/10 rounded-full blur-2xl pointer-events-none animate-pulse" />
             )}
-          </div>
+          </motion.div>
         </div>
 
         {/* === MAIN CONTENT ROW === */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* CHART: Visitor Load Analytics */}
-          <div className="lg:col-span-2 bg-slate-50 rounded-4xl border border-slate-200 p-6 lg:p-8 flex flex-col">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-sm font-black text-[#0038A8] flex items-center gap-2 uppercase tracking-widest">
-                <BarChart3 className="text-[#FFD700]" /> Campus Traffic
-                Distribution
+          <motion.div
+            variants={itemVariants}
+            className="lg:col-span-2 bg-slate-50 rounded-[2.5rem] border-2 border-slate-100 p-6 lg:p-8 flex flex-col relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:2rem_2rem] opacity-30" />
+
+            <div className="flex items-center justify-between mb-8 relative z-10">
+              <h3 className="text-xs font-black text-[#0038A8] flex items-center gap-2 uppercase tracking-widest bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200">
+                <BarChart3 className="text-[#FFD700]" size={16} /> Campus
+                Traffic Distribution
               </h3>
-              <span className="text-[9px] font-black text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-200 uppercase tracking-[0.2em] hidden sm:block">
+              <span className="text-[9px] font-black text-slate-400 bg-white px-3 py-1.5 rounded-lg border border-slate-200 uppercase tracking-[0.2em] hidden sm:block shadow-sm">
                 8AM - 6PM
               </span>
             </div>
 
-            <div className="flex-1 min-h-62.5 relative flex items-end justify-between gap-1 sm:gap-2 px-1 sm:px-2 pt-10 pb-6 border-b-2 border-slate-200">
+            <div className="flex-1 min-h-[250px] relative flex items-end justify-between gap-1 sm:gap-2 px-1 sm:px-2 pt-10 pb-6 border-b-2 border-slate-200 z-10">
               {/* Horizontal Grid Lines */}
-              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-30 pb-6 pt-10">
-                <div className="w-full h-px bg-slate-400"></div>
-                <div className="w-full h-px bg-slate-400"></div>
-                <div className="w-full h-px bg-slate-400"></div>
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20 pb-6 pt-10">
+                <div className="w-full h-px bg-slate-500" />
+                <div className="w-full h-px bg-slate-500" />
+                <div className="w-full h-px bg-slate-500" />
               </div>
 
               {/* Bars */}
@@ -502,24 +535,28 @@ const ReportsAnalytics = () => {
                 return (
                   <div
                     key={hr}
-                    className="flex flex-col items-center justify-end h-full flex-1 group z-10 relative"
+                    className="flex flex-col items-center justify-end h-full flex-1 group relative"
                   >
-                    <div className="absolute -top-8 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                      {count} Visits
+                    <div className="absolute -top-8 bg-[#0038A8] text-[#FFD700] text-[9px] font-black tracking-widest px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-lg">
+                      {count} VISITS
                     </div>
                     <div
-                      className="w-full max-w-10 bg-slate-200 rounded-t-lg relative flex items-end justify-center overflow-hidden"
+                      className="w-full max-w-[40px] bg-white border border-slate-200 rounded-t-xl relative flex items-end justify-center overflow-hidden shadow-inner"
                       style={{ height: "100%" }}
                     >
                       <motion.div
                         initial={{ height: 0 }}
                         animate={{ height: `${heightPct}%` }}
-                        transition={{ duration: 1, type: "spring" }}
-                        className={`w-full rounded-t-lg transition-colors ${isPeak ? "bg-linear-to-t from-[#0038A8] to-[#FFD700]" : "bg-[#0038A8]/60 group-hover:bg-[#0038A8]"}`}
+                        transition={{
+                          duration: 1,
+                          type: "spring",
+                          bounce: 0.4,
+                        }}
+                        className={`w-full rounded-t-xl transition-colors ${isPeak ? "bg-gradient-to-t from-[#0038A8] to-blue-400 shadow-[0_0_15px_rgba(0,56,168,0.5)]" : "bg-slate-200 group-hover:bg-[#FFD700]"}`}
                       />
                     </div>
                     <span
-                      className={`text-[8px] sm:text-[9px] font-black uppercase mt-3 ${isPeak ? "text-[#0038A8]" : "text-slate-400"}`}
+                      className={`text-[8px] sm:text-[9px] font-black uppercase mt-3 tracking-widest ${isPeak ? "text-[#0038A8]" : "text-slate-400"}`}
                     >
                       {label}
                     </span>
@@ -527,16 +564,19 @@ const ReportsAnalytics = () => {
                 );
               })}
             </div>
-          </div>
+          </motion.div>
 
           {/* SIDEBAR: Predictives & Demographics */}
           <div className="space-y-6 flex flex-col">
             {/* Predictive Insights Card */}
-            <div className="bg-[#0038A8] rounded-4xl p-6 lg:p-8 text-white shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFD700] rounded-full -translate-y-16 translate-x-16 opacity-10"></div>
+            <motion.div
+              variants={itemVariants}
+              className="bg-[#0038A8] rounded-[2.5rem] p-6 lg:p-8 text-white shadow-xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFD700] rounded-full -translate-y-16 translate-x-16 opacity-10 blur-xl" />
               <div className="flex items-center gap-3 mb-6 relative z-10">
-                <div className="p-2 bg-white/10 rounded-xl">
-                  <Activity className="text-[#FFD700]" />
+                <div className="p-2.5 bg-white/10 border border-white/20 rounded-xl shadow-inner">
+                  <Activity className="text-[#FFD700]" size={18} />
                 </div>
                 <h3 className="font-black uppercase tracking-widest text-xs text-[#FFD700]">
                   AI Insights
@@ -546,7 +586,7 @@ const ReportsAnalytics = () => {
                 <div>
                   <div className="flex justify-between items-center text-[9px] font-black text-blue-200 uppercase tracking-widest mb-1.5">
                     <span>Busiest Destination</span>
-                    <span className="text-[#FFD700] bg-black/20 px-2 py-0.5 rounded">
+                    <span className="text-[#0038A8] bg-[#FFD700] px-2 py-0.5 rounded shadow-sm">
                       High Vol
                     </span>
                   </div>
@@ -560,7 +600,10 @@ const ReportsAnalytics = () => {
                 <div>
                   <div className="flex justify-between items-center text-[9px] font-black text-blue-200 uppercase tracking-widest mb-1.5">
                     <span>Face Verification Net</span>
-                    <span className="text-emerald-400">98.5% Acc</span>
+                    <span className="text-emerald-400 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />{" "}
+                      98.5% Acc
+                    </span>
                   </div>
                   <p className="text-xs font-medium text-blue-100 leading-relaxed">
                     Phase 5 Biometric engine maintaining optimal identification
@@ -568,12 +611,15 @@ const ReportsAnalytics = () => {
                   </p>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Demographics List */}
-            <div className="bg-slate-50 rounded-4xl p-6 lg:p-8 border border-slate-200 flex-1">
-              <h3 className="text-xs font-black text-[#0038A8] uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Briefcase size={16} /> Demographics
+            <motion.div
+              variants={itemVariants}
+              className="bg-slate-50 rounded-[2.5rem] p-6 lg:p-8 border-2 border-slate-100 flex-1 shadow-sm"
+            >
+              <h3 className="text-xs font-black text-[#0038A8] uppercase tracking-widest mb-5 flex items-center gap-2">
+                <Briefcase size={16} className="text-[#FFD700]" /> Demographics
               </h3>
               <div className="space-y-3">
                 {Object.entries(stats.catMap).length === 0 ? (
@@ -584,24 +630,27 @@ const ReportsAnalytics = () => {
                   Object.entries(stats.catMap).map(([cat, count]) => (
                     <div
                       key={cat}
-                      className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 shadow-sm"
+                      className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-default"
                     >
-                      <span className="text-[10px] font-black text-slate-600 uppercase">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                         {cat}
                       </span>
-                      <span className="text-sm font-black text-[#0038A8]">
+                      <span className="text-sm font-black text-[#0038A8] bg-blue-50 px-3 py-1 rounded-lg">
                         {count}
                       </span>
                     </div>
                   ))
                 )}
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
 
         {/* Intelligence Footer */}
-        <div className="mt-8 p-6 bg-slate-50 rounded-3xl border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+        <motion.div
+          variants={itemVariants}
+          className="mt-8 p-6 bg-slate-50 rounded-[2rem] border-2 border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-sm"
+        >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-white rounded-2xl border border-slate-200 flex items-center justify-center shadow-sm shrink-0">
               <ShieldCheck className="text-[#0038A8] text-xl" />
@@ -615,20 +664,22 @@ const ReportsAnalytics = () => {
               </p>
             </div>
           </div>
-          <button className="text-[9px] font-black text-slate-400 hover:text-[#0038A8] tracking-[0.2em] transition-colors border border-slate-200 px-4 py-2 rounded-lg bg-white shadow-sm w-full md:w-auto text-center">
+          <button className="text-[9px] font-black text-[#0038A8] hover:text-white hover:bg-[#0038A8] tracking-[0.2em] transition-all border-2 border-[#0038A8]/20 px-6 py-3 rounded-xl bg-white shadow-sm w-full md:w-auto text-center cursor-pointer">
             REPORT ENGINE V2.0
           </button>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
 
 // --- HELPER COMPONENT ---
 const MetricCard = ({ icon, label, value, color, bg }: any) => (
-  <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex flex-col hover:shadow-md transition-all">
-    <div className={`p-3 rounded-xl w-max mb-4 ${bg} ${color}`}>{icon}</div>
-    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+  <div className="bg-white p-6 rounded-[2rem] border border-slate-200 flex flex-col shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+    <div className={`p-3 rounded-2xl w-max mb-4 border ${bg} ${color}`}>
+      {icon}
+    </div>
+    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
       {label}
     </h3>
     <p className={`text-4xl font-black mt-1 ${color}`}>{value}</p>

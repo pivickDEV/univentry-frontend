@@ -287,7 +287,7 @@ const AuditTrail = () => {
             <FiShield size={32} />
           </div>
           <div>
-            <h1 className="text-3xl lg:text-4xl font-black text-[#0038A8] uppercase tracking-tighter italic">
+            <h1 className="text-3xl lg:text-4xl font-black text-[#0038A8] uppercase tracking-tighter ">
               Audit <span className="text-[#FFD700]">Trail</span>
             </h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
