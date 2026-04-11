@@ -19,15 +19,6 @@ const api = axios.create({
   },
 });
 
-// 🔥 CRITICAL FIX: Add Token Interceptor so backend accepts saves/deletes!
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 const CCTVContext = createContext<any>(null);
 
 // ============================================================================
@@ -101,7 +92,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // 🛡️ 2. INITIALIZE SYSTEM (AI + Faces)
+  // 🛡️ 2. INITIALIZE SYSTEM (AI + Faces from Custom Route)
   useEffect(() => {
     const init = async () => {
       try {
@@ -118,26 +109,15 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
 
         setSystemStatus("SYNCING VECTORS...");
 
-        // 🔥 FETCH FROM MAIN BOOKINGS (NO DATE RESTRICTIONS)
-        const res = await api.get("/bookings");
-
-        let visitors: any[] = [];
-        if (Array.isArray(res.data)) {
-          visitors = res.data;
-        } else if (res.data?.data && Array.isArray(res.data.data)) {
-          visitors = res.data.data;
-        } else if (res.data?.bookings && Array.isArray(res.data.bookings)) {
-          visitors = res.data.bookings;
-        } else if (res.data?.visitors && Array.isArray(res.data.visitors)) {
-          visitors = res.data.visitors;
-        }
+        // 🔥 USE YOUR OPTIMIZED CUSTOM ROUTE
+        const res = await api.get("/face-recognition/visitors");
+        const visitors = res.data?.data || [];
 
         const labeledDescriptors: any[] = [];
         let loadedCount = 0;
 
-        visitors.forEach((v: any) => {
-          // REMOVED THE "TODAY ONLY" DATE RESTRICTION COMPLETELY!
-          // It will now load EVERYONE with a face.
+        visitors.forEach((v: any, index: number) => {
+          // 🔥 DATE RESTRICTION REMOVED: It now loads ALL visitors!
 
           const normalizedEmbedding = normalizeEmbedding(v.faceEmbedding);
 
@@ -150,12 +130,16 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
               ),
             );
             loadedCount++;
+          } else {
+            console.warn(
+              `Visitor [${index}] skipped: invalid embedding length`,
+            );
           }
         });
 
         // Initialize Face Matcher
         if (labeledDescriptors.length > 0) {
-          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65));
+          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65)); // 0.65 is optimal for CCTV
           setSystemStatus(`${loadedCount} VECTORS ACTIVE`);
           console.log(`✅ Loaded ${loadedCount} faces into AI memory!`);
         } else {
@@ -186,28 +170,17 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     cooldownMap.current.set(key, now);
 
     try {
-      // Send to DB FIRST
+      // Wait for Backend to save and return the REAL MongoDB _id
       const res = await api.post("/cctv-logs", newLog);
+      const savedLog = res.data?.data || res.data?.log || res.data || newLog;
 
-      // Robust extraction of the saved document
-      let savedLog = res.data;
-      if (res.data?.data) savedLog = res.data.data;
-      if (res.data?.log) savedLog = res.data.log;
-      if (res.data?.cctvLog) savedLog = res.data.cctvLog;
-
-      // Only display it on screen IF it successfully saved and has a real _id
-      if (savedLog && savedLog._id) {
-        setLogs((prev) => [savedLog, ...prev].slice(0, 50));
-      } else {
-        // Fallback: If backend saved it but we couldn't parse the response, re-fetch logs
-        await fetchLogs();
-      }
-    } catch (e: any) {
-      // 🔥 EXPOSED BACKEND ERROR: This tells you why MongoDB rejected the save
-      console.error(
-        "🚨 Failed to save CCTV log to Database. Backend says:",
-        e.response?.data || e.message,
-      );
+      // Prepend to UI
+      setLogs((prev) => [savedLog, ...prev].slice(0, 50));
+    } catch (e) {
+      console.warn("Failed to save CCTV log:", e);
+      // Fallback optimistic UI (deletion will fail until page refresh, but visual persists)
+      const fallbackLog = { ...newLog, _id: `temp-${Date.now()}` };
+      setLogs((prev) => [fallbackLog, ...prev].slice(0, 50));
     }
   }, []);
 
@@ -216,9 +189,8 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await api.delete(`/cctv-logs/${id}`);
       setLogs((prev) => prev.filter((l) => l._id !== id));
-    } catch (e: any) {
-      console.error("Delete Error:", e.response?.data || e.message);
-      alert("Delete failed! Check the browser console for details.");
+    } catch (e) {
+      alert("Delete failed! Refresh the page and try again.");
     }
   };
 
