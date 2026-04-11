@@ -72,7 +72,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         ]);
 
         setSystemStatus("SYNCING VECTORS...");
-        const res = await api.get("/face-recognition/visitors");
+        const res = await api.get("/bookings");
         const visitors = res.data?.bookings || res.data?.data || res.data || [];
 
         // 🔥 NEW: Get today's date in Manila timezone
