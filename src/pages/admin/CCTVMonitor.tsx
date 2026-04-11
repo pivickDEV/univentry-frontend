@@ -110,7 +110,7 @@ const CCTVMonitor = () => {
 
       <AnimatePresence>
         {logToDelete && (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 print:hidden">
+          <div className="fixed inset-0 z-150 flex items-center justify-center p-4 print:hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -150,7 +150,7 @@ const CCTVMonitor = () => {
       </AnimatePresence>
 
       {/* --- HEADER --- */}
-      <div className="max-w-[1800px] mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4 print:hidden">
+      <div className="max-w-450 mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4 print:hidden">
         <div className="flex items-center gap-5">
           <div className="p-4 bg-[#0038A8] text-[#FFD700] rounded-[1.8rem] shadow-2xl">
             <FiShield size={32} />
@@ -173,9 +173,9 @@ const CCTVMonitor = () => {
         </div>
       </div>
 
-      <div className="max-w-[1800px] mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 lg:overflow-hidden">
+      <div className="max-w-450 mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 lg:overflow-hidden">
         {/* --- LEFT: LIVE FEED --- */}
-        <div className="flex-[2.5] bg-white rounded-[2.5rem] border-2 border-slate-100 p-8 flex flex-col overflow-hidden shadow-xl min-h-[450px] print:hidden">
+        <div className="flex-[2.5] bg-white rounded-[2.5rem] border-2 border-slate-100 p-8 flex flex-col overflow-hidden shadow-xl min-h-112.5 print:hidden">
           <div className="flex items-center gap-3 mb-6 shrink-0">
             <div className="p-2.5 bg-blue-50 text-[#0038A8] rounded-xl">
               <FiCamera size={20} />
@@ -198,7 +198,7 @@ const CCTVMonitor = () => {
         {/* --- RIGHT: DETECTION REGISTRY --- */}
         <div
           id="detection-registry"
-          className="flex-1 bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-2xl p-6 lg:p-8 flex flex-col xl:max-w-md min-h-[500px] lg:min-h-0 print:border-0 print:shadow-none print:max-w-none"
+          className="flex-1 bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-2xl p-6 lg:p-8 flex flex-col xl:max-w-md min-h-125 lg:min-h-0 print:border-0 print:shadow-none print:max-w-none"
         >
           <div className="shrink-0 mb-6 border-b border-slate-100 pb-6 print:hidden">
             <div className="flex items-center justify-between mb-6">

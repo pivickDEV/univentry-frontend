@@ -19,6 +19,7 @@ import {
   Save,
   Settings2,
   Shield,
+  ShieldCheck,
   User as UserIcon,
   UserPlus,
   X,
@@ -238,6 +239,24 @@ const GuardSidebar = () => {
       setIsUpdating(false);
     }
   };
+
+  // 🔥 NEW: Real-time Password Strength Calculator
+  const getPasswordStrength = (pwd: string) => {
+    if (!pwd) return { width: "0%", color: "bg-transparent", label: "" };
+    if (pwd.length < 8)
+      return { width: "33%", color: "bg-red-500", label: "WEAK - MIN 8 CHARS" };
+
+    let score = 0;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+    if (score < 2)
+      return { width: "66%", color: "bg-amber-500", label: "MODERATE" };
+    return { width: "100%", color: "bg-emerald-500", label: "STRONG" };
+  };
+
+  const strength = getPasswordStrength(passwordForm.newPassword);
 
   // --- GUARD SPECIFIC MENU ITEMS ---
   const menuItems = [
@@ -695,7 +714,7 @@ const GuardSidebar = () => {
                           New Security Key
                         </label>
                         <div className="relative">
-                          <Shield
+                          <ShieldCheck
                             className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0038A8] transition-colors"
                             size={18}
                           />
@@ -730,6 +749,29 @@ const GuardSidebar = () => {
                             )}
                           </button>
                         </div>
+
+                        {/* 🔥 NEW: Password Strength Indicator */}
+                        {passwordForm.newPassword && (
+                          <div className="pt-2 px-1">
+                            <div className="flex justify-between items-center mb-1.5">
+                              <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">
+                                Strength Indicator
+                              </span>
+                              <span
+                                className={`text-[8px] font-black uppercase tracking-widest ${strength.label === "STRONG" ? "text-emerald-500" : strength.label === "MODERATE" ? "text-amber-500" : "text-red-500"}`}
+                              >
+                                {strength.label}
+                              </span>
+                            </div>
+                            <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: strength.width }}
+                                className={`h-full ${strength.color} transition-all duration-300`}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Confirm Password */}
