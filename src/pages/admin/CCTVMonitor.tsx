@@ -401,7 +401,7 @@ const CCTVMonitor = () => {
 };
 
 // HELPER CAMERA NODE (Unchanged)
-const CameraNode = ({ wsUrl, name }: { wsUrl: string; name: string }) => {
+const CameraNode = ({ wsUrl }: { wsUrl: string; name: string }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (!canvasRef.current || !(window as any).JSMpeg) return;
