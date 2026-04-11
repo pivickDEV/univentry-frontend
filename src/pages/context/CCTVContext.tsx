@@ -10,9 +10,13 @@ import React, {
   useState,
 } from "react";
 
+// 🚀 VERCEL PREP: Global API Instance with Tunnel Headers
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
-  headers: { "ngrok-skip-browser-warning": "69420" },
+  headers: {
+    "ngrok-skip-browser-warning": "69420",
+    "Bypass-Tunnel-Reminder": "true",
+  },
 });
 
 const CCTVContext = createContext<any>(null);
@@ -24,18 +28,17 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
   );
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [systemStatus, setSystemStatus] = useState("INITIALIZING...");
+
+  // 5 Minute Cooldown Map
   const cooldownMap = useRef<Map<string, number>>(new Map());
 
-  /* eslint-disable */
-
-  // 🛡️ 1. IMPROVED FETCH LOGS (Handles different response shapes)
+  // 🛡️ 1. FETCH LOGS
   const fetchLogs = async () => {
     try {
       const res = await api.get("/cctv-logs");
-      console.log("📥 CCTV Logs Received:", res.data); // DEBUG LOG
-
-      // Handle nested data structures (res.data, res.data.data, or res.data.logs)
       let rawData = [];
+
+      // Safely handle different backend response structures
       if (Array.isArray(res.data)) {
         rawData = res.data;
       } else if (res.data.data && Array.isArray(res.data.data)) {
@@ -44,6 +47,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         rawData = res.data.logs;
       }
 
+      // Sort newest to oldest
       const sortedData = rawData.sort(
         (a: any, b: any) =>
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
@@ -55,72 +59,15 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // 🛡️ 2. SEPARATED INITIALIZATION
-  useEffect(() => {
-    // Fetch logs IMMEDIATELY, don't wait for AI
-    fetchLogs();
-
-    const initAI = async () => {
-      try {
-        setSystemStatus("LOADING MODELS...");
-        const MODEL_URL =
-          "https://justadudewhohacks.github.io/face-api.js/models";
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        ]);
-
-        setSystemStatus("SYNCING VECTORS...");
-        const res = await api.get("/bookings");
-        const visitors = res.data?.bookings || res.data?.data || res.data || [];
-
-        // 🔥 NEW: Get today's date in Manila timezone
-        const todayStr = new Date().toLocaleDateString("en-CA", {
-          timeZone: "Asia/Manila",
-        });
-
-        const labeledDescriptors: any[] = [];
-
-        visitors.forEach((v: any) => {
-          // 🔥 NEW: Only process visitors whose bookingDate is exactly TODAY
-          if (v.bookingDate !== todayStr) return;
-
-          if (v.faceEmbedding && v.faceEmbedding.length === 128) {
-            labeledDescriptors.push(
-              new faceapi.LabeledFaceDescriptors(
-                `${v.firstName} ${v.lastName}__${v._id}`,
-                [new Float32Array(v.faceEmbedding)],
-              ),
-            );
-          }
-        });
-
-        if (labeledDescriptors.length > 0) {
-          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.6));
-          setSystemStatus("SURVEILLANCE ACTIVE");
-        } else {
-          setSystemStatus("NO VECTORS LOADED");
-        }
-
-        setModelsLoaded(true);
-      } catch (e) {
-        console.error("AI Initialization Failed:", e);
-        setSystemStatus("AI OFFLINE");
-        // Don't set ModelsLoaded to false if you want the logs to show anyway
-      }
-    };
-
-    initAI();
-  }, []);
-
-  // 🛡️ 2. INITIALIZE SYSTEM
+  // 🛡️ 2. INITIALIZE SYSTEM (AI + Faces from Bookings)
   useEffect(() => {
     const init = async () => {
       try {
         setSystemStatus("LOADING MODELS...");
         const MODEL_URL =
           "https://justadudewhohacks.github.io/face-api.js/models";
+
+        // Load Neural Nets
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
@@ -128,46 +75,87 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         ]);
 
         setSystemStatus("SYNCING VECTORS...");
-        const res = await api.get("/face-recognition/visitors");
-        const visitors = res.data?.bookings || res.data || [];
+
+        // 🔥 FETCH FROM BOOKINGS DB
+        const res = await api.get("/bookings");
+        const visitors = res.data?.bookings || res.data?.data || res.data || [];
+
+        // Get Today's Date in Manila Time (YYYY-MM-DD)
+        const todayStr = new Date().toLocaleDateString("en-CA", {
+          timeZone: "Asia/Manila",
+        });
 
         const labeledDescriptors: any[] = [];
+        let loadedCount = 0; // Track how many faces were successfully loaded
+
         visitors.forEach((v: any) => {
-          if (v.faceEmbedding && v.faceEmbedding.length === 128) {
+          // Extract just the YYYY-MM-DD from the DB bookingDate
+          const vDate = v.bookingDate ? v.bookingDate.split("T")[0] : "";
+
+          // =========================================================================
+          // ⚠️ CAPSTONE SECURITY RULE: Only allow visitors booked for TODAY
+          // =========================================================================
+          if (vDate !== todayStr) return;
+
+          if (!v.faceEmbedding) return;
+
+          // Safely parse the Face Embedding array from MongoDB
+          let arr: number[] = [];
+          if (typeof v.faceEmbedding === "string") {
+            try {
+              arr = JSON.parse(v.faceEmbedding);
+            } catch (e) {}
+          } else if (Array.isArray(v.faceEmbedding)) {
+            arr = v.faceEmbedding;
+          } else if (typeof v.faceEmbedding === "object") {
+            arr = Object.values(v.faceEmbedding);
+          }
+
+          // If it successfully extracted the 128-d matrix, memorize the face!
+          if (arr.length === 128) {
+            const floatArray = new Float32Array(arr.map(Number));
             labeledDescriptors.push(
               new faceapi.LabeledFaceDescriptors(
                 `${v.firstName} ${v.lastName}__${v._id}`,
-                [new Float32Array(v.faceEmbedding)],
+                [floatArray],
               ),
             );
+            loadedCount++;
           }
         });
 
+        // Initialize Face Matcher
         if (labeledDescriptors.length > 0) {
-          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.6));
+          // 🔥 BUMPED TO 0.65: This makes the CCTV slightly more forgiving to bad lighting/angles!
+          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65));
+          setSystemStatus(`${loadedCount} VECTORS ACTIVE`);
+        } else {
+          setSystemStatus(`NO BOOKINGS FOR TODAY`);
         }
 
-        // 🔥 CRITICAL: Fetch the logs after models/matcher are ready
+        // Fetch UI logs and mark as ready
         await fetchLogs();
-
         setModelsLoaded(true);
-        setSystemStatus("SURVEILLANCE ACTIVE");
       } catch (e) {
+        console.error("Context Init Error:", e);
         setSystemStatus("OFFLINE");
       }
     };
+
     init();
   }, []);
 
-  // 🛡️ 3. ADD LOG (Real-time)
+  // 🛡️ 3. ADD LOG (Triggered by CCTVMonitor when someone walks by)
   const addLog = useCallback(async (newLog: any) => {
     const key = `${newLog.visitorId}|||${newLog.cameraName}`;
     const now = Date.now();
+
+    // 5 MINUTE COOLDOWN: Prevent spamming the DB if the person stands there
     if (now - (cooldownMap.current.get(key) || 0) < 300000) return;
 
     cooldownMap.current.set(key, now);
 
-    // Update local state immediately for UI response
+    // Optimistic UI Update (Pops instantly on the right sidebar)
     setLogs((prev) => [newLog, ...prev].slice(0, 50));
 
     try {
