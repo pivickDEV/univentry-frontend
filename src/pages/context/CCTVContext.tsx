@@ -19,6 +19,15 @@ const api = axios.create({
   },
 });
 
+// 🔥 CRITICAL FIX: Add Token Interceptor so backend accepts saves/deletes/fetches!
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 const CCTVContext = createContext<any>(null);
 
 // ============================================================================
@@ -109,15 +118,32 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
 
         setSystemStatus("SYNCING VECTORS...");
 
-        // 🔥 USE YOUR OPTIMIZED CUSTOM ROUTE
+        // 🔥 FETCH FROM DB
         const res = await api.get("/face-recognition/visitors");
         const visitors = res.data?.data || [];
+
+        // Get Today's Date in Manila Time
+        const todayStr = new Date().toLocaleDateString("en-CA", {
+          timeZone: "Asia/Manila",
+        });
 
         const labeledDescriptors: any[] = [];
         let loadedCount = 0;
 
         visitors.forEach((v: any, index: number) => {
-          // 🔥 DATE RESTRICTION REMOVED: It now loads ALL visitors!
+          if (!v.bookingDate) return;
+
+          // 🔥 STRICT RULE FIX: Dual-Check Date System (Handles UTC and Local Strings)
+          const rawDate = v.bookingDate.split("T")[0];
+          let manilaDate = rawDate;
+          try {
+            manilaDate = new Date(v.bookingDate).toLocaleDateString("en-CA", {
+              timeZone: "Asia/Manila",
+            });
+          } catch (e) {}
+
+          // If neither the raw DB string nor the converted Manila time matches today, SKIP!
+          if (rawDate !== todayStr && manilaDate !== todayStr) return;
 
           const normalizedEmbedding = normalizeEmbedding(v.faceEmbedding);
 
@@ -139,13 +165,15 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
 
         // Initialize Face Matcher
         if (labeledDescriptors.length > 0) {
-          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65)); // 0.65 is optimal for CCTV
+          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65));
           setSystemStatus(`${loadedCount} VECTORS ACTIVE`);
-          console.log(`✅ Loaded ${loadedCount} faces into AI memory!`);
+          console.log(
+            `✅ Loaded ${loadedCount} faces into AI memory for today!`,
+          );
         } else {
           setFaceMatcher(null);
-          setSystemStatus(`NO FACES IN DATABASE`);
-          console.warn("⚠️ No faces found in DB at all.");
+          setSystemStatus(`NO BOOKINGS FOR TODAY`);
+          console.warn("⚠️ No faces found in DB matching today's date.");
         }
 
         // Fetch UI logs and mark as ready
@@ -160,7 +188,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     init();
   }, []);
 
-  // 🛡️ 3. ADD LOG (Waits for Real DB ID before displaying)
+  // 🛡️ 3. ADD LOG (Requires Real DB confirmation before showing on screen)
   const addLog = useCallback(async (newLog: Omit<any, "_id">) => {
     const key = `${newLog.visitorId}|||${newLog.cameraName}`;
     const now = Date.now();
@@ -170,17 +198,17 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     cooldownMap.current.set(key, now);
 
     try {
-      // Wait for Backend to save and return the REAL MongoDB _id
+      // Send to DB FIRST
       const res = await api.post("/cctv-logs", newLog);
-      const savedLog = res.data?.data || res.data?.log || res.data || newLog;
 
-      // Prepend to UI
-      setLogs((prev) => [savedLog, ...prev].slice(0, 50));
+      // Only display it on screen IF it successfully saved and has a real _id
+      const savedLog = res.data?.data || res.data?.log || res.data;
+      if (savedLog && savedLog._id) {
+        setLogs((prev) => [savedLog, ...prev].slice(0, 50));
+      }
     } catch (e) {
-      console.warn("Failed to save CCTV log:", e);
-      // Fallback optimistic UI (deletion will fail until page refresh, but visual persists)
-      const fallbackLog = { ...newLog, _id: `temp-${Date.now()}` };
-      setLogs((prev) => [fallbackLog, ...prev].slice(0, 50));
+      // 🔥 FIX: No more fake ID fallbacks. If it fails, it will not show up on screen.
+      console.error("🚨 Failed to save CCTV log to Database:", e);
     }
   }, []);
 
@@ -190,7 +218,8 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
       await api.delete(`/cctv-logs/${id}`);
       setLogs((prev) => prev.filter((l) => l._id !== id));
     } catch (e) {
-      alert("Delete failed! Refresh the page and try again.");
+      console.error(e);
+      alert("Delete failed! Ensure you are an Admin/Guard and refresh.");
     }
   };
 
