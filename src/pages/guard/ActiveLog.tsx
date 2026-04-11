@@ -1,3 +1,4 @@
+/* eslint-disable */
 "use client";
 
 import axios from "axios";
@@ -5,8 +6,10 @@ import { motion } from "framer-motion";
 import {
   Activity,
   Briefcase,
+  Camera,
   CheckCircle,
-  Clock,
+  Clock, // Added for CCTV UI
+  Eye,
   MapPin,
   RefreshCw,
   Search,
@@ -14,6 +17,7 @@ import {
   User,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useCCTV } from "../context/CCTVContext"; // 🔥 Import CCTV Context
 
 // --- API INSTANCE ---
 const api = axios.create({
@@ -34,29 +38,36 @@ interface Visitor {
   purpose: string;
   status: string;
   timeIn: string;
-  bookingDate: string; // 🚀 Added to interface for filtering
+  bookingDate: string;
   transactionTime?: string;
   timeOut?: string;
 }
 
 const ActiveLog = () => {
+  // 🔥 Pull real-time logs from Background Surveillance
+  const { logs } = useCCTV();
+
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [now, setNow] = useState(new Date());
+
+  // Update "Last Seen" timer every second
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   // --- FETCH DATA (STRICTLY TODAY) ---
   const fetchActiveVisitors = async () => {
     setRefreshing(true);
     try {
       const res = await api.get("/bookings");
-
-      // Get today's date in Manila timezone
       const todayStr = new Date().toLocaleDateString("en-CA", {
         timeZone: "Asia/Manila",
       });
 
-      // 🚀 THE FIX: We only want people who are INSIDE right now AND booked for TODAY
       const activeOnly = res.data.filter(
         (b: Visitor) =>
           b.status === "On Campus" &&
@@ -76,7 +87,6 @@ const ActiveLog = () => {
 
   useEffect(() => {
     fetchActiveVisitors();
-    // Auto-refresh every 30 seconds
     const interval = setInterval(fetchActiveVisitors, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -94,15 +104,24 @@ const ActiveLog = () => {
       );
   }, [visitors, searchTerm]);
 
-  // --- TIME CALCULATOR ---
+  // --- TIME CALCULATORS ---
   const getMinutesInside = (timeIn: string) => {
-    const diff = new Date().getTime() - new Date(timeIn).getTime();
+    const diff = now.getTime() - new Date(timeIn).getTime();
     return Math.floor(diff / 60000);
   };
 
+  const getLastSeenText = (timestamp: string) => {
+    const diffMs = now.getTime() - new Date(timestamp).getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+
+    if (diffSec < 60) return "Just now";
+    const mins = Math.floor(diffSec / 60);
+    return `${mins}m ago`;
+  };
+
   return (
-    <div className="min-h-55 h-screen bg-slate-50 p-4 md:p-6 font-sans text-slate-800 flex flex-col overflow-hidden">
-      <div className="max-w-450 mx-auto w-full flex flex-col h-full">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6 font-sans text-slate-800 flex flex-col overflow-hidden">
+      <div className="max-w-[1600px] mx-auto w-full flex flex-col h-full">
         {/* --- HEADER --- */}
         <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 mb-6 shrink-0 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <div>
@@ -121,12 +140,11 @@ const ActiveLog = () => {
               </span>
             </h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-              Live Campus Census - Today Only
+              Live Campus Census - Monitoring Integrated
             </p>
           </div>
 
           <div className="flex items-center gap-4 w-full lg:w-auto">
-            {/* Search Bar */}
             <div className="relative flex-1 lg:w-96">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input
@@ -138,7 +156,6 @@ const ActiveLog = () => {
               />
             </div>
 
-            {/* Refresh Button */}
             <button
               onClick={fetchActiveVisitors}
               disabled={refreshing}
@@ -173,11 +190,11 @@ const ActiveLog = () => {
             </div>
             <div>
               <p className="text-[10px] font-black text-[#0038A8]/60 uppercase tracking-widest">
-                System Status
+                Surveillance
               </p>
               <p className="text-sm font-black text-[#0038A8] leading-none mt-2 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#0038A8] animate-pulse"></span>{" "}
-                Monitoring
+                Tracking Active
               </p>
             </div>
           </div>
@@ -185,8 +202,8 @@ const ActiveLog = () => {
 
         {/* --- HIGH DENSITY TABLE --- */}
         <div className="bg-white border border-slate-200 rounded-4xl shadow-xl flex-1 flex flex-col overflow-hidden relative">
-          <div className="overflow-y-auto overflow-x-auto h-32.5 flex-1 custom-scrollbar relative">
-            <table className="w-full text-left border-collapse table-auto relative min-w-56.25">
+          <div className="overflow-auto flex-1 custom-scrollbar relative">
+            <table className="w-full text-left border-collapse table-auto relative min-w-[1000px]">
               <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-100">
                 <tr className="bg-slate-50/95 backdrop-blur-md">
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
@@ -196,10 +213,13 @@ const ActiveLog = () => {
                     Destination
                   </th>
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                    Entry Time
+                    Gate Entry
+                  </th>
+                  <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    Surveillance Track
                   </th>
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">
-                    Office Status
+                    Status
                   </th>
                 </tr>
               </thead>
@@ -208,26 +228,29 @@ const ActiveLog = () => {
                 {loading ? (
                   [...Array(6)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td colSpan={4} className="px-6 py-6">
+                      <td colSpan={5} className="px-6 py-6">
                         <div className="h-10 bg-slate-100 rounded-xl w-full" />
                       </td>
                     </tr>
                   ))
                 ) : filteredVisitors.length === 0 ? (
                   <tr>
-                    <td colSpan={4}>
-                      <div className="flex flex-col items-center justify-center py-32 text-slate-400">
-                        <Shield size={48} className="mb-4 opacity-20" />
-                        <p className="text-xs font-bold uppercase tracking-widest">
-                          Campus is currently empty.
-                        </p>
-                      </div>
+                    <td colSpan={5} className="py-32 text-center">
+                      <Shield size={48} className="mb-4 mx-auto opacity-20" />
+                      <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                        Campus is empty
+                      </p>
                     </td>
                   </tr>
                 ) : (
                   filteredVisitors.map((v) => {
                     const minsInside = getMinutesInside(v.timeIn);
-                    const isWarning = minsInside > 240; // Warn if inside for over 4 hours (240 mins)
+                    const isWarning = minsInside > 240;
+
+                    // 🔥 Find the latest CCTV hit for this specific visitor
+                    const latestDetection = logs.find(
+                      (l: any) => l.visitorId === v._id,
+                    );
 
                     return (
                       <motion.tr
@@ -250,7 +273,7 @@ const ActiveLog = () => {
                               >
                                 {v.lastName}, {v.firstName}
                               </p>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded mt-1 inline-block border border-slate-200">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded border border-slate-200 mt-1 inline-block">
                                 {v.category}
                               </span>
                             </div>
@@ -272,7 +295,7 @@ const ActiveLog = () => {
                           </div>
                         </td>
 
-                        {/* Entry Time / Duration */}
+                        {/* Entry Time */}
                         <td className="px-6 py-5 whitespace-nowrap">
                           <div className="flex flex-col">
                             <span className="text-xs font-black text-slate-700 font-mono bg-slate-100 px-2 py-1 rounded inline-block w-max border border-slate-200">
@@ -284,12 +307,53 @@ const ActiveLog = () => {
                             <span
                               className={`text-[10px] font-bold mt-1.5 flex items-center gap-1 ${isWarning ? "text-red-500" : "text-emerald-500"}`}
                             >
-                              <Clock size={10} /> {minsInside} mins inside
+                              <Clock size={10} /> {minsInside}m inside
                             </span>
                           </div>
                         </td>
 
-                        {/* Office Status (Moved to far right since manual action is gone) */}
+                        {/* 🔥 SURVEILLANCE TRACK (HH:MM:SS + Camera + Last Seen) */}
+                        <td className="px-6 py-5 whitespace-nowrap">
+                          {latestDetection ? (
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-[#0038A8]/10 rounded-lg text-[#0038A8]">
+                                  <Camera size={12} />
+                                </div>
+                                <span className="text-[10px] font-black uppercase text-slate-700 tracking-tight">
+                                  {latestDetection.cameraName?.split(
+                                    "|||",
+                                  )[0] || "Unknown Node"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[11px] font-bold text-[#0038A8] font-mono bg-blue-50 px-2 py-0.5 rounded">
+                                  {new Date(
+                                    latestDetection.timestamp,
+                                  ).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                    hour12: false,
+                                  })}
+                                </span>
+                                <span className="text-[10px] font-black text-emerald-600 flex items-center gap-1 uppercase tracking-tighter">
+                                  <Eye size={10} />{" "}
+                                  {getLastSeenText(latestDetection.timestamp)}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 opacity-30">
+                              <Camera size={14} className="text-slate-400" />
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 italic">
+                                No Optical Hit
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Office Status */}
                         <td className="px-6 py-5 whitespace-nowrap text-right">
                           {v.transactionTime ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest">
