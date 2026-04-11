@@ -153,39 +153,35 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     const key = `${newLog.visitorId}|||${newLog.cameraName}`;
     const now = Date.now();
 
+    // Prevent multiple logs within 1 minute for the same person
     if (now - (cooldownMap.current.get(key) || 0) < 60000) return;
     cooldownMap.current.set(key, now);
 
-    // Default values
+    // 1. Start with "IN" as the default status
     let finalStatus = "IN";
-    let finalCameraDisplay = newLog.cameraName;
 
+    // 2. Retrieve the visitor's gate entry data from the map
     const vData = visitorDataMap.current.get(newLog.visitorId);
 
-    // 🛡️ TACTICAL ALERT LOGIC
-    if (vData && vData.office !== "Unknown") {
-      const destOffice = vData.office;
-      const currentCam = newLog.cameraName;
-      const minutesInside = (now - vData.timeIn) / 60000;
+    if (vData && vData.timeIn) {
+      const entryTime = new Date(vData.timeIn).getTime();
 
-      // Define zones that are acceptable for this specific visitor
-      const safeZones = ["Main Entrance Hallway", "Gate", destOffice];
+      // Calculate how many minutes have passed since they entered the RTU Gate
+      const minutesSinceGateEntry = (now - entryTime) / 60000;
 
-      if (!safeZones.includes(currentCam)) {
-        // 🚨 Case 1: Visitor is in a hallway they shouldn't be in
-        finalStatus = "OUT_OF_BOUNDS";
-        finalCameraDisplay = `${currentCam} (Target: ${destOffice})`;
-      } else if (minutesInside > 20 && currentCam !== destOffice) {
-        // 🚨 Case 2: Visitor has been in the hallway/gate for too long without reaching the office
+      // 🔥 FIX: Only flag as LOITERING if they exceed 30 minutes on campus
+      // without completing their transaction.
+      if (minutesSinceGateEntry > 30) {
         finalStatus = "LOITERING";
       }
     }
 
+    // 3. Construct the sanitized payload for Mongoose
     const payload = {
       visitorId: newLog.visitorId,
       visitorName: newLog.visitorName,
-      cameraName: finalCameraDisplay,
-      status: finalStatus, // 🔥 Matches the new Backend Enum
+      cameraName: newLog.cameraName,
+      status: finalStatus, // Matches the backend enum perfectly
       confidence: newLog.confidence,
       screenshotBase64: newLog.screenshotBase64,
       timestamp: new Date().toISOString(),
@@ -194,10 +190,10 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       const res = await api.post("/cctv-logs", payload);
-      // Refresh local state with the saved log from DB
+      // Push the saved log from the database into the UI list
       setLogs((prev) => [res.data, ...prev].slice(0, 50));
     } catch (e: any) {
-      console.error("🚨 CCTV Save Failed:", e.response?.data || e.message);
+      console.error("🚨 CCTV Log Save Failed:", e.response?.data || e.message);
     }
   }, []);
 
