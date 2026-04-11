@@ -411,6 +411,22 @@ const CCTVMonitor = () => {
                           year: "numeric",
                         })}
                       </p>
+
+                      {/* 🔥 NEW: Displays the Loitering/Out of bounds status */}
+                      <div className="mb-2">
+                        <span
+                          className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${
+                            log.status === "Detected"
+                              ? "bg-slate-100 text-slate-500"
+                              : log.status.includes("Out of Bounds")
+                                ? "bg-red-100 text-red-600"
+                                : "bg-amber-100 text-amber-600"
+                          }`}
+                        >
+                          {log.status}
+                        </span>
+                      </div>
+
                       <div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
                         <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg">
                           <div className="w-1 h-1 bg-emerald-500 rounded-full" />
@@ -462,7 +478,6 @@ const CameraNode = ({
     }
   };
 
-  // 1. Connect JSMpeg Video Stream
   useEffect(() => {
     if (!canvasRef.current || !(window as any).JSMpeg) return;
 
@@ -480,7 +495,6 @@ const CameraNode = ({
     };
   }, [wsUrl]);
 
-  // 2. Start AI Scanning Loop
   useEffect(() => {
     if (!modelsLoaded || status !== "LIVE") return;
 
@@ -524,32 +538,9 @@ const CameraNode = ({
         ctx?.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
         resizedDetections.forEach((detection) => {
-          // ========================================================
-          // 🛡️ AI FIX: REJECT SIDE-PROFILE FACES (Mathematical Check)
-          // ========================================================
-          const landmarks = detection.landmarks;
-          const nose = landmarks.getNose()[0]; // Top of the nose
-          const jawline = landmarks.getJawOutline();
-          const leftEdge = jawline[0]; // Far left of the face
-          const rightEdge = jawline[16]; // Far right of the face
-
-          // Calculate distance from nose to both sides of the face
-          const leftDist = Math.abs(nose.x - leftEdge.x);
-          const rightDist = Math.abs(nose.x - rightEdge.x);
-
-          // If ratio is wildly uneven, the face is turned sideways!
-          const symmetryRatio = leftDist / rightDist;
-
-          if (symmetryRatio > 2.0 || symmetryRatio < 0.5) {
-            // Face is looking left or right. DO NOT SCAN.
-            return;
-          }
-          // ========================================================
-
           let drawLabel = "UNAUTHORIZED";
           let boxColor = "#ef4444"; // Red for unknown/unauthorized
 
-          // Only attempt to match if there are actually visitors in memory
           if (faceMatcher) {
             const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
             const isKnown = bestMatch.label !== "unknown";
@@ -560,7 +551,6 @@ const CameraNode = ({
               drawLabel = `${visitorName} (${confidence}%)`;
               boxColor = "#FFD700"; // RTU Gold for known
 
-              // Trigger Log creation in Context
               const screenshot = videoCanvas.toDataURL("image/jpeg", 0.6);
               onMatch({
                 visitorId,
@@ -574,7 +564,6 @@ const CameraNode = ({
             }
           }
 
-          // Draw the Box and Label on the overlay canvas
           const box = detection.detection.box;
           const drawBox = new faceapi.draw.DrawBox(box, {
             label: drawLabel,
@@ -584,10 +573,8 @@ const CameraNode = ({
           drawBox.draw(overlayCanvas);
         });
       } catch (err) {
-        // Suppress benign canvas errors
       } finally {
         isScanning = false;
-        // Adjust this timeout to balance performance (800ms = ~1.2 FPS)
         scanTimeout = setTimeout(scanFace, 500);
       }
     };
@@ -602,19 +589,14 @@ const CameraNode = ({
       ref={containerRef}
       className="w-full h-full relative flex items-center justify-center bg-[#0a0f1c] group"
     >
-      {/* Video Stream Layer */}
       <canvas
         ref={canvasRef}
         className="w-full h-full object-cover opacity-90 transition-opacity duration-700"
       />
-
-      {/* Transparent AI Drawing Layer */}
       <canvas
         ref={drawCanvasRef}
         className="absolute inset-0 w-full h-full pointer-events-none z-10"
       />
-
-      {/* Overlay Status Badge */}
       <div className="absolute top-6 left-6 flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl z-20">
         <div
           className={`w-2 h-2 rounded-full ${status === "LIVE" ? "bg-red-500 animate-pulse shadow-[0_0_10px_red]" : "bg-slate-500"}`}
@@ -623,16 +605,12 @@ const CameraNode = ({
           {name}
         </span>
       </div>
-
-      {/* Maximize Button */}
       <button
         onClick={toggleFullscreen}
         className="absolute top-6 right-6 p-3 bg-black/60 backdrop-blur-md text-white/50 hover:text-[#FFD700] rounded-xl transition-all opacity-0 group-hover:opacity-100 z-30"
       >
         <FiMaximize size={18} />
       </button>
-
-      {/* Offline Screen */}
       {status !== "LIVE" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm z-30">
           <FiWifiOff size={48} className="mb-4 text-slate-700 animate-pulse" />
