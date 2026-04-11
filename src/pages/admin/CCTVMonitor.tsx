@@ -524,10 +524,32 @@ const CameraNode = ({
         ctx?.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
         resizedDetections.forEach((detection) => {
+          // ========================================================
+          // 🛡️ AI FIX: REJECT SIDE-PROFILE FACES (Mathematical Check)
+          // ========================================================
+          const landmarks = detection.landmarks;
+          const nose = landmarks.getNose()[0]; // Top of the nose
+          const jawline = landmarks.getJawOutline();
+          const leftEdge = jawline[0]; // Far left of the face
+          const rightEdge = jawline[16]; // Far right of the face
+
+          // Calculate distance from nose to both sides of the face
+          const leftDist = Math.abs(nose.x - leftEdge.x);
+          const rightDist = Math.abs(nose.x - rightEdge.x);
+
+          // If ratio is wildly uneven, the face is turned sideways!
+          const symmetryRatio = leftDist / rightDist;
+
+          if (symmetryRatio > 2.0 || symmetryRatio < 0.5) {
+            // Face is looking left or right. DO NOT SCAN.
+            return;
+          }
+          // ========================================================
+
           let drawLabel = "UNAUTHORIZED";
           let boxColor = "#ef4444"; // Red for unknown/unauthorized
 
-          // Only attempt to match if there are actually visitors booked today
+          // Only attempt to match if there are actually visitors in memory
           if (faceMatcher) {
             const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
             const isKnown = bestMatch.label !== "unknown";
@@ -552,7 +574,7 @@ const CameraNode = ({
             }
           }
 
-          // Draw the Box and Label on the overlay canvas (even for strangers!)
+          // Draw the Box and Label on the overlay canvas
           const box = detection.detection.box;
           const drawBox = new faceapi.draw.DrawBox(box, {
             label: drawLabel,
