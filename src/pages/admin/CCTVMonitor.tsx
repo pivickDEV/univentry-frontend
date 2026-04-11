@@ -25,6 +25,7 @@ const CCTVMonitor = () => {
   const { logs, deleteLog, modelsLoaded, systemStatus, faceMatcher, addLog } =
     useCCTV();
 
+  // --- CAMERA STATE ---
   const [cameras] = useState([
     {
       id: "CAM_1",
@@ -33,25 +34,21 @@ const CCTVMonitor = () => {
     },
   ]);
 
+  // --- FILTER STATES ---
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterDate, setFilterDate] = useState("");
-  // 🔥 NEW STATE FOR RANGE
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-
+  const [dateFrom, setDateFrom] = useState(""); // 🔥 NEW
+  const [dateTo, setDateTo] = useState(""); // 🔥 NEW
   const [timeRange, setTimeRange] = useState<"today" | "yesterday" | "all">(
     "all",
   );
   const [sortOrder, setSortOrder] = useState<"recent" | "old">("recent");
 
+  // --- MODAL STATES ---
   const [logToDelete, setLogToDelete] = useState<any>(null);
   const [selectedLogDetails, setSelectedLogDetails] = useState<any>(null);
 
-  // --- 🔥 DOWNLOAD AS PICTURE LOGIC ---
-  const handleDownloadReport = () => {
-    const element = document.getElementById("detection-registry");
-    if (!element) return;
-    // This triggers the browser's visual print capture focused on the logs
+  // --- 🔥 PRINT/DOWNLOAD DOSSIER LOGIC ---
+  const handlePrintDossier = () => {
     window.print();
   };
 
@@ -64,33 +61,29 @@ const CCTVMonitor = () => {
       if (!l.timestamp) return false;
       const logTime = new Date(l.timestamp).getTime();
 
-      // 🔥 DATE RANGE LOGIC
-      if (dateFrom) {
-        const start = new Date(dateFrom).setHours(0, 0, 0, 0);
-        if (logTime < start) return false;
-      }
-      if (dateTo) {
-        const end = new Date(dateTo).setHours(23, 59, 59, 999);
-        if (logTime > end) return false;
+      // 1. Check Date Range (Takes priority)
+      if (dateFrom || dateTo) {
+        if (dateFrom) {
+          const start = new Date(dateFrom).setHours(0, 0, 0, 0);
+          if (logTime < start) return false;
+        }
+        if (dateTo) {
+          const end = new Date(dateTo).setHours(23, 59, 59, 999);
+          if (logTime > end) return false;
+        }
+        return true;
       }
 
-      // Existing logic for quick filters (if no range is set)
-      if (!dateFrom && !dateTo) {
-        if (filterDate) {
-          return (
-            new Date(l.timestamp).toISOString().split("T")[0] === filterDate
-          );
-        }
-        if (timeRange === "all") return true;
-        const logDate = new Date(l.timestamp);
-        const now = new Date();
-        if (timeRange === "today")
-          return logDate.toDateString() === now.toDateString();
-        if (timeRange === "yesterday") {
-          const yesterday = new Date();
-          yesterday.setDate(now.getDate() - 1);
-          return logDate.toDateString() === yesterday.toDateString();
-        }
+      // 2. Check Quick Filters
+      if (timeRange === "all") return true;
+      const logDate = new Date(l.timestamp);
+      const now = new Date();
+      if (timeRange === "today")
+        return logDate.toDateString() === now.toDateString();
+      if (timeRange === "yesterday") {
+        const yesterday = new Date();
+        yesterday.setDate(now.getDate() - 1);
+        return logDate.toDateString() === yesterday.toDateString();
       }
       return true;
     })
@@ -108,39 +101,43 @@ const CCTVMonitor = () => {
   };
 
   return (
-    <div className="min-h-screen lg:h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-y-auto lg:overflow-hidden relative print:bg-white print:p-0">
-      {/* ... (Existing Dossier Modal and Delete Confirmation code stays exactly the same) ... */}
-      {/* --- DOSSIER MODAL --- */}
+    <div className="min-h-screen lg:h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-y-auto lg:overflow-hidden relative print:p-0 print:bg-white">
+      {/* --------------------------- */}
+      {/* 🔥 DOSSIER MODAL (PRINT FORMAT) */}
+      {/* --------------------------- */}
       <AnimatePresence>
         {selectedLogDetails && (
-          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 print:relative print:z-0 print:p-0">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedLogDetails(null)}
-              className="absolute inset-0 bg-[#001233]/95 backdrop-blur-2xl"
+              className="absolute inset-0 bg-[#001233]/95 backdrop-blur-2xl print:hidden"
             />
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 50 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 50 }}
-              className="relative bg-white w-full max-w-4xl rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(0,56,168,0.4)] flex flex-col lg:flex-row"
+              className="relative bg-white w-full max-w-4xl rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(0,56,168,0.4)] flex flex-col lg:flex-row print:shadow-none print:rounded-none print:border-0 print:max-w-none"
             >
-              <div className="lg:w-3/5 bg-slate-950 relative flex items-center justify-center border-r border-slate-100">
+              {/* Image Section */}
+              <div className="lg:w-3/5 bg-slate-950 relative flex items-center justify-center border-r border-slate-100 print:w-1/2">
                 <img
                   src={selectedLogDetails.screenshotBase64}
                   className="w-full h-full object-contain"
-                  alt="High Res Detection"
+                  alt="Evidence"
                 />
-                <div className="absolute top-6 left-6 px-4 py-2 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  <span className="text-white text-[10px] font-black uppercase tracking-widest">
+                <div className="absolute top-6 left-6 px-4 py-2 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 flex items-center gap-2 print:bg-slate-100 print:text-black">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse print:hidden" />
+                  <span className="text-white text-[10px] font-black uppercase tracking-widest print:text-slate-800">
                     Raw Surveillance Frame
                   </span>
                 </div>
               </div>
-              <div className="lg:w-2/5 p-10 flex flex-col justify-between">
+
+              {/* Data Section */}
+              <div className="lg:w-2/5 p-10 flex flex-col justify-between print:w-1/2">
                 <div>
                   <div className="flex items-center gap-2 text-[#0038A8] mb-2">
                     <FiTarget size={20} />
@@ -175,8 +172,7 @@ const CCTVMonitor = () => {
                             <FiCamera size={14} /> Node
                           </span>
                           <span className="text-[#0038A8] text-right ml-2">
-                            {selectedLogDetails.cameraName?.split("|||")[0] ||
-                              "Unknown"}
+                            {selectedLogDetails.cameraName?.split("|||")[0]}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-xs font-bold text-slate-600 uppercase">
@@ -203,16 +199,27 @@ const CCTVMonitor = () => {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelectedLogDetails(null)}
-                  className="w-full mt-10 py-5 bg-[#0038A8] text-white rounded-[1.8rem] font-black uppercase text-xs tracking-widest shadow-xl hover:bg-[#002b82] transition-all active:scale-95"
-                >
-                  Close Dossier
-                </button>
+
+                {/* MODAL ACTIONS */}
+                <div className="flex flex-col gap-3 mt-10 print:hidden">
+                  <button
+                    onClick={handlePrintDossier}
+                    className="w-full py-5 bg-[#FFD700] text-[#0038A8] rounded-[1.8rem] font-black uppercase text-xs tracking-widest shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                  >
+                    <FiDownload size={18} /> Download Dossier
+                  </button>
+                  <button
+                    onClick={() => setSelectedLogDetails(null)}
+                    className="w-full py-4 bg-slate-100 text-slate-400 rounded-[1.5rem] font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all"
+                  >
+                    Close Registry
+                  </button>
+                </div>
               </div>
+
               <button
                 onClick={() => setSelectedLogDetails(null)}
-                className="absolute top-6 right-6 p-3 bg-slate-100 rounded-full hover:bg-red-500 hover:text-white transition-all"
+                className="absolute top-6 right-6 p-3 bg-slate-100 rounded-full hover:bg-red-500 hover:text-white transition-all print:hidden"
               >
                 <FiX />
               </button>
@@ -221,6 +228,7 @@ const CCTVMonitor = () => {
         )}
       </AnimatePresence>
 
+      {/* --- DELETE CONFIRMATION (Unchanged) --- */}
       <AnimatePresence>
         {logToDelete && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 print:hidden">
@@ -234,15 +242,21 @@ const CCTVMonitor = () => {
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl text-center border-4 border-white"
             >
               <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
                 <FiAlertTriangle size={40} />
               </div>
-              <h2 className="text-2xl font-black text-[#0038A8] uppercase mb-10">
+              <h2 className="text-2xl font-black text-[#0038A8] uppercase tracking-tighter mb-2">
                 Erase Track?
               </h2>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest leading-relaxed mb-10">
+                Remove log for{" "}
+                <span className="text-red-600">
+                  "{logToDelete.visitorName}"
+                </span>
+                ?
+              </p>
               <div className="flex gap-4">
                 <button
                   onClick={() => setLogToDelete(null)}
@@ -252,7 +266,7 @@ const CCTVMonitor = () => {
                 </button>
                 <button
                   onClick={handleConfirmDelete}
-                  className="flex-1 py-4 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px]"
+                  className="flex-1 py-4 bg-red-600 text-white font-black rounded-2xl uppercase text-[10px] shadow-lg shadow-red-900/20"
                 >
                   Delete
                 </button>
@@ -269,7 +283,7 @@ const CCTVMonitor = () => {
             <FiShield size={32} />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter italic">
+            <h1 className="text-3xl md:text-4xl font-black text-[#0038A8] uppercase tracking-tighter italic leading-none">
               Intelligence Monitor
             </h1>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-2">
@@ -286,7 +300,7 @@ const CCTVMonitor = () => {
         </div>
       </div>
 
-      <div className="max-w-[1800px] mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 lg:overflow-hidden">
+      <div className="max-w-[1800px] mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 lg:overflow-hidden print:block">
         {/* --- LEFT: LIVE FEED --- */}
         <div className="flex-[2.5] bg-white rounded-[2.5rem] border-2 border-slate-100 p-8 flex flex-col overflow-hidden shadow-xl min-h-[450px] print:hidden">
           <div className="flex items-center gap-3 mb-6 shrink-0">
@@ -294,10 +308,10 @@ const CCTVMonitor = () => {
               <FiCamera size={20} />
             </div>
             <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest">
-              Tactical Node: {cameras[0].name}
+              Tactical Node Feed
             </h3>
           </div>
-          <div className="flex-1 bg-slate-950 rounded-[2.2rem] overflow-hidden relative border-[6px] border-slate-50 shadow-inner group">
+          <div className="flex-1 bg-slate-950 rounded-[2.2rem] overflow-hidden relative border-[6px] border-slate-50 shadow-inner">
             <CameraNode
               wsUrl={cameras[0].wsUrl}
               name={cameras[0].name}
@@ -309,27 +323,20 @@ const CCTVMonitor = () => {
         </div>
 
         {/* --- RIGHT: DETECTION REGISTRY --- */}
-        <div
-          id="detection-registry"
-          className="flex-1 bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-2xl p-6 lg:p-8 flex flex-col xl:max-w-md min-h-[500px] lg:min-h-0 print:border-0 print:shadow-none print:max-w-none"
-        >
-          <div className="shrink-0 mb-6 border-b border-slate-100 pb-6 print:hidden">
+        <div className="flex-1 bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-2xl p-6 lg:p-8 flex flex-col xl:max-w-md min-h-[500px] lg:min-h-0 print:hidden">
+          <div className="shrink-0 mb-6 border-b border-slate-100 pb-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-blue-50 text-[#0038A8] rounded-xl">
                   <FiUserCheck size={20} />
                 </div>
                 <h3 className="text-xs font-black uppercase text-[#0038A8]">
-                  Identification Logs
+                  Registry Logs
                 </h3>
               </div>
-              {/* 🔥 DOWNLOAD BUTTON */}
-              <button
-                onClick={handleDownloadReport}
-                className="p-3 bg-[#FFD700] text-[#0038A8] rounded-xl shadow-lg hover:scale-110 transition-transform active:scale-90"
-              >
-                <FiDownload size={18} />
-              </button>
+              <span className="text-[9px] font-black text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-lg tracking-widest animate-pulse">
+                SYNCED
+              </span>
             </div>
 
             <div className="space-y-4">
@@ -344,7 +351,7 @@ const CCTVMonitor = () => {
                 />
               </div>
 
-              {/* 🔥 DATE RANGE PICKER */}
+              {/* 🔥 TACTICAL DATE RANGE FILTERS */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                   <p className="text-[7px] font-black text-slate-400 uppercase mb-1">
@@ -376,11 +383,10 @@ const CCTVMonitor = () => {
                     key={t}
                     onClick={() => {
                       setTimeRange(t as any);
-                      setFilterDate("");
                       setDateFrom("");
                       setDateTo("");
                     }}
-                    className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${timeRange === t && !dateFrom ? "bg-white text-[#0038A8] shadow-md" : "text-slate-400"}`}
+                    className={`flex-1 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${timeRange === t && !dateFrom ? "bg-white text-[#0038A8] shadow-md" : "text-slate-400"}`}
                   >
                     {t}
                   </button>
@@ -401,14 +407,13 @@ const CCTVMonitor = () => {
             </div>
           </div>
 
-          {/* DETECTIONS FEED */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4 print:overflow-visible">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
             <AnimatePresence mode="popLayout">
               {filteredLogs.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center opacity-30 mt-10 space-y-4">
                   <FiAlertCircle size={32} />
                   <p className="font-black text-slate-400 uppercase text-[10px]">
-                    No Matches In Range
+                    No Logs Found
                   </p>
                 </div>
               ) : (
@@ -418,7 +423,7 @@ const CCTVMonitor = () => {
                     layout
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="relative group bg-[#F8FAFC] border-2 border-slate-100 p-4 rounded-4xl flex gap-4 items-center hover:bg-white transition-all cursor-pointer overflow-hidden print:border-slate-300 print:mb-4"
+                    className="relative group bg-[#F8FAFC] border-2 border-slate-100 p-4 rounded-4xl flex gap-4 items-center hover:bg-white hover:shadow-2xl transition-all cursor-pointer overflow-hidden"
                     onClick={() => setSelectedLogDetails(log)}
                   >
                     <button
@@ -426,7 +431,7 @@ const CCTVMonitor = () => {
                         e.stopPropagation();
                         setLogToDelete(log);
                       }}
-                      className="absolute -top-1 -right-1 p-3 bg-red-600 text-white rounded-bl-3xl opacity-0 group-hover:opacity-100 transition-all z-30 print:hidden"
+                      className="absolute -top-1 -right-1 p-3 bg-red-600 text-white rounded-bl-3xl opacity-0 group-hover:opacity-100 transition-all z-30"
                     >
                       <FiTrash2 size={14} />
                     </button>
@@ -471,7 +476,7 @@ const CCTVMonitor = () => {
   );
 };
 
-// ... (Existing CameraNode component stays exactly the same) ...
+// --- CAMERA NODE (WITH AI INTEGRATION) ---
 const CameraNode = ({
   wsUrl,
   name,
