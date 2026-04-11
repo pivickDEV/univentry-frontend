@@ -7,12 +7,14 @@ import { useEffect, useRef, useState } from "react";
 import {
   FiAlertCircle,
   FiAlertTriangle,
+  FiCalendar,
   FiCamera,
   FiClock,
   FiDownload,
   FiLayers,
   FiSearch,
   FiShield,
+  FiTarget,
   FiTrash2,
   FiUserCheck,
   FiX,
@@ -108,9 +110,10 @@ const CCTVMonitor = () => {
   return (
     <div className="min-h-screen lg:h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-y-auto lg:overflow-hidden relative print:bg-white print:p-0">
       {/* ... (Existing Dossier Modal and Delete Confirmation code stays exactly the same) ... */}
+      {/* --- DOSSIER MODAL --- */}
       <AnimatePresence>
         {selectedLogDetails && (
-          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 print:hidden">
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -130,9 +133,21 @@ const CCTVMonitor = () => {
                   className="w-full h-full object-contain"
                   alt="High Res Detection"
                 />
+                <div className="absolute top-6 left-6 px-4 py-2 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  <span className="text-white text-[10px] font-black uppercase tracking-widest">
+                    Raw Surveillance Frame
+                  </span>
+                </div>
               </div>
               <div className="lg:w-2/5 p-10 flex flex-col justify-between">
                 <div>
+                  <div className="flex items-center gap-2 text-[#0038A8] mb-2">
+                    <FiTarget size={20} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em]">
+                      Target Identified
+                    </span>
+                  </div>
                   <h2 className="text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none mb-6">
                     {selectedLogDetails.visitorName}
                   </h2>
@@ -150,18 +165,54 @@ const CCTVMonitor = () => {
                         </span>
                       </div>
                     </div>
+                    <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                        Timestamp & Logistics
+                      </p>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-600 uppercase">
+                          <span className="flex items-center gap-2">
+                            <FiCamera size={14} /> Node
+                          </span>
+                          <span className="text-[#0038A8] text-right ml-2">
+                            {selectedLogDetails.cameraName?.split("|||")[0] ||
+                              "Unknown"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-600 uppercase">
+                          <span className="flex items-center gap-2">
+                            <FiClock size={14} /> Time
+                          </span>
+                          <span className="text-[#0038A8]">
+                            {new Date(
+                              selectedLogDetails.timestamp,
+                            ).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-600 uppercase">
+                          <span className="flex items-center gap-2">
+                            <FiCalendar size={14} /> Date
+                          </span>
+                          <span className="text-[#0038A8]">
+                            {new Date(
+                              selectedLogDetails.timestamp,
+                            ).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedLogDetails(null)}
-                  className="w-full mt-10 py-5 bg-[#0038A8] text-white rounded-[1.8rem] font-black uppercase text-xs tracking-widest shadow-xl"
+                  className="w-full mt-10 py-5 bg-[#0038A8] text-white rounded-[1.8rem] font-black uppercase text-xs tracking-widest shadow-xl hover:bg-[#002b82] transition-all active:scale-95"
                 >
                   Close Dossier
                 </button>
               </div>
               <button
                 onClick={() => setSelectedLogDetails(null)}
-                className="absolute top-6 right-6 p-3 bg-slate-100 rounded-full"
+                className="absolute top-6 right-6 p-3 bg-slate-100 rounded-full hover:bg-red-500 hover:text-white transition-all"
               >
                 <FiX />
               </button>
