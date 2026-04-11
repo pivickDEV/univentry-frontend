@@ -19,6 +19,15 @@ const api = axios.create({
   },
 });
 
+// 🔥 1. CRITICAL FIX: Add Token Interceptor so backend accepts saves/deletes!
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 const CCTVContext = createContext<any>(null);
 
 // ============================================================================
@@ -64,10 +73,10 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [systemStatus, setSystemStatus] = useState("INITIALIZING...");
 
-  // 5 Minute Cooldown Map
+  // 🔥 2. SMART TRACKING MAPS (For Loitering & Out of Bounds)
   const cooldownMap = useRef<Map<string, number>>(new Map());
+  const visitorDataMap = useRef<Map<string, any>>(new Map());
 
-  // 🛡️ 1. FETCH LOGS
   const fetchLogs = async () => {
     try {
       const res = await api.get("/cctv-logs");
@@ -92,7 +101,6 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // 🛡️ 2. INITIALIZE SYSTEM (AI + Faces from Custom Route)
   useEffect(() => {
     const init = async () => {
       try {
@@ -100,7 +108,6 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         const MODEL_URL =
           "https://justadudewhohacks.github.io/face-api.js/models";
 
-        // Load Neural Nets
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
@@ -109,15 +116,22 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
 
         setSystemStatus("SYNCING VECTORS...");
 
-        // 🔥 USE YOUR OPTIMIZED CUSTOM ROUTE
-        const res = await api.get("/face-recognition/visitors");
-        const visitors = res.data?.data || [];
+        // Fetching full bookings data so we have 'office' and 'timeIn' for the Loitering tracking!
+        const res = await api.get("/bookings");
+        const visitors = res.data?.data || res.data || [];
 
         const labeledDescriptors: any[] = [];
         let loadedCount = 0;
 
+        // Reset Tracker
+        visitorDataMap.current.clear();
+
         visitors.forEach((v: any, index: number) => {
-          // 🔥 DATE RESTRICTION REMOVED: It now loads ALL visitors!
+          // Save Visitor Info to map for Area Coverage / Loitering calculations
+          visitorDataMap.current.set(v._id, {
+            office: v.office || "Unknown",
+            timeIn: v.timeIn ? new Date(v.timeIn).getTime() : Date.now(),
+          });
 
           const normalizedEmbedding = normalizeEmbedding(v.faceEmbedding);
 
@@ -131,24 +145,18 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
             );
             loadedCount++;
           } else {
-            console.warn(
-              `Visitor [${index}] skipped: invalid embedding length`,
-            );
+            console.warn(`Visitor [${index}] skipped: invalid embedding`);
           }
         });
 
-        // Initialize Face Matcher
         if (labeledDescriptors.length > 0) {
-          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65)); // 0.65 is optimal for CCTV
+          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65));
           setSystemStatus(`${loadedCount} VECTORS ACTIVE`);
-          console.log(`✅ Loaded ${loadedCount} faces into AI memory!`);
         } else {
           setFaceMatcher(null);
           setSystemStatus(`NO FACES IN DATABASE`);
-          console.warn("⚠️ No faces found in DB at all.");
         }
 
-        // Fetch UI logs and mark as ready
         await fetchLogs();
         setModelsLoaded(true);
       } catch (e) {
@@ -160,27 +168,74 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     init();
   }, []);
 
-  // 🛡️ 3. ADD LOG (Waits for Real DB ID before displaying)
+  // 🛡️ 3. ADD LOG & AREA TRACKING (Point A to Point B)
   const addLog = useCallback(async (newLog: Omit<any, "_id">) => {
     const key = `${newLog.visitorId}|||${newLog.cameraName}`;
     const now = Date.now();
 
-    // 5 Minute Cooldown per person per camera
-    if (now - (cooldownMap.current.get(key) || 0) < 300000) return;
+    // 1-Minute Cooldown to prevent spam
+    if (now - (cooldownMap.current.get(key) || 0) < 60000) return;
     cooldownMap.current.set(key, now);
 
-    try {
-      // Wait for Backend to save and return the REAL MongoDB _id
-      const res = await api.post("/cctv-logs", newLog);
-      const savedLog = res.data?.data || res.data?.log || res.data || newLog;
+    // ========================================================
+    // 🚨 SENSOR TRIGGER: Out of Bounds & Loitering Check
+    // ========================================================
+    let alertStatus = "Detected";
+    let alertNote = "Normal";
 
-      // Prepend to UI
-      setLogs((prev) => [savedLog, ...prev].slice(0, 50));
-    } catch (e) {
-      console.warn("Failed to save CCTV log:", e);
-      // Fallback optimistic UI (deletion will fail until page refresh, but visual persists)
-      const fallbackLog = { ...newLog, _id: `temp-${Date.now()}` };
-      setLogs((prev) => [fallbackLog, ...prev].slice(0, 50));
+    const vData = visitorDataMap.current.get(newLog.visitorId);
+
+    if (vData) {
+      const destOffice = vData.office;
+      const currentCam = newLog.cameraName;
+      const timeIn = vData.timeIn;
+
+      // Calculate minutes since entry
+      const minutesInside = (now - timeIn) / 60000;
+
+      // Safe zones include the main gate and their actual destination
+      const safeZones = ["Main Entrance Hallway", "Gate", destOffice];
+
+      // RULE 1: OUT OF BOUNDS (Wrong Area)
+      if (!safeZones.includes(currentCam)) {
+        alertStatus = "Out of Bounds";
+        alertNote = `Unauthorized Area. Destination is ${destOffice}.`;
+      }
+      // RULE 2: LOITERING (Time Allotted > 15 mins without reaching destination)
+      else if (minutesInside > 15 && currentCam !== destOffice) {
+        alertStatus = "Loitering";
+        alertNote = `In transit for ${Math.floor(minutesInside)} mins.`;
+      }
+    }
+
+    const payload = {
+      ...newLog,
+      visitorName: `${newLog.firstName} ${newLog.lastName}`,
+      status: alertStatus,
+      purpose: alertNote, // Using 'purpose' or 'notes' field to store the alert info
+    };
+
+    try {
+      // Send to DB FIRST
+      const res = await api.post("/cctv-logs", payload);
+      const savedLog = res.data?.data || res.data?.log || res.data;
+
+      // Ensure successful DB Save
+      if (savedLog && savedLog._id) {
+        setLogs((prev) => [savedLog, ...prev].slice(0, 50));
+
+        // If alert was triggered, you can log it to console or trigger UI notification
+        if (alertStatus !== "Detected") {
+          console.warn(
+            `🚨 SECURITY ALERT: ${payload.visitorName} - ${alertStatus} (${alertNote})`,
+          );
+        }
+      }
+    } catch (e: any) {
+      console.error(
+        "Failed to save log. Auth or DB Error:",
+        e.response?.data || e.message,
+      );
     }
   }, []);
 
@@ -190,7 +245,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
       await api.delete(`/cctv-logs/${id}`);
       setLogs((prev) => prev.filter((l) => l._id !== id));
     } catch (e) {
-      alert("Delete failed! Refresh the page and try again.");
+      alert("Delete failed! Check the browser console for details.");
     }
   };
 
