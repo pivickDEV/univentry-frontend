@@ -12,6 +12,7 @@ import {
   FiClock,
   FiLayers,
   FiLoader,
+  FiMaximize,
   FiSearch,
   FiShield,
   FiTarget,
@@ -360,6 +361,7 @@ const CCTVMonitor = () => {
             </div>
           </div>
 
+          {/* DETECTIONS FEED */}
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
             <AnimatePresence mode="popLayout">
               {filteredLogs.length === 0 ? (
@@ -389,7 +391,7 @@ const CCTVMonitor = () => {
                     >
                       <FiTrash2 size={14} />
                     </button>
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border-2 border-white shadow-md transition-transform group-hover:scale-105">
+                    <div className="w-18 h-18 rounded-2xl overflow-hidden shrink-0 border-2 border-white shadow-md transition-transform group-hover:scale-105">
                       <img
                         src={log.screenshotBase64}
                         className="w-full h-full object-cover"
@@ -397,7 +399,7 @@ const CCTVMonitor = () => {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-[#0038A8] text-sm uppercase truncate tracking-tight mb-0.5">
+                      <h4 className="font-black text-[#0038A8] text-[13px] uppercase truncate tracking-tight mb-0.5">
                         {log.visitorName}
                       </h4>
                       <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">
@@ -419,7 +421,6 @@ const CCTVMonitor = () => {
                           {new Date(log.timestamp).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
-                            second: "2-digit",
                           })}
                         </div>
                       </div>
@@ -445,10 +446,19 @@ const CameraNode = ({
   modelsLoaded,
   onMatch,
 }: any) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null); // For Video
   const drawCanvasRef = useRef<HTMLCanvasElement>(null); // For AI Boxes
   const playerRef = useRef<any>(null);
   const [status, setStatus] = useState("LINKING...");
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen();
+    }
+  };
 
   // 1. Connect JSMpeg Video Stream
   useEffect(() => {
@@ -470,7 +480,9 @@ const CameraNode = ({
 
   // 2. Start AI Scanning Loop
   useEffect(() => {
-    if (!modelsLoaded || !faceMatcher || status !== "LIVE") return;
+    // 🔥 FIX: We REMOVED !faceMatcher from the return here.
+    // It will now run the detection loop even if no visitors are booked today.
+    if (!modelsLoaded || status !== "LIVE") return;
 
     let scanTimeout: NodeJS.Timeout;
     let isScanning = false;
@@ -487,12 +499,12 @@ const CameraNode = ({
           throw new Error("Canvas zero dimension");
         }
 
-        // Detect Faces on the JSMpeg Canvas
+        // 🔥 FIX: Increased inputSize to 416 for better CCTV distance detection based on docs
         const detections = await faceapi
           .detectAllFaces(
             videoCanvas,
             new faceapi.TinyFaceDetectorOptions({
-              inputSize: 320,
+              inputSize: 416,
               scoreThreshold: 0.4,
             }),
           )
@@ -513,34 +525,37 @@ const CameraNode = ({
         ctx?.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
         resizedDetections.forEach((detection) => {
-          const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-          const box = detection.detection.box;
-
-          // Draw the Box and Label on the overlay canvas
-          const isKnown = bestMatch.label !== "unknown";
           let drawLabel = "UNAUTHORIZED";
-          let boxColor = "#ef4444"; // Red for unknown
+          let boxColor = "#ef4444"; // Red for unknown/unauthorized
 
-          if (isKnown) {
-            const [visitorName, visitorId] = bestMatch.label.split("__");
-            const confidence = Math.round((1 - bestMatch.distance) * 100);
-            drawLabel = `${visitorName} (${confidence}%)`;
-            boxColor = "#FFD700"; // RTU Gold for known
+          // Only attempt to match if there are actually visitors booked today
+          if (faceMatcher) {
+            const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+            const isKnown = bestMatch.label !== "unknown";
 
-            // Trigger Log creation in Context
-            const screenshot = videoCanvas.toDataURL("image/jpeg", 0.6);
-            onMatch({
-              _id: Math.random().toString(36).substr(2, 9),
-              visitorId,
-              visitorName,
-              cameraName: name,
-              confidence,
-              screenshotBase64: screenshot,
-              status: "Detected",
-              timestamp: new Date().toISOString(),
-            });
+            if (isKnown) {
+              const [visitorName, visitorId] = bestMatch.label.split("__");
+              const confidence = Math.round((1 - bestMatch.distance) * 100);
+              drawLabel = `${visitorName} (${confidence}%)`;
+              boxColor = "#FFD700"; // RTU Gold for known
+
+              // Trigger Log creation in Context
+              const screenshot = videoCanvas.toDataURL("image/jpeg", 0.6);
+              onMatch({
+                _id: Math.random().toString(36).substr(2, 9),
+                visitorId,
+                visitorName,
+                cameraName: name,
+                confidence,
+                screenshotBase64: screenshot,
+                status: "Detected",
+                timestamp: new Date().toISOString(),
+              });
+            }
           }
 
+          // Draw the Box and Label on the overlay canvas (even for strangers!)
+          const box = detection.detection.box;
           const drawBox = new faceapi.draw.DrawBox(box, {
             label: drawLabel,
             boxColor: boxColor,
@@ -553,7 +568,7 @@ const CameraNode = ({
       } finally {
         isScanning = false;
         // Adjust this timeout to balance performance (800ms = ~1.2 FPS)
-        scanTimeout = setTimeout(scanFace, 800);
+        scanTimeout = setTimeout(scanFace, 500);
       }
     };
 
@@ -563,7 +578,10 @@ const CameraNode = ({
   }, [faceMatcher, modelsLoaded, status, name, onMatch]);
 
   return (
-    <div className="w-full h-full relative flex items-center justify-center bg-[#0a0f1c]">
+    <div
+      ref={containerRef}
+      className="w-full h-full relative flex items-center justify-center bg-[#0a0f1c] group"
+    >
       {/* Video Stream Layer */}
       <canvas
         ref={canvasRef}
@@ -585,6 +603,14 @@ const CameraNode = ({
           {name}
         </span>
       </div>
+
+      {/* Maximize Button */}
+      <button
+        onClick={toggleFullscreen}
+        className="absolute top-6 right-6 p-3 bg-black/60 backdrop-blur-md text-white/50 hover:text-[#FFD700] rounded-xl transition-all opacity-0 group-hover:opacity-100 z-30"
+      >
+        <FiMaximize size={18} />
+      </button>
 
       {/* Offline Screen */}
       {status !== "LIVE" && (
