@@ -19,7 +19,6 @@ const api = axios.create({
   },
 });
 
-// 🔥 CRITICAL FIX: Add Token Interceptor so backend accepts saves/deletes!
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token && config.headers) {
@@ -84,7 +83,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
       );
       setLogs(sortedData);
     } catch (err) {
-      console.error("🔥 Context Error: Could not fetch initial logs", err);
+      console.error("Context Error: Could not fetch initial logs", err);
     }
   };
 
@@ -150,16 +149,14 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     init();
   }, []);
 
-  // 🛡️ 3. ADD LOG (Posts to backend, then refetches to ensure sync)
   const addLog = useCallback(async (newLog: Omit<any, "_id">) => {
     const key = `${newLog.visitorId}|||${newLog.cameraName}`;
     const now = Date.now();
 
-    // 1 Minute Cooldown per person per camera to avoid DB spam
     if (now - (cooldownMap.current.get(key) || 0) < 60000) return;
     cooldownMap.current.set(key, now);
 
-    let finalStatus = "Detected";
+    let finalCameraName = newLog.cameraName;
 
     const vData = visitorDataMap.current.get(newLog.visitorId);
     if (vData && vData.office !== "Unknown") {
@@ -169,32 +166,30 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
       const safeZones = ["Main Entrance Hallway", "Gate", destOffice];
 
       if (!safeZones.includes(currentCam)) {
-        finalStatus = `Out of Bounds (${destOffice})`;
+        finalCameraName = `${newLog.cameraName} ||| OUT OF BOUNDS (Headed to ${destOffice})`;
       } else if (minutesInside > 15 && currentCam !== destOffice) {
-        finalStatus = `Loitering`;
+        finalCameraName = `${newLog.cameraName} ||| LOITERING`;
       }
     }
 
-    // STRICT PAYLOAD: Only fields the backend expects
+    // 🔥 STRICT PAYLOAD FIX: perfectly matches your MongoDB Schema
     const payload = {
       visitorId: newLog.visitorId,
       visitorName: newLog.visitorName,
-      cameraName: newLog.cameraName,
-      status: finalStatus,
+      cameraName: finalCameraName, // Safe place to store the alert!
+      status: "Detected", // Fixed Enum Issue
       confidence: newLog.confidence,
       screenshotBase64: newLog.screenshotBase64,
       timestamp: newLog.timestamp,
+      date: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" }), // Fixed Missing Date Issue
     };
 
     try {
-      // SEND TO DATABASE FIRST
       await api.post("/cctv-logs", payload);
-
-      // 🔥 FETCH FRESH LOGS FROM DB TO GUARANTEE IT SAVED AND HAS AN _ID
-      await fetchLogs();
+      await fetchLogs(); // Guaranteed fetch after save
     } catch (e: any) {
       console.error(
-        "🚨 Failed to save CCTV log. Backend Schema might reject it.",
+        "🚨 Failed to save CCTV log. Backend says:",
         e.response?.data || e.message,
       );
     }

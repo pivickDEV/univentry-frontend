@@ -149,8 +149,9 @@ const CCTVMonitor = () => {
                           <span className="flex items-center gap-2">
                             <FiCamera size={14} /> Node
                           </span>
-                          <span className="text-[#0038A8]">
-                            {selectedLogDetails.cameraName}
+                          <span className="text-[#0038A8] text-right ml-2">
+                            {selectedLogDetails.cameraName?.split("|||")[0] ||
+                              "Unknown"}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-xs font-bold text-slate-600 uppercase">
@@ -285,6 +286,7 @@ const CCTVMonitor = () => {
             </h3>
           </div>
           <div className="flex-1 bg-slate-950 rounded-[2.2rem] overflow-hidden relative border-[6px] border-slate-50 shadow-inner group">
+            {/* 🔥 INTEGRATED CAMERA NODE WITH AI DRAWING */}
             <CameraNode
               wsUrl={cameras[0].wsUrl}
               name={cameras[0].name}
@@ -373,86 +375,102 @@ const CCTVMonitor = () => {
                   </p>
                 </div>
               ) : (
-                filteredLogs.map((log: any) => (
-                  <motion.div
-                    key={log._id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9, x: 20 }}
-                    animate={{ opacity: 1, scale: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="relative group bg-[#F8FAFC] border-2 border-slate-100 p-4 rounded-4xl flex gap-4 items-center hover:bg-white hover:shadow-2xl hover:border-blue-100 transition-all cursor-pointer overflow-hidden"
-                    onClick={() => setSelectedLogDetails(log)}
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLogToDelete(log);
-                      }}
-                      className="absolute -top-1 -right-1 p-3 bg-red-600 text-white rounded-bl-3xl opacity-0 group-hover:opacity-100 transition-all shadow-lg z-30 active:scale-90"
+                filteredLogs.map((log: any) => {
+                  // 🔥 RENDER ALERT FROM CAMERANAME SAFELY
+                  const isOutOfBounds =
+                    log.cameraName?.includes("OUT OF BOUNDS");
+                  const isLoitering = log.cameraName?.includes("LOITERING");
+                  const hasAlert = isOutOfBounds || isLoitering;
+                  const cleanCameraName =
+                    log.cameraName?.split("|||")[0] || log.cameraName;
+
+                  return (
+                    <motion.div
+                      key={log._id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9, x: 20 }}
+                      animate={{ opacity: 1, scale: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      className="relative group bg-[#F8FAFC] border-2 border-slate-100 p-4 rounded-4xl flex gap-4 items-center hover:bg-white hover:shadow-2xl hover:border-blue-100 transition-all cursor-pointer overflow-hidden"
+                      onClick={() => setSelectedLogDetails(log)}
                     >
-                      <FiTrash2 size={14} />
-                    </button>
-                    <div className="w-18 h-18 rounded-2xl overflow-hidden shrink-0 border-2 border-white shadow-md transition-transform group-hover:scale-105">
-                      <img
-                        src={log.screenshotBase64}
-                        className="w-full h-full object-cover"
-                        alt="Hit"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-[#0038A8] text-[13px] uppercase truncate tracking-tight mb-0.5">
-                        {log.visitorName}
-                      </h4>
-                      <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">
-                        {new Date(log.timestamp).toLocaleDateString("en-PH", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </p>
-
-                      <div className="mb-2">
-                        <span
-                          className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${
-                            log.status === "Detected"
-                              ? "bg-slate-100 text-slate-500 border border-slate-200"
-                              : log.status?.includes("Out of Bounds")
-                                ? "bg-red-100 text-red-600 border border-red-200"
-                                : "bg-amber-100 text-amber-600 border border-amber-200"
-                          }`}
-                        >
-                          {log.status}
-                        </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLogToDelete(log);
+                        }}
+                        className="absolute -top-1 -right-1 p-3 bg-red-600 text-white rounded-bl-3xl opacity-0 group-hover:opacity-100 transition-all shadow-lg z-30 active:scale-90"
+                      >
+                        <FiTrash2 size={14} />
+                      </button>
+                      <div className="w-18 h-18 rounded-2xl overflow-hidden shrink-0 border-2 border-white shadow-md transition-transform group-hover:scale-105">
+                        <img
+                          src={log.screenshotBase64}
+                          className="w-full h-full object-cover"
+                          alt="Hit"
+                        />
                       </div>
-
-                      <div className="flex flex-col gap-2 border-t border-slate-100 pt-2.5">
-                        <div className="flex items-center gap-1.5 w-max">
-                          <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg">
-                            <div className="w-1 h-1 bg-emerald-500 rounded-full" />
-                            <span className="text-[8px] font-black">
-                              {log.confidence}%
-                            </span>
-                          </div>
-                          {/* 🔥 NEW: Displays the exact Camera Node */}
-                          <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-[#0038A8] border border-blue-100 rounded-lg">
-                            <FiCamera size={8} />
-                            <span className="text-[8px] font-black uppercase tracking-wider">
-                              {log.cameraName || "Unknown Node"}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400 font-mono">
-                          <FiClock size={10} className="text-blue-200" />
-                          {new Date(log.timestamp).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-black text-[#0038A8] text-[13px] uppercase truncate tracking-tight mb-0.5">
+                          {log.visitorName}
+                        </h4>
+                        <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">
+                          {new Date(log.timestamp).toLocaleDateString("en-PH", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
                           })}
+                        </p>
+
+                        {/* 🔥 STATUS ALERT BADGE */}
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
+                            {log.status || "Detected"}
+                          </span>
+
+                          {hasAlert && (
+                            <span
+                              className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${
+                                isOutOfBounds
+                                  ? "bg-red-100 text-red-600 border border-red-200"
+                                  : "bg-amber-100 text-amber-600 border border-amber-200"
+                              }`}
+                            >
+                              {isOutOfBounds ? "Out of Bounds" : "Loitering"}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2 border-t border-slate-100 pt-2.5">
+                          <div className="flex items-center gap-1.5 w-max">
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg">
+                              <div className="w-1 h-1 bg-emerald-500 rounded-full" />
+                              <span className="text-[8px] font-black">
+                                {log.confidence}%
+                              </span>
+                            </div>
+
+                            {/* 🔥 CAMERA NODE DISPLAY */}
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-[#0038A8] border border-blue-100 rounded-lg">
+                              <FiCamera size={8} />
+                              <span className="text-[8px] font-black uppercase tracking-wider">
+                                {cleanCameraName}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400 font-mono">
+                            <FiClock size={10} className="text-blue-200" />
+                            {new Date(log.timestamp).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))
+                    </motion.div>
+                  );
+                })
               )}
             </AnimatePresence>
           </div>
