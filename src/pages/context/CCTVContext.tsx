@@ -113,30 +113,11 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         const res = await api.get("/face-recognition/visitors");
         const visitors = res.data?.data || [];
 
-        // Get Today's Date in Manila Time (YYYY-MM-DD)
-        const todayStr = new Date().toLocaleDateString("en-CA", {
-          timeZone: "Asia/Manila",
-        });
-
         const labeledDescriptors: any[] = [];
         let loadedCount = 0;
 
         visitors.forEach((v: any, index: number) => {
-          // If the backend didn't return a date, skip them
-          if (!v.bookingDate) {
-            console.warn(
-              `Visitor ${v.firstName} skipped: No bookingDate provided by API.`,
-            );
-            return;
-          }
-
-          // Safely extract just the YYYY-MM-DD portion
-          const vDate = v.bookingDate.split("T")[0];
-
-          // =========================================================================
-          // ⚠️ CAPSTONE SECURITY RULE: Only allow visitors booked for TODAY
-          // =========================================================================
-          if (vDate !== todayStr) return;
+          // 🔥 DATE RESTRICTION REMOVED: It now loads ALL visitors!
 
           const normalizedEmbedding = normalizeEmbedding(v.faceEmbedding);
 
@@ -160,13 +141,11 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         if (labeledDescriptors.length > 0) {
           setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65)); // 0.65 is optimal for CCTV
           setSystemStatus(`${loadedCount} VECTORS ACTIVE`);
-          console.log(
-            `✅ Loaded ${loadedCount} faces into AI memory for today!`,
-          );
+          console.log(`✅ Loaded ${loadedCount} faces into AI memory!`);
         } else {
           setFaceMatcher(null);
-          setSystemStatus(`NO BOOKINGS FOR TODAY`);
-          console.warn("⚠️ No faces found in DB matching today's date.");
+          setSystemStatus(`NO FACES IN DATABASE`);
+          console.warn("⚠️ No faces found in DB at all.");
         }
 
         // Fetch UI logs and mark as ready
