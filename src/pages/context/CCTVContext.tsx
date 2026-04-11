@@ -77,7 +77,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         setSystemStatus("SYNCING VECTORS...");
 
         // 🔥 FETCH FROM BOOKINGS DB
-        const res = await api.get("/bookings");
+        const res = await api.get("/face-recognition/visitors");
         const visitors = res.data?.bookings || res.data?.data || res.data || [];
 
         // Get Today's Date in Manila Time (YYYY-MM-DD)
