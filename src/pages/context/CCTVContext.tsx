@@ -19,7 +19,7 @@ const api = axios.create({
   },
 });
 
-// 🔥 CRITICAL FIX: Add Token Interceptor so backend accepts saves/deletes/fetches!
+// 🔥 CRITICAL FIX: Ensure the Auth Token is always sent for saves/deletes!
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -101,7 +101,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // 🛡️ 2. INITIALIZE SYSTEM (AI + Faces from Custom Route)
+  // 🛡️ 2. INITIALIZE SYSTEM (AI + Faces)
   useEffect(() => {
     const init = async () => {
       try {
@@ -118,32 +118,44 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
 
         setSystemStatus("SYNCING VECTORS...");
 
-        // 🔥 FETCH FROM DB
-        const res = await api.get("/face-recognition/visitors");
-        const visitors = res.data?.data || [];
+        // 🔥 FETCH FROM MAIN BOOKINGS
+        const res = await api.get("/bookings");
 
-        // Get Today's Date in Manila Time
+        // 🚨 INDESTRUCTIBLE ARRAY EXTRACTION:
+        let visitors: any[] = [];
+        if (Array.isArray(res.data)) {
+          visitors = res.data;
+        } else if (res.data?.data && Array.isArray(res.data.data)) {
+          visitors = res.data.data;
+        } else if (res.data?.bookings && Array.isArray(res.data.bookings)) {
+          visitors = res.data.bookings;
+        } else if (res.data?.visitors && Array.isArray(res.data.visitors)) {
+          visitors = res.data.visitors;
+        }
+
+        console.log(
+          `[CCTV DB Check] Found ${visitors.length} total visitors in database.`,
+        );
+
+        // Get Today's Date in exact "YYYY-MM-DD" format for Manila
         const todayStr = new Date().toLocaleDateString("en-CA", {
           timeZone: "Asia/Manila",
         });
 
         const labeledDescriptors: any[] = [];
         let loadedCount = 0;
+        let todayMatches = 0;
 
-        visitors.forEach((v: any, index: number) => {
-          if (!v.bookingDate) return;
+        visitors.forEach((v: any) => {
+          // Get "YYYY-MM-DD" from DB's bookingDate safely
+          const dbDate = v.bookingDate
+            ? String(v.bookingDate).split("T")[0]
+            : null;
 
-          // 🔥 STRICT RULE FIX: Dual-Check Date System (Handles UTC and Local Strings)
-          const rawDate = v.bookingDate.split("T")[0];
-          let manilaDate = rawDate;
-          try {
-            manilaDate = new Date(v.bookingDate).toLocaleDateString("en-CA", {
-              timeZone: "Asia/Manila",
-            });
-          } catch (e) {}
+          // ⚠️ SECURITY RULE: ONLY allow bookings matching today's Manila date!
+          if (dbDate !== todayStr) return;
 
-          // If neither the raw DB string nor the converted Manila time matches today, SKIP!
-          if (rawDate !== todayStr && manilaDate !== todayStr) return;
+          todayMatches++;
 
           const normalizedEmbedding = normalizeEmbedding(v.faceEmbedding);
 
@@ -158,22 +170,22 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
             loadedCount++;
           } else {
             console.warn(
-              `Visitor [${index}] skipped: invalid embedding length`,
+              `[CCTV] Skipping ${v.firstName}: Invalid face data (Length: ${normalizedEmbedding.length})`,
             );
           }
         });
 
+        console.log(
+          `[CCTV Metrics] Matched ${todayMatches} bookings for today. Loaded ${loadedCount} valid faces.`,
+        );
+
         // Initialize Face Matcher
         if (labeledDescriptors.length > 0) {
-          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65));
+          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65)); // 0.65 is optimal for CCTV
           setSystemStatus(`${loadedCount} VECTORS ACTIVE`);
-          console.log(
-            `✅ Loaded ${loadedCount} faces into AI memory for today!`,
-          );
         } else {
           setFaceMatcher(null);
-          setSystemStatus(`NO BOOKINGS FOR TODAY`);
-          console.warn("⚠️ No faces found in DB matching today's date.");
+          setSystemStatus(`NO BOOKINGS TODAY`);
         }
 
         // Fetch UI logs and mark as ready
@@ -188,7 +200,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     init();
   }, []);
 
-  // 🛡️ 3. ADD LOG (Requires Real DB confirmation before showing on screen)
+  // 🛡️ 3. ADD LOG (Waits for Real DB ID before displaying)
   const addLog = useCallback(async (newLog: Omit<any, "_id">) => {
     const key = `${newLog.visitorId}|||${newLog.cameraName}`;
     const now = Date.now();
@@ -206,9 +218,12 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
       if (savedLog && savedLog._id) {
         setLogs((prev) => [savedLog, ...prev].slice(0, 50));
       }
-    } catch (e) {
-      // 🔥 FIX: No more fake ID fallbacks. If it fails, it will not show up on screen.
-      console.error("🚨 Failed to save CCTV log to Database:", e);
+    } catch (e: any) {
+      // 🔥 EXPOSED BACKEND ERROR: This will tell you exactly why MongoDB rejected the save
+      console.error(
+        "🚨 Failed to save CCTV log to Database. Backend says:",
+        e.response?.data || e.message,
+      );
     }
   }, []);
 
@@ -217,9 +232,9 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await api.delete(`/cctv-logs/${id}`);
       setLogs((prev) => prev.filter((l) => l._id !== id));
-    } catch (e) {
-      console.error(e);
-      alert("Delete failed! Ensure you are an Admin/Guard and refresh.");
+    } catch (e: any) {
+      console.error("Delete Error:", e.response?.data || e.message);
+      alert("Delete failed! Check the browser console for details.");
     }
   };
 
