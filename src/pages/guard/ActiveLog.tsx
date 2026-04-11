@@ -121,7 +121,7 @@ const ActiveLog = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6 font-sans text-slate-800 flex flex-col overflow-hidden">
-      <div className="max-w-[1600px] mx-auto w-full flex flex-col h-full">
+      <div className="max-w-400 mx-auto w-full flex flex-col h-full">
         {/* --- HEADER --- */}
         <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6 mb-6 shrink-0 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <div>
@@ -203,7 +203,7 @@ const ActiveLog = () => {
         {/* --- HIGH DENSITY TABLE --- */}
         <div className="bg-white border border-slate-200 rounded-4xl shadow-xl flex-1 flex flex-col overflow-hidden relative">
           <div className="overflow-auto flex-1 custom-scrollbar relative">
-            <table className="w-full text-left border-collapse table-auto relative min-w-[1000px]">
+            <table className="w-full text-left border-collapse table-auto relative min-w-250">
               <thead className="sticky top-0 z-10 bg-white shadow-sm ring-1 ring-slate-100">
                 <tr className="bg-slate-50/95 backdrop-blur-md">
                   <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
