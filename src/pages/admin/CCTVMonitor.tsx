@@ -26,7 +26,6 @@ const CCTVMonitor = () => {
   const [dateTo, setDateTo] = useState(""); // 🔥 NEW
   const [sortOrder, setSortOrder] = useState<"recent" | "old">("recent");
 
-  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [logToDelete, setLogToDelete] = useState<any>(null);
   const [selectedLogDetails, setSelectedLogDetails] = useState<any>(null);
 
