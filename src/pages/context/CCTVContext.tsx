@@ -19,10 +19,10 @@ const api = axios.create({
   },
 });
 
-// 🔥 CRITICAL FIX: Ensure the Auth Token is always sent for saves/deletes!
+// 🔥 CRITICAL FIX: Add Token Interceptor so backend accepts saves/deletes!
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
-  if (token) {
+  if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -118,10 +118,9 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
 
         setSystemStatus("SYNCING VECTORS...");
 
-        // 🔥 FETCH FROM MAIN BOOKINGS
+        // 🔥 FETCH FROM MAIN BOOKINGS (NO DATE RESTRICTIONS)
         const res = await api.get("/bookings");
 
-        // 🚨 INDESTRUCTIBLE ARRAY EXTRACTION:
         let visitors: any[] = [];
         if (Array.isArray(res.data)) {
           visitors = res.data;
@@ -133,29 +132,12 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
           visitors = res.data.visitors;
         }
 
-        console.log(
-          `[CCTV DB Check] Found ${visitors.length} total visitors in database.`,
-        );
-
-        // Get Today's Date in exact "YYYY-MM-DD" format for Manila
-        const todayStr = new Date().toLocaleDateString("en-CA", {
-          timeZone: "Asia/Manila",
-        });
-
         const labeledDescriptors: any[] = [];
         let loadedCount = 0;
-        let todayMatches = 0;
 
         visitors.forEach((v: any) => {
-          // Get "YYYY-MM-DD" from DB's bookingDate safely
-          const dbDate = v.bookingDate
-            ? String(v.bookingDate).split("T")[0]
-            : null;
-
-          // ⚠️ SECURITY RULE: ONLY allow bookings matching today's Manila date!
-          if (dbDate !== todayStr) return;
-
-          todayMatches++;
+          // REMOVED THE "TODAY ONLY" DATE RESTRICTION COMPLETELY!
+          // It will now load EVERYONE with a face.
 
           const normalizedEmbedding = normalizeEmbedding(v.faceEmbedding);
 
@@ -168,24 +150,18 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
               ),
             );
             loadedCount++;
-          } else {
-            console.warn(
-              `[CCTV] Skipping ${v.firstName}: Invalid face data (Length: ${normalizedEmbedding.length})`,
-            );
           }
         });
 
-        console.log(
-          `[CCTV Metrics] Matched ${todayMatches} bookings for today. Loaded ${loadedCount} valid faces.`,
-        );
-
         // Initialize Face Matcher
         if (labeledDescriptors.length > 0) {
-          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65)); // 0.65 is optimal for CCTV
+          setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65));
           setSystemStatus(`${loadedCount} VECTORS ACTIVE`);
+          console.log(`✅ Loaded ${loadedCount} faces into AI memory!`);
         } else {
           setFaceMatcher(null);
-          setSystemStatus(`NO BOOKINGS TODAY`);
+          setSystemStatus(`NO FACES IN DATABASE`);
+          console.warn("⚠️ No faces found in DB at all.");
         }
 
         // Fetch UI logs and mark as ready
@@ -213,13 +189,21 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
       // Send to DB FIRST
       const res = await api.post("/cctv-logs", newLog);
 
+      // Robust extraction of the saved document
+      let savedLog = res.data;
+      if (res.data?.data) savedLog = res.data.data;
+      if (res.data?.log) savedLog = res.data.log;
+      if (res.data?.cctvLog) savedLog = res.data.cctvLog;
+
       // Only display it on screen IF it successfully saved and has a real _id
-      const savedLog = res.data?.data || res.data?.log || res.data;
       if (savedLog && savedLog._id) {
         setLogs((prev) => [savedLog, ...prev].slice(0, 50));
+      } else {
+        // Fallback: If backend saved it but we couldn't parse the response, re-fetch logs
+        await fetchLogs();
       }
     } catch (e: any) {
-      // 🔥 EXPOSED BACKEND ERROR: This will tell you exactly why MongoDB rejected the save
+      // 🔥 EXPOSED BACKEND ERROR: This tells you why MongoDB rejected the save
       console.error(
         "🚨 Failed to save CCTV log to Database. Backend says:",
         e.response?.data || e.message,
