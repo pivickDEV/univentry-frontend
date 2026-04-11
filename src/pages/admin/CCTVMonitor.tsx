@@ -51,7 +51,7 @@ const CCTVMonitor = () => {
       l.visitorName?.toLowerCase().includes(searchQuery.toLowerCase()),
     )
     .filter((l: any) => {
-      if (!l.timestamp) return false; // Safety check
+      if (!l.timestamp) return false;
 
       if (filterDate) {
         return new Date(l.timestamp).toISOString().split("T")[0] === filterDate;
@@ -285,7 +285,6 @@ const CCTVMonitor = () => {
             </h3>
           </div>
           <div className="flex-1 bg-slate-950 rounded-[2.2rem] overflow-hidden relative border-[6px] border-slate-50 shadow-inner group">
-            {/* 🔥 INTEGRATED CAMERA NODE WITH AI DRAWING */}
             <CameraNode
               wsUrl={cameras[0].wsUrl}
               name={cameras[0].name}
@@ -412,28 +411,37 @@ const CCTVMonitor = () => {
                         })}
                       </p>
 
-                      {/* 🔥 NEW: Displays the Loitering/Out of bounds status */}
                       <div className="mb-2">
                         <span
                           className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${
                             log.status === "Detected"
-                              ? "bg-slate-100 text-slate-500"
-                              : log.status.includes("Out of Bounds")
-                                ? "bg-red-100 text-red-600"
-                                : "bg-amber-100 text-amber-600"
+                              ? "bg-slate-100 text-slate-500 border border-slate-200"
+                              : log.status?.includes("Out of Bounds")
+                                ? "bg-red-100 text-red-600 border border-red-200"
+                                : "bg-amber-100 text-amber-600 border border-amber-200"
                           }`}
                         >
                           {log.status}
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
-                        <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg">
-                          <div className="w-1 h-1 bg-emerald-500 rounded-full" />
-                          <span className="text-[8px] font-black">
-                            {log.confidence}%
-                          </span>
+                      <div className="flex flex-col gap-2 border-t border-slate-100 pt-2.5">
+                        <div className="flex items-center gap-1.5 w-max">
+                          <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg">
+                            <div className="w-1 h-1 bg-emerald-500 rounded-full" />
+                            <span className="text-[8px] font-black">
+                              {log.confidence}%
+                            </span>
+                          </div>
+                          {/* 🔥 NEW: Displays the exact Camera Node */}
+                          <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-[#0038A8] border border-blue-100 rounded-lg">
+                            <FiCamera size={8} />
+                            <span className="text-[8px] font-black uppercase tracking-wider">
+                              {log.cameraName || "Unknown Node"}
+                            </span>
+                          </div>
                         </div>
+
                         <div className="flex items-center gap-1 text-[9px] font-bold text-slate-400 font-mono">
                           <FiClock size={10} className="text-blue-200" />
                           {new Date(log.timestamp).toLocaleTimeString([], {
@@ -465,8 +473,8 @@ const CameraNode = ({
   onMatch,
 }: any) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null); // For Video
-  const drawCanvasRef = useRef<HTMLCanvasElement>(null); // For AI Boxes
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawCanvasRef = useRef<HTMLCanvasElement>(null);
   const playerRef = useRef<any>(null);
   const [status, setStatus] = useState("LINKING...");
 
@@ -485,7 +493,7 @@ const CameraNode = ({
       canvas: canvasRef.current,
       autoplay: true,
       audio: false,
-      disableGl: true, // IMPORTANT: Needed so FaceAPI can read the canvas!
+      disableGl: true,
       onPlay: () => setStatus("LIVE"),
       onStalled: () => setStatus("BUFFERING..."),
     });
@@ -539,7 +547,7 @@ const CameraNode = ({
 
         resizedDetections.forEach((detection) => {
           let drawLabel = "UNAUTHORIZED";
-          let boxColor = "#ef4444"; // Red for unknown/unauthorized
+          let boxColor = "#ef4444";
 
           if (faceMatcher) {
             const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
@@ -549,7 +557,7 @@ const CameraNode = ({
               const [visitorName, visitorId] = bestMatch.label.split("__");
               const confidence = Math.round((1 - bestMatch.distance) * 100);
               drawLabel = `${visitorName} (${confidence}%)`;
-              boxColor = "#FFD700"; // RTU Gold for known
+              boxColor = "#FFD700";
 
               const screenshot = videoCanvas.toDataURL("image/jpeg", 0.6);
               onMatch({

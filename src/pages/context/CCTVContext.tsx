@@ -66,7 +66,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
   const [systemStatus, setSystemStatus] = useState("INITIALIZING...");
 
   const cooldownMap = useRef<Map<string, number>>(new Map());
-  const visitorDataMap = useRef<Map<string, any>>(new Map()); // 🔥 Tracks Office & TimeIn
+  const visitorDataMap = useRef<Map<string, any>>(new Map());
 
   const fetchLogs = async () => {
     try {
@@ -103,7 +103,6 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
 
         setSystemStatus("SYNCING VECTORS...");
 
-        // 🔥 Use optimized route. NO DATE RESTRICTION. Load EVERYONE.
         const res = await api.get("/face-recognition/visitors");
         const visitors = res.data?.data || res.data || [];
 
@@ -113,7 +112,6 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         visitorDataMap.current.clear();
 
         visitors.forEach((v: any) => {
-          // Store data for Out of Bounds / Loitering checks
           visitorDataMap.current.set(v._id, {
             office: v.office || "Unknown",
             timeIn: v.timeIn ? new Date(v.timeIn).getTime() : Date.now(),
@@ -152,47 +150,51 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     init();
   }, []);
 
+  // 🛡️ 3. ADD LOG (Posts to backend, then refetches to ensure sync)
   const addLog = useCallback(async (newLog: Omit<any, "_id">) => {
     const key = `${newLog.visitorId}|||${newLog.cameraName}`;
     const now = Date.now();
 
+    // 1 Minute Cooldown per person per camera to avoid DB spam
     if (now - (cooldownMap.current.get(key) || 0) < 60000) return;
     cooldownMap.current.set(key, now);
 
-    // ========================================================
-    // 🚨 SENSOR TRIGGER: Out of Bounds & Loitering Check
-    // ========================================================
     let finalStatus = "Detected";
 
     const vData = visitorDataMap.current.get(newLog.visitorId);
     if (vData && vData.office !== "Unknown") {
       const destOffice = vData.office;
       const currentCam = newLog.cameraName;
-      const secondsInside = (now - vData.timeIn) / 1000;
-
+      const minutesInside = (now - vData.timeIn) / 60000;
       const safeZones = ["Main Entrance Hallway", "Gate", destOffice];
 
       if (!safeZones.includes(currentCam)) {
-        finalStatus = `Out of Bounds (Headed to ${destOffice})`;
-      } else if (secondsInside > 10 && currentCam !== destOffice) {
-        finalStatus = `Loitering (${Math.floor(secondsInside)} secs)`;
+        finalStatus = `Out of Bounds (${destOffice})`;
+      } else if (minutesInside > 15 && currentCam !== destOffice) {
+        finalStatus = `Loitering`;
       }
     }
 
-    const payload = { ...newLog, status: finalStatus };
+    // STRICT PAYLOAD: Only fields the backend expects
+    const payload = {
+      visitorId: newLog.visitorId,
+      visitorName: newLog.visitorName,
+      cameraName: newLog.cameraName,
+      status: finalStatus,
+      confidence: newLog.confidence,
+      screenshotBase64: newLog.screenshotBase64,
+      timestamp: newLog.timestamp,
+    };
 
     try {
       // SEND TO DATABASE FIRST
-      const res = await api.post("/cctv-logs", payload);
-      const savedLog = res.data?.data || res.data?.log || res.data;
+      await api.post("/cctv-logs", payload);
 
-      // UPDATE UI ONLY IF DB ACCEPTS IT
-      if (savedLog && savedLog._id) {
-        setLogs((prev) => [savedLog, ...prev].slice(0, 50));
-      }
+      // 🔥 FETCH FRESH LOGS FROM DB TO GUARANTEE IT SAVED AND HAS AN _ID
+      await fetchLogs();
     } catch (e: any) {
       console.error(
-        "🚨 Failed to save CCTV log. Token missing or invalid schema.",
+        "🚨 Failed to save CCTV log. Backend Schema might reject it.",
         e.response?.data || e.message,
       );
     }
