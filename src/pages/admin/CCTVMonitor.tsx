@@ -48,9 +48,11 @@ const CCTVMonitor = () => {
   // --- FILTER & SORT LOGIC ---
   const filteredLogs = logs
     .filter((l: any) =>
-      l.visitorName.toLowerCase().includes(searchQuery.toLowerCase()),
+      l.visitorName?.toLowerCase().includes(searchQuery.toLowerCase()),
     )
     .filter((l: any) => {
+      if (!l.timestamp) return false; // Safety check
+
       if (filterDate) {
         return new Date(l.timestamp).toISOString().split("T")[0] === filterDate;
       }
@@ -69,8 +71,8 @@ const CCTVMonitor = () => {
       return true;
     })
     .sort((a: any, b: any) => {
-      const timeA = new Date(a.timestamp).getTime();
-      const timeB = new Date(b.timestamp).getTime();
+      const timeA = new Date(a.timestamp || 0).getTime();
+      const timeB = new Date(b.timestamp || 0).getTime();
       return sortOrder === "recent" ? timeB - timeA : timeA - timeB;
     });
 
@@ -480,8 +482,6 @@ const CameraNode = ({
 
   // 2. Start AI Scanning Loop
   useEffect(() => {
-    // 🔥 FIX: We REMOVED !faceMatcher from the return here.
-    // It will now run the detection loop even if no visitors are booked today.
     if (!modelsLoaded || status !== "LIVE") return;
 
     let scanTimeout: NodeJS.Timeout;
@@ -499,7 +499,6 @@ const CameraNode = ({
           throw new Error("Canvas zero dimension");
         }
 
-        // 🔥 FIX: Increased inputSize to 416 for better CCTV distance detection based on docs
         const detections = await faceapi
           .detectAllFaces(
             videoCanvas,
@@ -542,7 +541,6 @@ const CameraNode = ({
               // Trigger Log creation in Context
               const screenshot = videoCanvas.toDataURL("image/jpeg", 0.6);
               onMatch({
-                _id: Math.random().toString(36).substr(2, 9),
                 visitorId,
                 visitorName,
                 cameraName: name,
