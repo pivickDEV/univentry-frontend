@@ -149,49 +149,55 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     init();
   }, []);
 
-  const addLog = useCallback(async (newLog: Omit<any, "_id">) => {
+  const addLog = useCallback(async (newLog: any) => {
     const key = `${newLog.visitorId}|||${newLog.cameraName}`;
     const now = Date.now();
 
     if (now - (cooldownMap.current.get(key) || 0) < 60000) return;
     cooldownMap.current.set(key, now);
 
-    let finalCameraName = newLog.cameraName;
+    // Default values
+    let finalStatus = "IN";
+    let finalCameraDisplay = newLog.cameraName;
 
     const vData = visitorDataMap.current.get(newLog.visitorId);
+
+    // 🛡️ TACTICAL ALERT LOGIC
     if (vData && vData.office !== "Unknown") {
       const destOffice = vData.office;
       const currentCam = newLog.cameraName;
       const minutesInside = (now - vData.timeIn) / 60000;
+
+      // Define zones that are acceptable for this specific visitor
       const safeZones = ["Main Entrance Hallway", "Gate", destOffice];
 
       if (!safeZones.includes(currentCam)) {
-        finalCameraName = `${newLog.cameraName} ||| OUT OF BOUNDS (Headed to ${destOffice})`;
-      } else if (minutesInside > 15 && currentCam !== destOffice) {
-        finalCameraName = `${newLog.cameraName} ||| LOITERING`;
+        // 🚨 Case 1: Visitor is in a hallway they shouldn't be in
+        finalStatus = "OUT_OF_BOUNDS";
+        finalCameraDisplay = `${currentCam} (Target: ${destOffice})`;
+      } else if (minutesInside > 20 && currentCam !== destOffice) {
+        // 🚨 Case 2: Visitor has been in the hallway/gate for too long without reaching the office
+        finalStatus = "LOITERING";
       }
     }
 
-    // 🔥 STRICT PAYLOAD FIX: perfectly matches your MongoDB Schema
     const payload = {
       visitorId: newLog.visitorId,
       visitorName: newLog.visitorName,
-      cameraName: finalCameraName, // Safe place to store the alert!
-      status: "Detected", // Fixed Enum Issue
+      cameraName: finalCameraDisplay,
+      status: finalStatus, // 🔥 Matches the new Backend Enum
       confidence: newLog.confidence,
       screenshotBase64: newLog.screenshotBase64,
-      timestamp: newLog.timestamp,
-      date: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" }), // Fixed Missing Date Issue
+      timestamp: new Date().toISOString(),
+      date: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" }),
     };
 
     try {
-      await api.post("/cctv-logs", payload);
-      await fetchLogs(); // Guaranteed fetch after save
+      const res = await api.post("/cctv-logs", payload);
+      // Refresh local state with the saved log from DB
+      setLogs((prev) => [res.data, ...prev].slice(0, 50));
     } catch (e: any) {
-      console.error(
-        "🚨 Failed to save CCTV log. Backend says:",
-        e.response?.data || e.message,
-      );
+      console.error("🚨 CCTV Save Failed:", e.response?.data || e.message);
     }
   }, []);
 
