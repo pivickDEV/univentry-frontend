@@ -64,7 +64,6 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [systemStatus, setSystemStatus] = useState("INITIALIZING...");
 
-  const cooldownMap = useRef<Map<string, number>>(new Map());
   const visitorDataMap = useRef<Map<string, any>>(new Map());
 
   const fetchLogs = async () => {
@@ -149,51 +148,90 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     init();
   }, []);
 
+  /* eslint-disable */
+
+  // 🔥 Replace your previous maps with this one
+  const presenceMap = useRef<
+    Map<
+      string,
+      { firstSeen: number; lastSeen: number; loiteringLogged: boolean }
+    >
+  >(new Map());
+
   const addLog = useCallback(async (newLog: any) => {
-    const key = `${newLog.visitorId}|||${newLog.cameraName}`;
+    const vid = newLog.visitorId;
     const now = Date.now();
+    const session = presenceMap.current.get(vid);
 
-    // Prevent multiple logs within 1 minute for the same person
-    if (now - (cooldownMap.current.get(key) || 0) < 60000) return;
-    cooldownMap.current.set(key, now);
-
-    // 1. Start with "IN" as the default status
-    let finalStatus = "IN";
-
-    // 2. Retrieve the visitor's gate entry data from the map
-    const vData = visitorDataMap.current.get(newLog.visitorId);
-
-    if (vData && vData.timeIn) {
-      const entryTime = new Date(vData.timeIn).getTime();
-
-      // Calculate how many minutes have passed since they entered the RTU Gate
-      const minutesSinceGateEntry = (now - entryTime) / 60000;
-
-      // 🔥 FIX: Only flag as LOITERING if they exceed 30 minutes on campus
-      // without completing their transaction.
-      if (minutesSinceGateEntry > 30) {
-        finalStatus = "LOITERING";
-      }
+    // 🛡️ 1. RESET LOGIC: If the face was gone for more than 5 seconds, clear the session
+    if (session && now - session.lastSeen > 5000) {
+      presenceMap.current.delete(vid);
     }
 
-    // 3. Construct the sanitized payload for Mongoose
-    const payload = {
-      visitorId: newLog.visitorId,
-      visitorName: newLog.visitorName,
-      cameraName: newLog.cameraName,
-      status: finalStatus, // Matches the backend enum perfectly
-      confidence: newLog.confidence,
-      screenshotBase64: newLog.screenshotBase64,
-      timestamp: new Date().toISOString(),
-      date: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" }),
-    };
+    const currentSession = presenceMap.current.get(vid);
 
-    try {
-      const res = await api.post("/cctv-logs", payload);
-      // Push the saved log from the database into the UI list
-      setLogs((prev) => [res.data, ...prev].slice(0, 50));
-    } catch (e: any) {
-      console.error("🚨 CCTV Log Save Failed:", e.response?.data || e.message);
+    if (!currentSession) {
+      // 🟢 FIRST FACE SCAN: Mark as "IN"
+      presenceMap.current.set(vid, {
+        firstSeen: now,
+        lastSeen: now,
+        loiteringLogged: false,
+      });
+
+      const payload = {
+        visitorId: newLog.visitorId,
+        visitorName: newLog.visitorName,
+        cameraName: newLog.cameraName,
+        status: "IN",
+        confidence: newLog.confidence,
+        screenshotBase64: newLog.screenshotBase64,
+        timestamp: new Date().toISOString(),
+        date: new Date().toLocaleDateString("en-CA", {
+          timeZone: "Asia/Manila",
+        }),
+      };
+
+      try {
+        const res = await api.post("/cctv-logs", payload);
+        setLogs((prev) => [res.data, ...prev].slice(0, 50));
+      } catch (e: any) {
+        console.error(
+          "🚨 Failed to save IN log:",
+          e.response?.data || e.message,
+        );
+      }
+    } else {
+      // 🟠 CONTINUOUS SCANNING: Update last seen time
+      currentSession.lastSeen = now;
+      const timeElapsed = now - currentSession.firstSeen;
+
+      // 🔥 LOITERING LOGIC: If face is detected for more than 10 seconds straight
+      if (timeElapsed >= 10000 && !currentSession.loiteringLogged) {
+        currentSession.loiteringLogged = true; // Only log loitering ONCE per session
+
+        const payload = {
+          visitorId: newLog.visitorId,
+          visitorName: newLog.visitorName,
+          cameraName: newLog.cameraName,
+          status: "LOITERING",
+          confidence: newLog.confidence,
+          screenshotBase64: newLog.screenshotBase64,
+          timestamp: new Date().toISOString(),
+          date: new Date().toLocaleDateString("en-CA", {
+            timeZone: "Asia/Manila",
+          }),
+        };
+
+        try {
+          const res = await api.post("/cctv-logs", payload);
+          setLogs((prev) => [res.data, ...prev].slice(0, 50));
+        } catch (e: any) {
+          console.error(
+            "🚨 Failed to save LOITERING log:",
+            e.response?.data || e.message,
+          );
+        }
+      }
     }
   }, []);
 
