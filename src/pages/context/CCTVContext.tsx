@@ -92,7 +92,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // 🛡️ 2. INITIALIZE SYSTEM (AI + Faces from Bookings)
+  // 🛡️ 2. INITIALIZE SYSTEM (AI + Faces from Custom Route)
   useEffect(() => {
     const init = async () => {
       try {
@@ -109,11 +109,11 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
 
         setSystemStatus("SYNCING VECTORS...");
 
-        // 🔥 FETCH FROM BOOKINGS
-        const res = await api.get("/bookings");
-        const visitors = res.data?.bookings || res.data?.data || res.data || [];
+        // 🔥 USE YOUR OPTIMIZED CUSTOM ROUTE
+        const res = await api.get("/face-recognition/visitors");
+        const visitors = res.data?.data || [];
 
-        // Get Today's Date securely in Manila Time (YYYY-MM-DD)
+        // Get Today's Date in Manila Time (YYYY-MM-DD)
         const todayStr = new Date().toLocaleDateString("en-CA", {
           timeZone: "Asia/Manila",
         });
@@ -122,17 +122,16 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         let loadedCount = 0;
 
         visitors.forEach((v: any, index: number) => {
-          if (!v.bookingDate) return;
-
-          // 🔥 FIXED: Convert the MongoDB date into Manila time safely BEFORE checking
-          let vDate = "";
-          try {
-            vDate = new Date(v.bookingDate).toLocaleDateString("en-CA", {
-              timeZone: "Asia/Manila",
-            });
-          } catch (e) {
-            vDate = v.bookingDate.split("T")[0]; // Ultimate fallback
+          // If the backend didn't return a date, skip them
+          if (!v.bookingDate) {
+            console.warn(
+              `Visitor ${v.firstName} skipped: No bookingDate provided by API.`,
+            );
+            return;
           }
+
+          // Safely extract just the YYYY-MM-DD portion
+          const vDate = v.bookingDate.split("T")[0];
 
           // =========================================================================
           // ⚠️ CAPSTONE SECURITY RULE: Only allow visitors booked for TODAY
@@ -153,7 +152,6 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
           } else {
             console.warn(
               `Visitor [${index}] skipped: invalid embedding length`,
-              v,
             );
           }
         });

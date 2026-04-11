@@ -439,7 +439,7 @@ const CCTVMonitor = () => {
 };
 
 // ============================================================================
-// 🔥 UPGRADED: CAMERA NODE WITH INLINE FACE-API DRAWING
+// 🔥 CAMERA NODE WITH INLINE FACE-API DRAWING
 // ============================================================================
 const CameraNode = ({
   wsUrl,
