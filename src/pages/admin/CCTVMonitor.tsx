@@ -1,6 +1,7 @@
 /* eslint-disable */
 "use client";
 
+import * as faceapi from "face-api.js";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -22,7 +23,8 @@ import {
 import { useCCTV } from "../context/CCTVContext";
 
 const CCTVMonitor = () => {
-  const { logs, deleteLog, modelsLoaded, systemStatus } = useCCTV();
+  const { logs, deleteLog, modelsLoaded, systemStatus, faceMatcher, addLog } =
+    useCCTV();
 
   const [cameras] = useState([
     {
@@ -39,7 +41,6 @@ const CCTVMonitor = () => {
   );
   const [sortOrder, setSortOrder] = useState<"recent" | "old">("recent");
 
-  // 🔥 MODAL STATES
   const [logToDelete, setLogToDelete] = useState<any>(null);
   const [selectedLogDetails, setSelectedLogDetails] = useState<any>(null);
 
@@ -81,12 +82,10 @@ const CCTVMonitor = () => {
 
   return (
     <div className="min-h-screen lg:h-screen bg-slate-50 p-4 lg:p-8 font-sans text-slate-800 flex flex-col overflow-y-auto lg:overflow-hidden relative">
-      {/* --------------------------- */}
-      {/* 🔥 DETECTION DOSSIER MODAL (Big View) */}
-      {/* --------------------------- */}
+      {/* --- DOSSIER MODAL --- */}
       <AnimatePresence>
         {selectedLogDetails && (
-          <div className="fixed inset-0 z-160 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -100,7 +99,6 @@ const CCTVMonitor = () => {
               exit={{ scale: 0.9, opacity: 0, y: 50 }}
               className="relative bg-white w-full max-w-4xl rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(0,56,168,0.4)] flex flex-col lg:flex-row"
             >
-              {/* Image Section */}
               <div className="lg:w-3/5 bg-slate-950 relative flex items-center justify-center border-r border-slate-100">
                 <img
                   src={selectedLogDetails.screenshotBase64}
@@ -114,8 +112,6 @@ const CCTVMonitor = () => {
                   </span>
                 </div>
               </div>
-
-              {/* Content Section */}
               <div className="lg:w-2/5 p-10 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-2 text-[#0038A8] mb-2">
@@ -127,7 +123,6 @@ const CCTVMonitor = () => {
                   <h2 className="text-4xl font-black text-[#0038A8] uppercase tracking-tighter leading-none mb-6">
                     {selectedLogDetails.visitorName}
                   </h2>
-
                   <div className="space-y-6">
                     <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
                       <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3">
@@ -142,7 +137,6 @@ const CCTVMonitor = () => {
                         </span>
                       </div>
                     </div>
-
                     <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
                       <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3">
                         Timestamp & Logistics
@@ -180,7 +174,6 @@ const CCTVMonitor = () => {
                     </div>
                   </div>
                 </div>
-
                 <button
                   onClick={() => setSelectedLogDetails(null)}
                   className="w-full mt-10 py-5 bg-[#0038A8] text-white rounded-[1.8rem] font-black uppercase text-xs tracking-widest shadow-xl hover:bg-[#002b82] transition-all active:scale-95"
@@ -188,7 +181,6 @@ const CCTVMonitor = () => {
                   Close Dossier
                 </button>
               </div>
-
               <button
                 onClick={() => setSelectedLogDetails(null)}
                 className="absolute top-6 right-6 p-3 bg-slate-100 rounded-full hover:bg-red-500 hover:text-white transition-all"
@@ -200,10 +192,10 @@ const CCTVMonitor = () => {
         )}
       </AnimatePresence>
 
-      {/* DELETION CONFIRMATION */}
+      {/* --- DELETION CONFIRMATION --- */}
       <AnimatePresence>
         {logToDelete && (
-          <div className="fixed inset-0 z-150 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -249,8 +241,8 @@ const CCTVMonitor = () => {
         )}
       </AnimatePresence>
 
-      {/* HEADER */}
-      <div className="max-w-400 mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
+      {/* --- HEADER --- */}
+      <div className="max-w-[1800px] mx-auto w-full mb-6 shrink-0 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
         <div className="flex items-center gap-5">
           <div className="p-4 bg-[#0038A8] text-[#FFD700] rounded-[1.8rem] shadow-2xl">
             <FiShield size={32} />
@@ -278,9 +270,9 @@ const CCTVMonitor = () => {
         </div>
       </div>
 
-      <div className="max-w-400 mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 lg:overflow-hidden">
-        {/* LEFT: LIVE FEED */}
-        <div className="flex-[2.5] bg-white rounded-[2.5rem] border-2 border-slate-100 p-8 flex flex-col overflow-hidden shadow-xl min-h-112.5">
+      <div className="max-w-[1800px] mx-auto w-full flex-1 flex flex-col xl:flex-row gap-8 lg:overflow-hidden">
+        {/* --- LEFT: LIVE FEED --- */}
+        <div className="flex-[2.5] bg-white rounded-[2.5rem] border-2 border-slate-100 p-8 flex flex-col overflow-hidden shadow-xl min-h-[450px]">
           <div className="flex items-center gap-3 mb-6 shrink-0">
             <div className="p-2.5 bg-blue-50 text-[#0038A8] rounded-xl">
               <FiCamera size={20} />
@@ -290,12 +282,19 @@ const CCTVMonitor = () => {
             </h3>
           </div>
           <div className="flex-1 bg-slate-950 rounded-[2.2rem] overflow-hidden relative border-[6px] border-slate-50 shadow-inner group">
-            <CameraNode wsUrl={cameras[0].wsUrl} name={cameras[0].name} />
+            {/* 🔥 INTEGRATED CAMERA NODE WITH AI DRAWING */}
+            <CameraNode
+              wsUrl={cameras[0].wsUrl}
+              name={cameras[0].name}
+              faceMatcher={faceMatcher}
+              modelsLoaded={modelsLoaded}
+              onMatch={addLog}
+            />
           </div>
         </div>
 
-        {/* RIGHT: DETECTION REGISTRY */}
-        <div className="flex-1 bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-2xl p-6 lg:p-8 flex flex-col xl:max-w-md min-h-125 lg:min-h-0">
+        {/* --- RIGHT: DETECTION REGISTRY --- */}
+        <div className="flex-1 bg-white rounded-[2.5rem] border-2 border-slate-100 shadow-2xl p-6 lg:p-8 flex flex-col xl:max-w-md min-h-[500px] lg:min-h-0">
           <div className="shrink-0 mb-6 border-b border-slate-100 pb-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
@@ -319,7 +318,7 @@ const CCTVMonitor = () => {
                   placeholder="SEARCH IDENTITIES..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-xs font-bold focus:border-[#0038A8] outline-none transition-all placeholder:text-slate-300"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 pl-12 text-xs font-bold focus:border-[#0038A8] outline-none transition-all placeholder:text-slate-300"
                 />
               </div>
               <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
@@ -361,7 +360,6 @@ const CCTVMonitor = () => {
             </div>
           </div>
 
-          {/* DETECTIONS FEED */}
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
             <AnimatePresence mode="popLayout">
               {filteredLogs.length === 0 ? (
@@ -382,7 +380,6 @@ const CCTVMonitor = () => {
                     className="relative group bg-[#F8FAFC] border-2 border-slate-100 p-4 rounded-4xl flex gap-4 items-center hover:bg-white hover:shadow-2xl hover:border-blue-100 transition-all cursor-pointer overflow-hidden"
                     onClick={() => setSelectedLogDetails(log)}
                   >
-                    {/* TRASH BUTTON */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -392,18 +389,15 @@ const CCTVMonitor = () => {
                     >
                       <FiTrash2 size={14} />
                     </button>
-
-                    {/* Thumbnail */}
-                    <div className="w-18 h-18 rounded-2xl overflow-hidden shrink-0 border-2 border-white shadow-md transition-transform group-hover:scale-105">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border-2 border-white shadow-md transition-transform group-hover:scale-105">
                       <img
                         src={log.screenshotBase64}
                         className="w-full h-full object-cover"
                         alt="Hit"
                       />
                     </div>
-
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-black text-[#0038A8] text-[13px] uppercase truncate tracking-tight mb-0.5">
+                      <h4 className="font-black text-[#0038A8] text-sm uppercase truncate tracking-tight mb-0.5">
                         {log.visitorName}
                       </h4>
                       <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">
@@ -413,7 +407,6 @@ const CCTVMonitor = () => {
                           year: "numeric",
                         })}
                       </p>
-
                       <div className="flex items-center justify-between border-t border-slate-100 pt-2.5">
                         <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg">
                           <div className="w-1 h-1 bg-emerald-500 rounded-full" />
@@ -426,6 +419,7 @@ const CCTVMonitor = () => {
                           {new Date(log.timestamp).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
+                            second: "2-digit",
                           })}
                         </div>
                       </div>
@@ -441,29 +435,149 @@ const CCTVMonitor = () => {
   );
 };
 
-const CameraNode = ({ wsUrl, name }: { wsUrl: string; name: string }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+// ============================================================================
+// 🔥 UPGRADED: CAMERA NODE WITH INLINE FACE-API DRAWING
+// ============================================================================
+const CameraNode = ({
+  wsUrl,
+  name,
+  faceMatcher,
+  modelsLoaded,
+  onMatch,
+}: any) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null); // For Video
+  const drawCanvasRef = useRef<HTMLCanvasElement>(null); // For AI Boxes
   const playerRef = useRef<any>(null);
   const [status, setStatus] = useState("LINKING...");
+
+  // 1. Connect JSMpeg Video Stream
   useEffect(() => {
     if (!canvasRef.current || !(window as any).JSMpeg) return;
+
     playerRef.current = new (window as any).JSMpeg.Player(wsUrl, {
       canvas: canvasRef.current,
       autoplay: true,
+      audio: false,
+      disableGl: true, // IMPORTANT: Needed so FaceAPI can read the canvas!
       onPlay: () => setStatus("LIVE"),
       onStalled: () => setStatus("BUFFERING..."),
     });
+
     return () => {
       if (playerRef.current) playerRef.current.destroy();
     };
   }, [wsUrl]);
+
+  // 2. Start AI Scanning Loop
+  useEffect(() => {
+    if (!modelsLoaded || !faceMatcher || status !== "LIVE") return;
+
+    let scanTimeout: NodeJS.Timeout;
+    let isScanning = false;
+
+    const scanFace = async () => {
+      if (isScanning || !canvasRef.current || !drawCanvasRef.current) return;
+      isScanning = true;
+
+      try {
+        const videoCanvas = canvasRef.current;
+        const overlayCanvas = drawCanvasRef.current;
+
+        if (videoCanvas.width === 0 || videoCanvas.height === 0) {
+          throw new Error("Canvas zero dimension");
+        }
+
+        // Detect Faces on the JSMpeg Canvas
+        const detections = await faceapi
+          .detectAllFaces(
+            videoCanvas,
+            new faceapi.TinyFaceDetectorOptions({
+              inputSize: 320,
+              scoreThreshold: 0.4,
+            }),
+          )
+          .withFaceLandmarks()
+          .withFaceDescriptors();
+
+        const displaySize = {
+          width: videoCanvas.clientWidth || 640,
+          height: videoCanvas.clientHeight || 360,
+        };
+
+        faceapi.matchDimensions(overlayCanvas, displaySize);
+        const resizedDetections = faceapi.resizeResults(
+          detections,
+          displaySize,
+        );
+        const ctx = overlayCanvas.getContext("2d");
+        ctx?.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+        resizedDetections.forEach((detection) => {
+          const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+          const box = detection.detection.box;
+
+          // Draw the Box and Label on the overlay canvas
+          const isKnown = bestMatch.label !== "unknown";
+          let drawLabel = "UNAUTHORIZED";
+          let boxColor = "#ef4444"; // Red for unknown
+
+          if (isKnown) {
+            const [visitorName, visitorId] = bestMatch.label.split("__");
+            const confidence = Math.round((1 - bestMatch.distance) * 100);
+            drawLabel = `${visitorName} (${confidence}%)`;
+            boxColor = "#FFD700"; // RTU Gold for known
+
+            // Trigger Log creation in Context
+            const screenshot = videoCanvas.toDataURL("image/jpeg", 0.6);
+            onMatch({
+              _id: Math.random().toString(36).substr(2, 9),
+              visitorId,
+              visitorName,
+              cameraName: name,
+              confidence,
+              screenshotBase64: screenshot,
+              status: "Detected",
+              timestamp: new Date().toISOString(),
+            });
+          }
+
+          const drawBox = new faceapi.draw.DrawBox(box, {
+            label: drawLabel,
+            boxColor: boxColor,
+            lineWidth: 3,
+          });
+          drawBox.draw(overlayCanvas);
+        });
+      } catch (err) {
+        // Suppress benign canvas errors
+      } finally {
+        isScanning = false;
+        // Adjust this timeout to balance performance (800ms = ~1.2 FPS)
+        scanTimeout = setTimeout(scanFace, 800);
+      }
+    };
+
+    scanFace();
+
+    return () => clearTimeout(scanTimeout);
+  }, [faceMatcher, modelsLoaded, status, name, onMatch]);
+
   return (
     <div className="w-full h-full relative flex items-center justify-center bg-[#0a0f1c]">
+      {/* Video Stream Layer */}
       <canvas
         ref={canvasRef}
-        className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-700"
+        className="w-full h-full object-cover opacity-90 transition-opacity duration-700"
       />
-      <div className="absolute top-6 left-6 flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl">
+
+      {/* Transparent AI Drawing Layer */}
+      <canvas
+        ref={drawCanvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none z-10"
+      />
+
+      {/* Overlay Status Badge */}
+      <div className="absolute top-6 left-6 flex items-center gap-2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-2xl z-20">
         <div
           className={`w-2 h-2 rounded-full ${status === "LIVE" ? "bg-red-500 animate-pulse shadow-[0_0_10px_red]" : "bg-slate-500"}`}
         />
@@ -471,8 +585,10 @@ const CameraNode = ({ wsUrl, name }: { wsUrl: string; name: string }) => {
           {name}
         </span>
       </div>
+
+      {/* Offline Screen */}
       {status !== "LIVE" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm z-30">
           <FiWifiOff size={48} className="mb-4 text-slate-700 animate-pulse" />
           <span className="text-xs font-black uppercase tracking-[0.4em] text-slate-500">
             {status}

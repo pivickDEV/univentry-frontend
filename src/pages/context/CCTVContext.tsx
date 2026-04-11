@@ -73,12 +73,19 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
 
         setSystemStatus("SYNCING VECTORS...");
         const res = await api.get("/face-recognition/visitors");
-
-        // Handle the various ways the visitor data might be returned
         const visitors = res.data?.bookings || res.data?.data || res.data || [];
 
+        // 🔥 NEW: Get today's date in Manila timezone
+        const todayStr = new Date().toLocaleDateString("en-CA", {
+          timeZone: "Asia/Manila",
+        });
+
         const labeledDescriptors: any[] = [];
+
         visitors.forEach((v: any) => {
+          // 🔥 NEW: Only process visitors whose bookingDate is exactly TODAY
+          if (v.bookingDate !== todayStr) return;
+
           if (v.faceEmbedding && v.faceEmbedding.length === 128) {
             labeledDescriptors.push(
               new faceapi.LabeledFaceDescriptors(
