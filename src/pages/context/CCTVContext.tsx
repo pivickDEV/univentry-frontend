@@ -10,7 +10,6 @@ import React, {
   useState,
 } from "react";
 
-// 🚀 VERCEL PREP: Global API Instance with Tunnel Headers
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:9000/api",
   headers: {
@@ -20,6 +19,48 @@ const api = axios.create({
 });
 
 const CCTVContext = createContext<any>(null);
+
+// ============================================================================
+// 🔥 YOUR ROBUST HELPER: Forces any weird DB format into a clean 128-d Array
+// ============================================================================
+const normalizeEmbedding = (rawEmbedding: any): number[] => {
+  if (!rawEmbedding) return [];
+
+  let arr: any[] = [];
+
+  // Case 1: already a proper JS array
+  if (Array.isArray(rawEmbedding)) {
+    arr = rawEmbedding;
+  }
+  // Case 2: JSON string
+  else if (typeof rawEmbedding === "string") {
+    try {
+      const parsed = JSON.parse(rawEmbedding);
+      if (Array.isArray(parsed)) arr = parsed;
+    } catch (err) {
+      return [];
+    }
+  }
+  // Case 3: mongoose/buffer-like object { data: [...] }
+  else if (
+    typeof rawEmbedding === "object" &&
+    rawEmbedding !== null &&
+    Array.isArray(rawEmbedding.data)
+  ) {
+    arr = rawEmbedding.data;
+  }
+  // Case 4: object with numeric keys
+  else if (typeof rawEmbedding === "object" && rawEmbedding !== null) {
+    const values = Object.values(rawEmbedding);
+    if (Array.isArray(values)) arr = values;
+  }
+
+  const numeric = arr.map((v) => Number(v)).filter((v) => !Number.isNaN(v));
+
+  if (numeric.length !== 128) return [];
+
+  return numeric;
+};
 
 export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
   const [logs, setLogs] = useState<any[]>([]);
@@ -38,7 +79,6 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
       const res = await api.get("/cctv-logs");
       let rawData = [];
 
-      // Safely handle different backend response structures
       if (Array.isArray(res.data)) {
         rawData = res.data;
       } else if (res.data.data && Array.isArray(res.data.data)) {
@@ -47,7 +87,6 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         rawData = res.data.logs;
       }
 
-      // Sort newest to oldest
       const sortedData = rawData.sort(
         (a: any, b: any) =>
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
@@ -76,8 +115,8 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
 
         setSystemStatus("SYNCING VECTORS...");
 
-        // 🔥 FETCH FROM BOOKINGS DB
-        const res = await api.get("/face-recognition/visitors");
+        // 🔥 FETCH FROM BOOKINGS
+        const res = await api.get("/bookings");
         const visitors = res.data?.bookings || res.data?.data || res.data || [];
 
         // Get Today's Date in Manila Time (YYYY-MM-DD)
@@ -86,10 +125,9 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         });
 
         const labeledDescriptors: any[] = [];
-        let loadedCount = 0; // Track how many faces were successfully loaded
+        let loadedCount = 0;
 
-        visitors.forEach((v: any) => {
-          // Extract just the YYYY-MM-DD from the DB bookingDate
+        visitors.forEach((v: any, index: number) => {
           const vDate = v.bookingDate ? v.bookingDate.split("T")[0] : "";
 
           // =========================================================================
@@ -97,23 +135,12 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
           // =========================================================================
           if (vDate !== todayStr) return;
 
-          if (!v.faceEmbedding) return;
-
-          // Safely parse the Face Embedding array from MongoDB
-          let arr: number[] = [];
-          if (typeof v.faceEmbedding === "string") {
-            try {
-              arr = JSON.parse(v.faceEmbedding);
-            } catch (e) {}
-          } else if (Array.isArray(v.faceEmbedding)) {
-            arr = v.faceEmbedding;
-          } else if (typeof v.faceEmbedding === "object") {
-            arr = Object.values(v.faceEmbedding);
-          }
+          // 🔥 Use your robust normalizer!
+          const normalizedEmbedding = normalizeEmbedding(v.faceEmbedding);
 
           // If it successfully extracted the 128-d matrix, memorize the face!
-          if (arr.length === 128) {
-            const floatArray = new Float32Array(arr.map(Number));
+          if (normalizedEmbedding.length === 128) {
+            const floatArray = new Float32Array(normalizedEmbedding);
             labeledDescriptors.push(
               new faceapi.LabeledFaceDescriptors(
                 `${v.firstName} ${v.lastName}__${v._id}`,
@@ -121,16 +148,26 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
               ),
             );
             loadedCount++;
+          } else {
+            console.warn(
+              `Visitor [${index}] skipped: invalid embedding length`,
+              v,
+            );
           }
         });
 
         // Initialize Face Matcher
         if (labeledDescriptors.length > 0) {
-          // 🔥 BUMPED TO 0.65: This makes the CCTV slightly more forgiving to bad lighting/angles!
+          // 0.65 threshold is best for live CCTV
           setFaceMatcher(new faceapi.FaceMatcher(labeledDescriptors, 0.65));
           setSystemStatus(`${loadedCount} VECTORS ACTIVE`);
+          console.log(
+            `✅ Loaded ${loadedCount} faces into AI memory for today!`,
+          );
         } else {
+          setFaceMatcher(null);
           setSystemStatus(`NO BOOKINGS FOR TODAY`);
+          console.warn("⚠️ No faces found in DB matching today's date.");
         }
 
         // Fetch UI logs and mark as ready
@@ -138,30 +175,29 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
         setModelsLoaded(true);
       } catch (e) {
         console.error("Context Init Error:", e);
-        setSystemStatus("OFFLINE");
+        setSystemStatus("SYSTEM OFFLINE");
       }
     };
 
     init();
   }, []);
 
-  // 🛡️ 3. ADD LOG (Triggered by CCTVMonitor when someone walks by)
+  // 🛡️ 3. ADD LOG (Triggered by CCTVMonitor)
   const addLog = useCallback(async (newLog: any) => {
     const key = `${newLog.visitorId}|||${newLog.cameraName}`;
     const now = Date.now();
 
-    // 5 MINUTE COOLDOWN: Prevent spamming the DB if the person stands there
+    // 5 Minute Cooldown per person per camera
     if (now - (cooldownMap.current.get(key) || 0) < 300000) return;
 
     cooldownMap.current.set(key, now);
 
-    // Optimistic UI Update (Pops instantly on the right sidebar)
     setLogs((prev) => [newLog, ...prev].slice(0, 50));
 
     try {
       await api.post("/cctv-logs", newLog);
     } catch (e) {
-      console.error("Failed to save log to DB");
+      console.warn("Failed to save CCTV log:", e);
     }
   }, []);
 
