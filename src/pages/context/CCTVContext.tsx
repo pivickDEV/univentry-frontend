@@ -154,7 +154,12 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
   const presenceMap = useRef<
     Map<
       string,
-      { firstSeen: number; lastSeen: number; loiteringLogged: boolean }
+      {
+        firstSeen: number;
+        lastSeen: number;
+        lastLogged: number; // 🔥 ADD THIS
+        loiteringLogged: boolean;
+      }
     >
   >(new Map());
 
@@ -175,6 +180,7 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
       presenceMap.current.set(vid, {
         firstSeen: now,
         lastSeen: now,
+        lastLogged: now, // 🔥 ADD THIS
         loiteringLogged: false,
       });
 
@@ -203,11 +209,19 @@ export const CCTVProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       // 🟠 CONTINUOUS SCANNING: Update last seen time
       currentSession.lastSeen = now;
+
+      // 🔥 COOLDOWN: only allow scanning every 500ms
+      if (now - currentSession.lastLogged < 500) {
+        return; // skip this frame
+      }
+
+      currentSession.lastLogged = now;
+
       const timeElapsed = now - currentSession.firstSeen;
 
-      // 🔥 LOITERING LOGIC: If face is detected for more than 10 seconds straight
+      // 🔥 LOITERING LOGIC (unchanged)
       if (timeElapsed >= 10000 && !currentSession.loiteringLogged) {
-        currentSession.loiteringLogged = true; // Only log loitering ONCE per session
+        currentSession.loiteringLogged = true;
 
         const payload = {
           visitorId: newLog.visitorId,
